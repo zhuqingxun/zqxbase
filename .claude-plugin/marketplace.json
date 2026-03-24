@@ -1,0 +1,37 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "zqxbase",
+  "owner": {
+    "name": "zhuqingxun"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for structured development workflows, meeting intelligence, and productivity tools",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "rpiv-loop",
+      "source": {
+        "source": "github",
+        "repo": "zhuqingxun/rpiv-loop"
+      },
+      "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
+      "version": "1.4.6",
+      "keywords": ["rpiv", "workflow", "development-process", "code-review"]
+    },
+    {
+      "name": "mint",
+      "source": "./plugins/mint",
+      "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
+      "version": "2.0.0",
+      "keywords": ["meeting", "transcription", "asr", "intelligence", "audio"]
+    },
+    {
+      "name": "toolbox",
+      "source": "./plugins/toolbox",
+      "description": "Productivity tools: session reflection, red-blue adversarial review, and changelog viewer",
+      "version": "1.0.0",
+      "keywords": ["reflect", "challenge", "adversarial", "changelog", "productivity"]
+    }
+  ]
+}
