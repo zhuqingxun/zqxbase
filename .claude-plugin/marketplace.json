@@ -24,11 +24,25 @@
       "keywords": ["meeting", "transcription", "asr", "intelligence", "audio"]
     },
     {
-      "name": "toolbox",
-      "source": "./plugins/toolbox",
-      "description": "Productivity tools: session reflection, red-blue adversarial review, and changelog viewer",
+      "name": "reflect",
+      "source": "./plugins/reflect",
+      "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
       "version": "1.0.0",
-      "keywords": ["reflect", "challenge", "adversarial", "changelog", "productivity"]
+      "keywords": ["reflect", "retrospective", "lessons-learned", "productivity"]
+    },
+    {
+      "name": "challenge",
+      "source": "./plugins/challenge",
+      "description": "Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions",
+      "version": "1.0.0",
+      "keywords": ["challenge", "adversarial", "red-team", "blue-team", "review"]
+    },
+    {
+      "name": "whatsnew",
+      "source": "./plugins/whatsnew",
+      "description": "Claude Code changelog viewer: check what's new in any Claude Code release",
+      "version": "1.0.0",
+      "keywords": ["whatsnew", "changelog", "release-notes", "version"]
     }
   ]
 }

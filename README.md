@@ -46,15 +46,23 @@ Audio-to-insights pipeline for meeting recordings.
 
 **主要命令**: `/mint`, `/mint:transcribe`, `/mint:refine`, `/mint:polish`, `/mint:extract`
 
-### toolbox
+### reflect
 
-独立效率工具集 / Standalone productivity skills:
+会话复盘 — 提取可沉淀的经验教训。
 
-| Skill | 说明 / Description |
-|-------|---------------------|
-| `/toolbox:reflect` | 会话复盘 — 提取可沉淀的经验教训 / Session retrospective — extract reusable lessons |
-| `/toolbox:challenge` | 红蓝对抗 — 结构化攻防审查方案和决策 / Red-Blue adversarial review on plans and decisions |
-| `/toolbox:whatsnew` | 版本更新查看器 — 查询 Claude Code release notes / Claude Code changelog viewer |
+Session retrospective — extract reusable lessons and insights from your current conversation.
+
+### challenge
+
+红蓝对抗 — 结构化攻防审查方案和决策。
+
+Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions.
+
+### whatsnew
+
+版本更新查看器 — 查询 Claude Code release notes。
+
+Claude Code changelog viewer: check what's new in any release.
 
 ## License
 
