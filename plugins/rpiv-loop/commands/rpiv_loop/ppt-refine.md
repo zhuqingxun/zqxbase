@@ -1,202 +1,189 @@
 ---
 name: ppt-refine
-description: "将粗加工 PPT 升级为精加工版本，PPT 架构师主导布局重构，用 NotebookLM 生成简洁视觉资产嵌入指定位置。当用户提到'精加工 PPT'、'PPT 精修'、'ppt-refine'、'PPT 增强'、'美化 PPT'、'给 PPT 加图'时使用。也适用于用户对已生成的 PPT 不满意想要视觉提升的场景。"
+description: "将粗加工 PPT 升级为精加工版本。支持两种模式: (1) N某管理工具 增强——架构师主导布局重构 + NotebookLM 生成视觉资产嵌入; (2) 纯代码增强——用 python-pptx 改善字体/配色/布局/渐变，无需 N某管理工具。当用户提到'精加工 PPT'、'PPT 精修'、'ppt-refine'、'PPT 增强'、'美化 PPT'、'给 PPT 加图'、'PPT 排版优化'时使用。也适用于: 用户对已生成的 PPT 不满意想要视觉提升、想改善字体配色、或想给纯文字页面添加图解的场景。"
 ---
 
 # PPT 精加工
 
-将 biubiubiu-research 产出的粗加工 PPT 升级为精加工版本。
+将程序化生成的粗加工 PPT（python-pptx / pptxgenjs）升级为精加工版本。
 
 ## 为什么需要这个技能
 
-粗加工 PPT（Python 程序化生成）结构精准但视觉单调。NotebookLM 能生成精美图形但不可控。本技能让 PPT 架构师作为总指挥，精确控制 NotebookLM 在哪些位置、生成什么样的简洁视觉元素，再用 Python 将它们组装到重构好的页面布局中。
+粗加工 PPT 结构精准但视觉单调——单一字体、纯色填充、无图解辅助。精加工有两条路径，按需选择或组合使用：
 
-核心不是"让 N某管理工具 做 PPT"，而是"架构师用 N某管理工具 作画笔"。
+- **纯代码增强**（python-pptx 后处理）：改善字体层级、渐变色、对齐精度、阴影质感。快速、确定性高、不依赖外部服务
+- **N某管理工具 增强**（NotebookLM 视觉资产）：为关键页面生成信息图/概念图嵌入。视觉冲击力强，但每张图需审查
+
+核心理念：架构师决定每一页该做什么、在哪里做，工具（python-pptx / N某管理工具）只是画笔。
 
 ## 前置条件
 
-1. 粗加工 PPT 已存在（由 `generate_ppt.py` 生成）
-2. `notebooklm status` 已登录
-3. Notebook 已创建且有源（检查项目中的 `nblm-meta.json`）
-
----
-
-## 核心原则
-
-**架构师主导，N某管理工具 克制。** 架构师决定每一页的布局和每个元素的位置。N某管理工具 仅在现有图片无法表达意图时才启动——大多数页面保留官方原图或 Python 图表不动。一个 24 页 PPT 通常只有 3-5 页需要 N某管理工具 增强。
-
-**先腾空间，再放图片。** 这是从实战中最痛的教训：绝不在已有内容上叠加图片。必须先用 Python 重构页面布局（缩小/移动/删除现有元素），为 N某管理工具 图片腾出明确的矩形区域，然后才插入图片。
-
-**串行生产，时间换质量。** 每个 N某管理工具 任务一次只处理一张图。生成 3 个候选 → 架构师审查 → 择优 → 通过后才做下一张。慢，但每张图都经过审视。
-
-**组装后必须审查。** 用 Read 工具查看最终 PPT 页面截图，确认无遮挡、风格一致。不审查就不交付。
+1. 粗加工 PPT 已存在（`generate_ppt.py` / `generate_ppt_v*.js` / 任何 python-pptx 或 pptxgenjs 生成的 PPTX）
+2. 如选择 N某管理工具 增强路径：`notebooklm status` 已登录，且项目有可用 notebook（Phase 0 会自动处理）
 
 ---
 
 ## 执行流程
 
+### Phase 0：环境准备（自动）
+
+**纯代码增强**：确认 python-pptx 已安装（`uv add python-pptx`），跳到 Phase A。
+
+**N某管理工具 增强**：需要 NotebookLM notebook。
+
+1. 检查项目根目录的 `nblm-meta.json`
+   - 存在且 notebook_id 有效 → `notebooklm use {id}` → 跳到 Phase A
+   - 不存在 → 继续
+2. `notebooklm status` 检查登录。未登录提示 `! notebooklm login`
+3. 创建 notebook：`notebooklm create "{项目名} — PPT 精加工"`
+4. 上传源材料（按优先级）：
+   - `rpiv/research/*.md`（调研素材，最重要）
+   - `site/docs/{项目目录}/*.md`（网站内容）
+   - `rpiv/prd/*.md`（需求文档）
+   - 每个文件：`notebooklm source add --file "{路径}"`
+   - 上限 50 个源，超出则跳过重复性高的
+5. 保存 `nblm-meta.json`（含 notebook_id、sources_count、source_dirs）
+6. `notebooklm status` 验证
+
 ### Phase A：审视与 Blueprint
 
-1. Read `generate_ppt.py` 理解每页的布局结构（哪些是 `add_image_slide` 带官方截图的，哪些是纯文字的）
-2. 逐页判断图片策略：`[ORIGINAL]` / `[PYTHON]` / `[N某管理工具]`
+1. **理解 PPT 结构**：读取生成脚本（`generate_ppt*.py` / `generate_ppt*.js`），提取：
+   - 每页布局结构（图片页 / 表格页 / 纯文字页 / 图表页）
+   - 色板（所有颜色常量）
+   - 字体配置
 
-**[N某管理工具] 判定三条件**（全部满足才标记）：
-- 页面是纯文字或 Python 图表，且有一个概念适合视觉化表达
-- 页面有可利用的空白区域（或现有元素可收缩腾出空间）
-- 增强后信息传达效率会显著提升（而非仅仅"更好看"）
+2. **逐页判定增强策略**：
 
-同一张官方图出现在多个页面时，所有引用页均标记 `[ORIGINAL]`。不要为了"避免重复"而用 N某管理工具 替换——官方图的权威性比视觉多样性更重要。
+   | 标记 | 含义 | 动作 |
+   |------|------|------|
+   | `[KEEP]` | 已有官方图/截图，保持原样 | 不动 |
+   | `[CODE]` | 用 python-pptx 增强（渐变、阴影、字体、对齐） | Phase C |
+   | `[N某管理工具]` | 用 NotebookLM 生成视觉资产嵌入 | Phase B → C |
 
-3. 对每个 N某管理工具 任务，在 blueprint 中写明：
+   **`[N某管理工具]` 判定三条件**（全部满足才标记）：
+   - 页面有概念适合视觉化（流程、对比、关系）
+   - 有可用空白或可收缩的现有元素
+   - 视觉化显著提升信息传达效率（不仅是"更好看"）
+
+   35 页 PPT 通常标记：25+ `[KEEP]`、5-8 `[CODE]`、3-5 `[N某管理工具]`
+
+3. **Blueprint 文档**：
 
 ```yaml
 meta:
   source_ppt: "rpiv/output/xxx.pptx"
   output_ppt: "rpiv/output/xxx-精加工.pptx"
-  theme_colors:  # 从 generate_ppt.py 提取全部核心色
-    primary: "#XXXXXX"     # 主色（深色，用于文字/线条）
-    accent: "#XXXXXX"      # 强调色 1
-    accent2: "#XXXXXX"     # 强调色 2
-    accent3: "#XXXXXX"     # 强调色 3（如有）
-    bg: "#XXXXXX"          # 背景色
+  enhancement_mode: "hybrid"  # code-only / nblm-only / hybrid
+  theme_colors:
+    primary: "#1E2761"
+    accent: "#E8553D"
+    accent2: "#2B4C8C"
+    bg: "#F4F6FA"
 
-nblm_tasks:
-  - page: 24
-    title: "结束页"
-    position: "right-half"        # 见下方位置取值规范
-    layout_change: "收窄文字框到 6 英寸，右侧留 5 英寸"
-    intent: "一句话说明这张图要表达什么"
-    asset_type: infographic       # infographic / slide-deck / mind-map
-    prompt_seed: "韦恩图/流程图/对比图等概念方向"
-    review_criteria:
-      - "与左侧文字逻辑呼应"
-      - "风格与 PPT 协调"
+code_tasks:    # [CODE] 页面的增强清单
+  - page: 1
+    changes: ["标题加渐变填充", "法域标签加阴影"]
+
+nblm_tasks:    # [N某管理工具] 页面的资产需求
+  - page: 20
+    position: "right-half"
+    layout_change: "收窄左侧内容到 6 英寸"
+    intent: "Meta 跨大西洋数据流可视化"
+    prompt_seed: "flow diagram with arrows"
 ```
 
-**`position` 推荐取值**：`right-half` / `left-half` / `bottom-strip` / `bottom-card` / `below-table` / `center-full` / `top-banner`
+   **`position` 取值**：`right-half` / `left-half` / `bottom-strip` / `bottom-card` / `center-full` / `top-banner`
 
-4. **门禁：向用户展示 blueprint 摘要，确认后才进入 Phase B。** Blueprint 标错页面类型会导致后续生产全部浪费——这个确认步骤成本低但防错价值高。
+4. **门禁**：向用户展示 blueprint 摘要，确认后继续。标错页面类型会导致后续全部浪费——这个确认成本低但防错价值高。
 
 ### Phase B：N某管理工具 串行生产
 
-对每个 N某管理工具 任务，按顺序执行：
+> 仅当 blueprint 包含 `nblm_tasks` 时执行。纯代码增强跳过此阶段。
 
-**B1. 写 3 个提示词变体。** 基于 blueprint 中的 `intent` 和 `prompt_seed`，用英文撰写 3 个不同视角的提示词。每个提示词的 Part 1 **必须以 "Draw a VERY SIMPLE" 开头**——这不是建议而是强制要求，实测显著减少元素密度。每个提示词**必须**包含风格约束块（见下方提示词工程章节）。3 个变体应该尝试不同的视觉隐喻（如韦恩图 vs 齿轮 vs 三角形），而非同一个概念的微调。
+对每个 N某管理工具 任务按顺序执行：
 
-**B2. 并行生成 3 候选。**
+**B1. 撰写 3 个提示词变体。** 用英文，Part 1 以 "Draw a VERY SIMPLE" 开头（实测显著减少元素密度），Part 2 必须包含风格约束块。3 个变体应尝试不同视觉隐喻（韦恩图 vs 齿轮 vs 三角形），而非同一概念微调。
 
-```bash
-notebooklm generate infographic "{prompt}" --no-wait -n {id}
-```
-
-等待完成后下载：`notebooklm download infographic "{path}" --artifact {task_id} -n {id}`
-
-**B3. 架构师审查。** Read 查看 3 张图片，打分（概念准确 40% / 简洁度 30% / 风格兼容 20% / 可读性 10%）。≥ 7/10 通过。全部不通过则修改提示词再来一轮，最多 2 轮。兜底：Python 占位图 + TODO。
-
-**B4. 保存有效提示词到 `rpiv/research/nblm-prompt-assets.md`。** 包括通过的和失败的，记录失败原因。这些资产在下一个项目中可直接复用。
-
-### Phase C：布局重构 + 组装
-
-用 python-pptx 打开粗加工 PPT，对每个 N某管理工具 任务的目标页面：
-
-1. **遍历 shapes，重构布局** — 根据 blueprint 的 `layout_change`，缩小/移动文字框，为图片腾出空间
-2. **添加背景承载区** — 浅灰圆角矩形作为图片的视觉容器
-3. **插入 N某管理工具 图片** — 放入预留区域，不超出边界
-4. **添加来源标注** — "Generated by NotebookLM"，7pt 斜体，右对齐
-
-### Phase D：QA 审查
-
-对每个被修改的页面：
-
-- [ ] 文字未被遮挡（用 Read 工具视觉确认）
-- [ ] N某管理工具 图片在预留区域内
-- [ ] 风格与 PPT 整体一致（白底、配色、无突兀元素）
-- [ ] 图片与文字逻辑呼应
-
-不通过的页面回退 Phase B。
-
-### Phase E：交付
-
-输出精加工报告：修改了哪些页面、每页用了什么图、评分、提示词经验沉淀。同时输出粗加工和精加工两个 PPT 文件。
-
----
-
-## 提示词工程（核心）
-
-这是精加工质量的决定性因素。NotebookLM 的图形生成能力强大但默认行为倾向"独立作品"——它会加标题、加边框、用深色背景、塞满信息。要把它驯服为"嵌入组件"，提示词必须精准约束。
-
-### 提示词结构
-
-每个提示词由两部分组成，**缺一不可**：
-
-```
-[Part 1: 概念描述 — 1-2 句话，说清"画什么"]
-
-[Part 2: 风格约束块 — 固定模板，约束"怎么画"]
-```
-
-Part 1 越短越好。N某管理工具 对长描述的反应是添加更多细节，而非更精准地理解意图。如果你需要 5 句话才能描述清楚，说明这个概念对 N某管理工具 来说太复杂了——拆分成更小的图，或改用 Python 程序化绘制。
-
-### 风格约束块（固定模板）
-
+**风格约束块**（每个提示词必须附加）：
 ```
 CRITICAL STYLE REQUIREMENTS:
 - Pure white background
 - NO title text above the diagram
 - NO border or frame
 - NO decorative elements or extra text descriptions
-- Use only these colors: [2-3 个 hex 值，从 PPT 色板提取]
+- Use only these colors: [从 theme_colors 选 2-3 个 hex]
 - This image will be embedded in an existing PowerPoint slide - keep it minimal and clean.
 ```
 
-**颜色选取规则**：从 blueprint 的 `theme_colors` 中选 2-3 个。如果需要第 3 个衍生色而色板不够，取 accent 色降低饱和度 40%（如 `#2B7AE0` → `#7AB3F0`）。不要自创与色板无关的颜色。
+每条约束的理由：白背景匹配 PPT 底色；无标题避免与 Python 标题重复；无边框让图片成为页面有机部分而非贴纸；限定颜色保持视觉一致。
 
-为什么每一条都不能省：
-- **白背景**：PPT 底色是浅白/浅灰，深色图片会像补丁一样突兀
-- **无标题**：Python 已经写了标题，N某管理工具 再加一个就重复了
-- **无边框**：边框让图片看起来像独立贴纸而非页面的有机部分
-- **无装饰文字**：N某管理工具 喜欢加段落解释，这些文字与 Python 文字风格不一致
-- **限定颜色**：N某管理工具 不一定严格遵循 hex 值，但至少约束了色调方向
-- **嵌入声明**：告诉 N某管理工具 这不是最终作品，而是更大页面中的一个元素
-
-### 概念描述的写法
-
-**有效模式**：用"Draw a VERY SIMPLE"开头，然后一句话说清图形类型和内容。
-
+**B2. 并行生成 3 候选。**
+```bash
+notebooklm generate infographic "{prompt}" --no-wait -n {id}
 ```
-好：Draw a VERY SIMPLE Venn diagram with 3 overlapping circles
-    labeled 'Enterprise Software', 'Defense Intelligence', 'AI Platform'.
-    'Palantir' at the center intersection.
+等待完成后下载。
 
-坏：Create a comprehensive infographic showing Palantir's unique
-    strategic positioning at the intersection of enterprise software,
-    defense and intelligence, and artificial intelligence platforms,
-    with competitors positioned in their respective domains including
-    Databricks, Snowflake, Lockheed Martin, Raytheon, OpenAI, and
-    Google, along with key differentiators...
+**B3. 架构师审查。** Read 查看 3 张图，打分（概念准确 40% / 简洁度 30% / 风格兼容 20% / 可读性 10%）。≥ 7/10 通过。全不通过则改提示词再来 1 轮，最多 2 轮。兜底：Python 占位图 + TODO。
+
+**B4. 沉淀提示词。** 保存到 `rpiv/research/nblm-prompt-assets.md`，含通过和失败的，记录原因。
+
+**提示词写作要诀**：好的提示词像素描指令（"画三个圆，标上这些字"），坏的像论文摘要。用英文写（N某管理工具 对英文否定指令理解更精准），图中标签会自动翻中文。翻译不准时显式双语标注（如 `labeled '企业软件 (Enterprise Software)'`）。
+
+### Phase C：布局重构 + 组装
+
+用 python-pptx 打开粗加工 PPT 进行修改。
+
+**通用增强**（所有 `[CODE]` 和 `[N某管理工具]` 页面）：
+
+```python
+from pptx import Presentation
+from pptx.util import Inches, Pt, Emu
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
+
+prs = Presentation('input.pptx')
+slide = prs.slides[page_index]
+
+# 遍历 shapes 修改属性
+for shape in slide.shapes:
+    if shape.has_text_frame:
+        for para in shape.text_frame.paragraphs:
+            for run in para.runs:
+                run.font.size = Pt(11)
+                run.font.color.rgb = RGBColor(0x2C, 0x33, 0x50)
 ```
 
-好的提示词像素描指令（"画三个圆，标上这些字"），坏的提示词像论文摘要。
+**N某管理工具 图片插入**（`[N某管理工具]` 页面）：
+1. 遍历 shapes，根据 blueprint `layout_change` 缩小/移动文字框腾出空间
+2. 添加浅灰圆角矩形作为视觉容器
+3. 插入图片到预留区域，不超出边界
+4. 添加 "Generated by NotebookLM" 标注（7pt 斜体）
 
-### 3 个变体的设计策略
+**pptxgenjs 兼容性注意**：pptxgenjs v4 生成的 PPTX 常有 OOXML 合规问题（如 Content_Types.xml 声明不存在的 slideMaster），可能触发 PowerPoint 修复提示。如果发现此问题，用 python-pptx 重新保存可修复大部分情况。另外，pptxgenjs 的 `barGrouping:"stacked"` 多系列图表会触发 PowerPoint 修复——避免使用。
 
-不要做同一个概念的微调（如"蓝色韦恩图"vs"绿色韦恩图"），而是尝试根本不同的视觉隐喻：
+### Phase D：QA 审查
 
-| 变体 | 策略 | 适用场景 |
-|------|------|----------|
-| A | 韦恩图/集合图 | 交叉/重叠关系 |
-| B | 齿轮/互锁 | 协同/依赖关系 |
-| C | 三角形/金字塔 | 层级/支撑关系 |
+对每个被修改的页面，用 PPT→PDF→JPG 管道渲染后 Read 查看：
 
-这样 3 个候选提供了真正不同的视觉表达，架构师可以选择最匹配页面叙事的那个。
+- [ ] 文字未被遮挡
+- [ ] 图片在预留区域内
+- [ ] 风格与整体一致（配色、字体、间距）
+- [ ] 图片与文字逻辑呼应（N某管理工具 页面）
 
-### 英文 vs 中文
+**QA 渲染管道**：
+```bash
+soffice --headless --convert-to pdf "output.pptx"
+# 用 pymupdf 转 JPG
+uv run python -c "import fitz; doc=fitz.open('output.pdf'); [doc[i].get_pixmap(dpi=150).save(f'slide-{i+1}.jpg') for i in range(len(doc))]"
+```
 
-用英文写提示词，包括图中标签也写英文（如 `'Enterprise Software'` 而非 `'企业软件'`）。原因：
+不通过的页面回退 Phase B（N某管理工具）或 Phase C（代码）。
 
-- N某管理工具 的图形生成对英文指令理解更精准，特别是否定指令（"NO title"）
-- N某管理工具 会自动将图中标签翻译为中文，所以最终图片通常是中文的
-- **翻译不一定准确**：如果生成的图中出现了错误的中文翻译，在提示词中显式用中文指定关键标签（如 `labeled '企业软件 (Enterprise Software)'`）来覆盖自动翻译
+### Phase E：交付
+
+1. 用 PowerShell COM 自动化验证 PPTX 可正常打开（无修复提示）
+2. 输出精加工报告：修改页面清单、使用策略、评分、提示词沉淀
+3. 保留粗加工和精加工两个文件
 
 ---
 
@@ -204,9 +191,9 @@ CRITICAL STYLE REQUIREMENTS:
 
 | 类型 | 命令 | 适合 | 注意 |
 |------|------|------|------|
-| 信息图 | `generate infographic` | 概念图、流程、对比 | **首选**，生成快、质量稳定 |
-| 单页幻灯片 | `generate slide-deck` (指定 1 页) | 风格化数据展示 | 需截取局部使用 |
-| 思维导图 | `generate mind-map` → Python 渲染 | 关系网络 | JSON 格式，需二次渲染 |
+| 信息图 | `generate infographic` | 概念图、流程、对比 | **首选**，快且稳定 |
+| 单页幻灯片 | `generate slide-deck` (1 页) | 风格化数据展示 | 需截取局部 |
+| 思维导图 | `generate mind-map` → Python 渲染 | 关系网络 | JSON 格式需二次渲染 |
 | 视频帧 | `generate video` → 截帧 | 场景化插图 | 最慢（5-10 分钟），慎用 |
 
 ---
@@ -215,8 +202,9 @@ CRITICAL STYLE REQUIREMENTS:
 
 | 情况 | 处理 |
 |------|------|
-| N某管理工具 生成超时 | `artifact poll {task_id}` 轮询，单次最长 10 分钟 |
-| 3 候选都不合格 | 修改提示词重做 1 轮；仍不合格降级 Python 占位图 + TODO |
+| N某管理工具 生成超时 | `artifact poll {task_id}` 轮询，最长 10 分钟 |
+| 3 候选都不合格 | 改提示词重做 1 轮；仍不合格降级 Python 占位图 + TODO |
 | 输出文件被锁 | 换文件名（加 v2/v3 后缀） |
-| Notebook 无源 | 提示先用 `/nblm` 添加源 |
+| Notebook 无源 | Phase 0 自动处理 |
 | 登录过期 | `notebooklm login` |
+| PowerPoint 修复提示 | python-pptx 重新保存；检查是否使用了 stacked chart |
