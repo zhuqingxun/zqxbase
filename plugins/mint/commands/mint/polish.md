@@ -15,7 +15,7 @@ argument-hint: "<工作目录> [--template <模板>] [--脱敏]"
 ```
 
 示例：
-- `/mint:polish D:\WORK\访谈记录\李玉蕾访谈`
+- `/mint:polish D:\WORK\访谈记录\张三访谈`
 - `/mint:polish D:\WORK\会议记录\产品评审会 --template D:\访谈提纲.md`
 
 参数说明：

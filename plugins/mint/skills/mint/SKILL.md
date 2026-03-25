@@ -234,7 +234,7 @@ stages:
 revisions: []
 
 desensitization:      # --脱敏 时由 refine 阶段填充
-  name_map: {}        # 如 {李玉蕾: 受访者_01}
+  name_map: {}        # 如 {张三: 受访者_01}
 ```
 
 ### 阶段完成时更新

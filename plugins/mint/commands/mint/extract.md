@@ -15,7 +15,7 @@ argument-hint: "<工作目录> [--source clean|polished] [--artifacts summary,sp
 ```
 
 示例：
-- `/mint:extract D:\WORK\访谈记录\李玉蕾访谈`
+- `/mint:extract D:\WORK\访谈记录\张三访谈`
 - `/mint:extract D:\WORK\会议记录\产品评审会 --source polished`
 - `/mint:extract D:\WORK\会议记录\周会 --artifacts summary,actions`
 

@@ -23,7 +23,7 @@
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "keywords": ["meeting", "transcription", "asr", "intelligence", "audio"]
     },
     {

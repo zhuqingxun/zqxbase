@@ -15,7 +15,7 @@ argument-hint: "<音频文件路径> <人名或会议名>"
 ```
 
 示例：
-- `/mint:transcribe D:\Downloads\interview.mp3 李玉蕾访谈`
+- `/mint:transcribe D:\Downloads\interview.mp3 张三访谈`
 - `/mint:transcribe "D:\华为云盘\录音\meeting.m4a" 产品评审会`
 
 ## 执行流程

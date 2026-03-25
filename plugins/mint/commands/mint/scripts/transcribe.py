@@ -3,7 +3,6 @@
 # dependencies = [
 #     "dashscope>=1.20.0",
 #     "requests",
-#     "oss2",
 # ]
 # ///
 """百炼平台语音转文本脚本 - Fun-ASR 录音文件识别
@@ -12,7 +11,8 @@
     uv run --script transcribe.py <音频路径或URL> <人名> [说话人数量]
 
 说明:
-    - 本地文件自动上传到阿里云 OSS（签名 URL），转录后自动清理
+    - 本地文件通过 DashScope 平台托管上传，无需配置 OSS
+    - 仅需设置 DASHSCOPE_API_KEY 环境变量
     - 支持格式: mp3/m4a/wav/flac/ogg/opus/wma/aac/mp4/avi/mkv/mov
     - 输出: 同目录下 {人名}_原始稿.md
 """
@@ -33,12 +33,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# OSS 配置（可通过环境变量覆盖）
-OSS_BUCKET = os.getenv('MINT_OSS_BUCKET', 'memoinsight-audio')
-OSS_ENDPOINT = os.getenv('MINT_OSS_ENDPOINT', 'https://oss-cn-beijing.aliyuncs.com')
-OSS_SIGNED_URL_EXPIRY = 7200  # 签名 URL 有效期：2 小时
-
-
 def get_dashscope_key() -> str:
     """获取 DashScope API Key
 
@@ -48,109 +42,55 @@ def get_dashscope_key() -> str:
     if key:
         return key
     # 尝试 Bitwarden CLI（需要已解锁 session）
-    try:
-        import subprocess
-        bw_path = os.path.expanduser('~/AppData/Roaming/npm/bw.cmd')
-        if not os.path.exists(bw_path):
-            bw_path = 'bw'  # fallback to PATH
-        result = subprocess.run(
-            [bw_path, 'get', 'password', '阿里bailian (标准 DashScope)'],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip()
-    except Exception:
-        pass
+    bw_entry = os.getenv('MINT_BW_DASHSCOPE_ENTRY')
+    if bw_entry:
+        try:
+            import shutil
+            import subprocess
+            bw_path = shutil.which('bw') or shutil.which('bw.cmd')
+            if not bw_path:
+                bw_path = 'bw'
+            result = subprocess.run(
+                [bw_path, 'get', 'password', bw_entry],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+        except Exception:
+            pass
     raise RuntimeError(
-        '未找到 DASHSCOPE_API_KEY。请设置环境变量: export DASHSCOPE_API_KEY="sk-..."'
+        '未找到 DASHSCOPE_API_KEY。请设置环境变量:\n'
+        '  export DASHSCOPE_API_KEY="sk-..."\n'
+        '获取方式: https://bailian.console.aliyun.com/ → API-KEY 管理'
     )
 
 
-def get_oss_credentials() -> tuple[str, str]:
-    """获取 OSS AccessKey ID 和 Secret
+def get_file_url(file_path: str, api_key: str) -> str:
+    """将输入转为可访问的 URL
 
-    优先级: 环境变量 > Bitwarden CLI
+    本地文件通过 DashScope 平台托管上传（oss_utils），无需用户配置 OSS。
     """
-    ak = os.getenv('OSS_ACCESS_KEY_ID')
-    sk = os.getenv('OSS_ACCESS_KEY_SECRET')
-    if ak and sk:
-        return ak, sk
-    # 尝试 Bitwarden CLI
-    try:
-        import subprocess
-        bw_path = os.path.expanduser('~/AppData/Roaming/npm/bw.cmd')
-        if not os.path.exists(bw_path):
-            bw_path = 'bw'
-        result = subprocess.run(
-            [bw_path, 'get', 'item', '阿里云 OSS'],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode == 0:
-            import json as _json
-            item = _json.loads(result.stdout)
-            fields = {f['name']: f['value'] for f in item.get('fields', [])}
-            ak = fields.get('AccessKey ID', '')
-            sk = fields.get('AccessKey Secret', '')
-            if ak and sk:
-                return ak, sk
-    except Exception:
-        pass
-    raise RuntimeError(
-        '未找到 OSS AccessKey。请设置环境变量:\n'
-        '  export OSS_ACCESS_KEY_ID="..."\n'
-        '  export OSS_ACCESS_KEY_SECRET="..."'
-    )
-
-
-def upload_to_oss(file_path: str) -> tuple[str, str]:
-    """上传本地文件到 OSS，返回 (签名URL, oss_key)
-
-    使用签名 URL 而非公开读，bucket 可保持私有权限。
-    """
-    import oss2
-
-    ak, sk = get_oss_credentials()
-    auth = oss2.Auth(ak, sk)
-    bucket = oss2.Bucket(auth, OSS_ENDPOINT, OSS_BUCKET)
-
-    file_name = os.path.basename(file_path)
-    file_size_mb = os.path.getsize(file_path) / 1024 / 1024
-    oss_key = f'temp/{int(time.time())}_{file_name}'
-
-    logger.info(f'上传到 OSS: {file_name} ({file_size_mb:.1f}MB)')
-    bucket.put_object_from_file(oss_key, file_path)
-
-    signed_url = bucket.sign_url('GET', oss_key, OSS_SIGNED_URL_EXPIRY)
-    logger.info('上传完成，已生成签名 URL')
-
-    return signed_url, oss_key
-
-
-def cleanup_oss(oss_key: str) -> None:
-    """删除 OSS 上的临时文件"""
-    import oss2
-
-    try:
-        ak, sk = get_oss_credentials()
-        auth = oss2.Auth(ak, sk)
-        bucket = oss2.Bucket(auth, OSS_ENDPOINT, OSS_BUCKET)
-        bucket.delete_object(oss_key)
-        logger.info(f'OSS 临时文件已清理: {oss_key}')
-    except Exception as e:
-        logger.warning(f'OSS 清理失败（不影响结果）: {e}')
-
-
-def get_file_url(file_path: str) -> tuple[str, str | None]:
-    """将输入转为可访问的 URL，返回 (url, oss_key_or_None)"""
-    if file_path.startswith(('http://', 'https://')):
-        return file_path, None
+    if file_path.startswith(('http://', 'https://', 'oss://')):
+        return file_path
 
     abs_path = os.path.abspath(file_path)
     if not os.path.exists(abs_path):
         raise FileNotFoundError(f'文件不存在: {abs_path}')
 
-    url, oss_key = upload_to_oss(abs_path)
-    return url, oss_key
+    from dashscope.utils.oss_utils import check_and_upload_local
+
+    file_size_mb = os.path.getsize(abs_path) / 1024 / 1024
+    logger.info(f'上传音频到 DashScope: {os.path.basename(abs_path)} ({file_size_mb:.1f}MB)')
+
+    is_upload, file_url, _ = check_and_upload_local(
+        model='fun-asr',
+        content=abs_path,
+        api_key=api_key,
+    )
+
+    if is_upload:
+        logger.info(f'上传完成: {file_url[:60]}...')
+    return file_url
 
 
 def submit_transcription(file_url: str, api_key: str, speaker_count: int | None = None) -> str:
@@ -280,8 +220,8 @@ def format_markdown(turns: list[tuple[int, int, str]]) -> str:
 def main():
     if len(sys.argv) < 3:
         print('用法: uv run --script transcribe.py <音频路径或URL> <人名> [说话人数量]')
-        print('示例: uv run --script transcribe.py D:/录音/interview.mp3 李玉蕾')
-        print('      uv run --script transcribe.py D:/录音/meeting.m4a 张三 3')
+        print('示例: uv run --script transcribe.py ~/录音/interview.mp3 张三')
+        print('      uv run --script transcribe.py ~/录音/meeting.m4a 李四 3')
         sys.exit(1)
 
     audio_input = sys.argv[1]
@@ -292,50 +232,44 @@ def main():
     logger.info(f'API Key: {api_key[:6]}...****')
 
     # 上传并获取 URL
-    file_url, oss_key = get_file_url(audio_input)
+    file_url = get_file_url(audio_input, api_key)
 
-    try:
-        # 转录
-        task_id = submit_transcription(file_url, api_key, speaker_count)
-        result = wait_for_result(task_id)
+    # 转录
+    task_id = submit_transcription(file_url, api_key, speaker_count)
+    result = wait_for_result(task_id)
 
-        # 解析
-        segments = parse_transcription(result)
-        if not segments:
-            logger.error('未识别到任何内容，请检查音频文件。')
-            sys.exit(1)
+    # 解析
+    segments = parse_transcription(result)
+    if not segments:
+        logger.error('未识别到任何内容，请检查音频文件。')
+        sys.exit(1)
 
-        turns = merge_speaker_turns(segments)
-        markdown = format_markdown(turns)
+    turns = merge_speaker_turns(segments)
+    markdown = format_markdown(turns)
 
-        # 输出
-        if audio_input.startswith(('http://', 'https://')):
-            output_dir = os.getcwd()
-        else:
-            output_dir = os.path.dirname(os.path.abspath(audio_input))
+    # 输出
+    if audio_input.startswith(('http://', 'https://')):
+        output_dir = os.getcwd()
+    else:
+        output_dir = os.path.dirname(os.path.abspath(audio_input))
 
-        output_path = os.path.join(output_dir, f'{person_name}_原始稿.md')
-        Path(output_path).write_text(markdown, encoding='utf-8')
+    output_path = os.path.join(output_dir, f'{person_name}_原始稿.md')
+    Path(output_path).write_text(markdown, encoding='utf-8')
 
-        # 统计
-        total_chars = sum(len(t) for _, _, t in turns)
-        unique_speakers = len(set(s for _, s, _ in turns))
-        max_time_ms = max(t for t, _, _ in turns) if turns else 0
-        duration_min = max_time_ms / 1000 / 60
+    # 统计
+    total_chars = sum(len(t) for _, _, t in turns)
+    unique_speakers = len(set(s for _, s, _ in turns))
+    max_time_ms = max(t for t, _, _ in turns) if turns else 0
+    duration_min = max_time_ms / 1000 / 60
 
-        print(f'\n{"="*50}')
-        print(f'转录完成！')
-        print(f'  输出文件: {output_path}')
-        print(f'  总字数:   {total_chars:,}')
-        print(f'  说话人:   {unique_speakers} 人')
-        print(f'  音频时长: {duration_min:.1f} 分钟')
-        print(f'  发言段数: {len(turns)}')
-        print(f'{"="*50}')
-
-    finally:
-        # 无论成功失败，都清理 OSS 临时文件
-        if oss_key:
-            cleanup_oss(oss_key)
+    print(f'\n{"="*50}')
+    print(f'转录完成！')
+    print(f'  输出文件: {output_path}')
+    print(f'  总字数:   {total_chars:,}')
+    print(f'  说话人:   {unique_speakers} 人')
+    print(f'  音频时长: {duration_min:.1f} 分钟')
+    print(f'  发言段数: {len(turns)}')
+    print(f'{"="*50}')
 
 
 if __name__ == '__main__':
