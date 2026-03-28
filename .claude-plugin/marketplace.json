@@ -13,43 +13,76 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.0.1",
-      "keywords": ["rpiv", "workflow", "development-process", "code-review"]
+      "version": "2.1.0",
+      "keywords": [
+        "rpiv",
+        "workflow",
+        "development-process",
+        "code-review"
+      ]
     },
     {
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.0.1",
-      "keywords": ["meeting", "transcription", "asr", "intelligence", "audio"]
+      "version": "2.1.0",
+      "keywords": [
+        "meeting",
+        "transcription",
+        "asr",
+        "intelligence",
+        "audio"
+      ]
     },
     {
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
       "version": "1.0.0",
-      "keywords": ["reflect", "retrospective", "lessons-learned", "productivity"]
+      "keywords": [
+        "reflect",
+        "retrospective",
+        "lessons-learned",
+        "productivity"
+      ]
     },
     {
       "name": "challenge",
       "source": "./plugins/challenge",
       "description": "Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions",
       "version": "1.0.0",
-      "keywords": ["challenge", "adversarial", "red-team", "blue-team", "review"]
+      "keywords": [
+        "challenge",
+        "adversarial",
+        "red-team",
+        "blue-team",
+        "review"
+      ]
     },
     {
       "name": "whatsnew",
       "source": "./plugins/whatsnew",
       "description": "Claude Code changelog viewer: check what's new in any Claude Code release",
       "version": "1.0.0",
-      "keywords": ["whatsnew", "changelog", "release-notes", "version"]
+      "keywords": [
+        "whatsnew",
+        "changelog",
+        "release-notes",
+        "version"
+      ]
     },
     {
       "name": "insight",
       "source": "./plugins/insight",
       "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
-      "version": "1.0.0",
-      "keywords": ["research", "insight", "deep-dive", "analysis", "brainstorm"]
+      "version": "1.1.0",
+      "keywords": [
+        "research",
+        "insight",
+        "deep-dive",
+        "analysis",
+        "brainstorm"
+      ]
     }
   ]
 }

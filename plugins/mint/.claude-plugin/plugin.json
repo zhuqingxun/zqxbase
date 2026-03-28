@@ -1,10 +1,16 @@
 {
   "name": "mint",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
   "author": {
     "name": "zhuqingxun"
   },
   "repository": "https://github.com/zhuqingxun/zqxbase",
-  "keywords": ["meeting", "transcription", "asr", "intelligence", "audio"]
+  "keywords": [
+    "meeting",
+    "transcription",
+    "asr",
+    "intelligence",
+    "audio"
+  ]
 }

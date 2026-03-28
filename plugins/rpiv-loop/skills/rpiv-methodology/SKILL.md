@@ -1,5 +1,5 @@
 ---
-name: rpiv-loop
+name: rpiv-loop:rpiv-methodology
 description: >-
   RPIV 结构化开发方法论——四阶段功能开发流程(需求→计划→实施→验证)。
   当用户的项目安装了此插件时，自动加载 RPIV 方法论上下文。
@@ -86,31 +86,31 @@ related_files:           # 关联文件（可选）
 
 | 命令 | 阶段 | 用途 |
 |------|------|------|
-| `/rpiv_loop:brainstorm` | R 前 | 通过访谈对话澄清产品需求 |
-| `/rpiv_loop:create-prd` | R | 基于对话上下文生成 PRD |
-| `/rpiv_loop:plan-feature` | P | 深入代码库分析，创建实施计划 |
-| `/rpiv_loop:execute` | I | 按计划逐步实施代码 |
-| `/rpiv_loop:validation:code-review` | V | 代码审查，检查质量和安全 |
-| `/rpiv_loop:validation:execution-report` | V | 生成实施报告，记录偏离 |
-| `/rpiv_loop:validation:system-review` | V | 元级分析，对比计划与实施 |
+| `/rpiv-loop:brainstorm` | R 前 | 通过访谈对话澄清产品需求 |
+| `/rpiv-loop:create-prd` | R | 基于对话上下文生成 PRD |
+| `/rpiv-loop:plan-feature` | P | 深入代码库分析，创建实施计划 |
+| `/rpiv-loop:execute` | I | 按计划逐步实施代码 |
+| `/rpiv-loop:validation:code-review` | V | 代码审查，检查质量和安全 |
+| `/rpiv-loop:validation:execution-report` | V | 生成实施报告，记录偏离 |
+| `/rpiv-loop:validation:system-review` | V | 元级分析，对比计划与实施 |
 
 ### 辅助命令
 
 | 命令 | 用途 |
 |------|------|
-| `/rpiv_loop:prime` | 加载项目上下文，建立代码库理解 |
-| `/rpiv_loop:record` | 从对话中记录问题/需求/待办到 rpiv/todo |
-| `/rpiv_loop:fix` | 基于 rpiv/todo 下的待办文件进行分析和修复 |
-| `/rpiv_loop:flow-status` | 查看所有过程文件的状态 |
-| `/rpiv_loop:archive` | 归档已完成的过程文件 |
-| `/rpiv_loop:validation:code-review-fix` | 修复代码审查中发现的问题 |
-| `/rpiv_loop:validation:validate` | 根据项目结构自动选择验证策略 |
+| `/rpiv-loop:prime` | 加载项目上下文，建立代码库理解 |
+| `/rpiv-loop:record` | 从对话中记录问题/需求/待办到 rpiv/todo |
+| `/rpiv-loop:fix` | 基于 rpiv/todo 下的待办文件进行分析和修复 |
+| `/rpiv-loop:flow-status` | 查看所有过程文件的状态 |
+| `/rpiv-loop:archive` | 归档已完成的过程文件 |
+| `/rpiv-loop:validation:code-review-fix` | 修复代码审查中发现的问题 |
+| `/rpiv-loop:validation:validate` | 根据项目结构自动选择验证策略 |
 
 ### 自动化命令
 
 | 命令 | 用途 |
 |------|------|
-| `/rpiv_loop:biubiubiu` | 一键启动全自主 agent 团队，自动完成 R→P→I→V |
+| `/rpiv-loop:biubiubiu` | 一键启动全自主 agent 团队，自动完成 R→P→I→V |
 
 ## 阶段间信息流转
 
@@ -141,9 +141,9 @@ Todo 系统支持三种类型的待办条目，存放在 `rpiv/todo/`：
 
 | 类型 | 适用场景 | 后续操作 |
 |------|---------|---------|
-| `issue` | 错误、bug、异常行为 | `/rpiv_loop:fix` 修复 |
-| `feature` | 新功能需求 | `/rpiv_loop:brainstorm` 或 `/rpiv_loop:create-prd` |
-| `todo` | 调研、配置、清理等一次性任务 | `/rpiv_loop:fix` 直接执行 |
+| `issue` | 错误、bug、异常行为 | `/rpiv-loop:fix` 修复 |
+| `feature` | 新功能需求 | `/rpiv-loop:brainstorm` 或 `/rpiv-loop:create-prd` |
+| `todo` | 调研、配置、清理等一次性任务 | `/rpiv-loop:fix` 直接执行 |
 
 Todo 文件使用独立的 frontmatter 结构（含 `title`、`type`、`priority` 字段），与过程文件的 frontmatter 略有不同。
 
@@ -166,7 +166,7 @@ system-review 是元级分析，它读取计划、执行报告和代码审查，
 ### 标准流程（人工参与）
 
 ```
-/rpiv_loop:brainstorm → /rpiv_loop:create-prd → /rpiv_loop:plan-feature → /rpiv_loop:execute → /rpiv_loop:validation:code-review → /rpiv_loop:validation:execution-report → /rpiv_loop:validation:system-review → /rpiv_loop:archive
+/rpiv-loop:brainstorm → /rpiv-loop:create-prd → /rpiv-loop:plan-feature → /rpiv-loop:execute → /rpiv-loop:validation:code-review → /rpiv-loop:validation:execution-report → /rpiv-loop:validation:system-review → /rpiv-loop:archive
 ```
 
 每个阶段之间建议 `/clear` 清理上下文。
@@ -174,13 +174,13 @@ system-review 是元级分析，它读取计划、执行报告和代码审查，
 ### 快速流程（小功能）
 
 ```
-/rpiv_loop:create-prd → /rpiv_loop:plan-feature → /rpiv_loop:execute → /rpiv_loop:validation:code-review
+/rpiv-loop:create-prd → /rpiv-loop:plan-feature → /rpiv-loop:execute → /rpiv-loop:validation:code-review
 ```
 
 ### 全自动流程
 
 ```
-/rpiv_loop:brainstorm → /rpiv_loop:biubiubiu
+/rpiv-loop:brainstorm → /rpiv-loop:biubiubiu
 ```
 
 biubiubiu 会启动 agent 团队自动完成 PRD → Plan → Execute → Validate 全流程。
