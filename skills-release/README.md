@@ -1,30 +1,28 @@
-# Standalone Skills (ZIP)
+# 独立 Skills (ZIP)
 
-Pre-packaged skill bundles for manual installation — no marketplace required.
+预打包的技能包，解压即用，无需 marketplace。
 
-## Installation
+## 安装方法
 
-1. Download the `.zip` file for the skill you want
-2. Unzip to `~/.claude/skills/` (global) or `<project>/.claude/skills/` (project-level)
-3. Restart your Claude Code session
+1. 下载所需的 `.zip` 文件
+2. 解压到 `~/.claude/skills/`（全局）或 `<项目>/.claude/skills/`（项目级）
+3. 重启 Claude Code 会话
 
-## Available Skills
+## 可用技能
 
-| File | Description | Skills |
-|------|-------------|--------|
-| `rpiv-loop-skills.zip` | RPIV structured development workflow | 20 skills (brainstorm, create-prd, plan-feature, execute, validation, etc.) |
-| `mint-skills.zip` | Meeting Intelligence pipeline | 9 skills (transcribe, refine, polish, extract, patch, etc.) |
-| `insight-skills.zip` | Deep research methodology | 6 skills (brainstorm, biubiubiu, nblm, ppt-refine, publish) |
-| `challenge-skills.zip` | Red-Blue adversarial review | 1 skill |
-| `reflect-skills.zip` | Session retrospective | 1 skill |
-| `whatsnew-skills.zip` | Claude Code changelog viewer | 1 skill |
+| 文件 | 说明 | 技能数 |
+|------|------|--------|
+| `rpiv-loop-skills.zip` | RPIV 结构化开发流程 | 20 个（brainstorm, create-prd, plan-feature, execute, validation 等） |
+| `mint-skills.zip` | MINT 会议智能处理管线 | 9 个（transcribe, refine, polish, extract, patch 等） |
+| `insight-skills.zip` | Insight 深度研究方法论 | 6 个（brainstorm, biubiubiu, nblm, ppt-refine, publish） |
+| `challenge-skills.zip` | 红蓝对抗结构化审查 | 1 个 |
+| `reflect-skills.zip` | 会话复盘与经验提取 | 1 个 |
+| `whatsnew-skills.zip` | Claude Code 版本更新查看 | 1 个 |
 
-## Alternative: Marketplace Installation
-
-You can also install these as plugins via the Claude Code marketplace:
+## 也可通过 Marketplace 安装
 
 ```
-Marketplace URL: zhuqingxun/zqxbase
+/plugin marketplace add zhuqingxun/zqxbase
 ```
 
-The marketplace version and standalone ZIP version are always in sync.
+ZIP 版本与 marketplace 插件版本始终保持同步。
