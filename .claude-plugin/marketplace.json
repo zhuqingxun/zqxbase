@@ -38,7 +38,7 @@
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
-      "version": "1.0.0",
+      "version": "1.0.4",
       "keywords": [
         "reflect",
         "retrospective",
