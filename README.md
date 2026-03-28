@@ -27,8 +27,7 @@ Claude Code plugin marketplace — structured workflows, meeting intelligence, d
 
 ## 插件 / Plugins
 
-### rpiv-loop `v2.1.0`
-
+### rpiv-loop
 结构化开发流程：**需求 → 计划 → 实施 → 验证**。
 
 Structured development workflow: **Requirements → Plan → Implementation → Validation**.
@@ -37,8 +36,7 @@ Structured development workflow: **Requirements → Plan → Implementation → 
 
 **主要命令**: `/rpiv-loop:brainstorm`, `/rpiv-loop:plan-feature`, `/rpiv-loop:execute`, `/rpiv-loop:validation:code-review`
 
-### mint `v2.1.0`
-
+### mint
 **MINT (Meeting Intelligence)** — 从录音到结构化洞察的全流程管线。
 
 Audio-to-insights pipeline for meeting recordings.
@@ -55,28 +53,24 @@ Audio-to-insights pipeline for meeting recordings.
 
 **主要命令**: `/mint`, `/mint:transcribe`, `/mint:refine`, `/mint:polish`, `/mint:extract`
 
-### insight `v1.1.0`
-
+### insight
 **Insight** — 结构化深度研究流程。
 
 Deep research methodology: brainstorm → source discovery → deep research → writing → delivery.
 
 **主要命令**: `/insight:brainstorm`, `/insight:biubiubiu`, `/insight:nblm`, `/insight:ppt-refine`
 
-### challenge `v1.0.0`
-
+### challenge
 红蓝对抗 — 结构化攻防审查方案和决策。
 
 Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions.
 
-### reflect `v1.0.4`
-
+### reflect
 会话复盘 — 提取可沉淀的经验教训，区分知识类与行为类经验，精准写入规则。
 
 Session retrospective — extract reusable lessons with knowledge vs. behavior classification.
 
-### whatsnew `v1.0.0`
-
+### whatsnew
 版本更新查看器 — 查询 Claude Code release notes。
 
 Claude Code changelog viewer: check what's new in any release.
