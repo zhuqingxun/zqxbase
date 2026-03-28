@@ -1,10 +1,12 @@
 # zqxbase
 
-Claude Code 插件市场 — 结构化开发流程、会议智能处理、效率工具集。
+Claude Code 插件市场 — 结构化开发流程、会议智能处理、深度研究、效率工具集。
 
-Claude Code plugin marketplace — structured workflows, meeting intelligence, and productivity tools.
+Claude Code plugin marketplace — structured workflows, meeting intelligence, deep research, and productivity tools.
 
 ## 安装 / Install
+
+### 方式一：Marketplace（推荐）
 
 ```bash
 # 添加市场 / Add the marketplace
@@ -13,12 +15,19 @@ Claude Code plugin marketplace — structured workflows, meeting intelligence, a
 # 按需安装 / Install plugins (pick what you need)
 /plugin install rpiv-loop@zqxbase
 /plugin install mint@zqxbase
-/plugin install toolbox@zqxbase
+/plugin install insight@zqxbase
+/plugin install challenge@zqxbase
+/plugin install reflect@zqxbase
+/plugin install whatsnew@zqxbase
 ```
+
+### 方式二：独立 ZIP
+
+从 [`skills-release/`](./skills-release/) 目录下载 zip 文件，解压到 `~/.claude/skills/` 即可使用，无需 marketplace。
 
 ## 插件 / Plugins
 
-### rpiv-loop
+### rpiv-loop `v2.1.0`
 
 结构化开发流程：**需求 → 计划 → 实施 → 验证**。
 
@@ -26,9 +35,9 @@ Structured development workflow: **Requirements → Plan → Implementation → 
 
 提供完整的功能开发生命周期管理：头脑风暴、PRD 创建、计划制定、实施执行、多维度验证（代码审查、审计、交付报告）。
 
-**主要命令**: `/rpiv_loop:brainstorm`, `/rpiv_loop:plan-feature`, `/rpiv_loop:execute`, `/rpiv_loop:validation:code-review`
+**主要命令**: `/rpiv-loop:brainstorm`, `/rpiv-loop:plan-feature`, `/rpiv-loop:execute`, `/rpiv-loop:validation:code-review`
 
-### mint
+### mint `v2.1.0`
 
 **MINT (Meeting Intelligence)** — 从录音到结构化洞察的全流程管线。
 
@@ -46,19 +55,27 @@ Audio-to-insights pipeline for meeting recordings.
 
 **主要命令**: `/mint`, `/mint:transcribe`, `/mint:refine`, `/mint:polish`, `/mint:extract`
 
-### reflect
+### insight `v1.1.0`
 
-会话复盘 — 提取可沉淀的经验教训。
+**Insight** — 结构化深度研究流程。
 
-Session retrospective — extract reusable lessons and insights from your current conversation.
+Deep research methodology: brainstorm → source discovery → deep research → writing → delivery.
 
-### challenge
+**主要命令**: `/insight:brainstorm`, `/insight:biubiubiu`, `/insight:nblm`, `/insight:ppt-refine`
+
+### challenge `v1.0.0`
 
 红蓝对抗 — 结构化攻防审查方案和决策。
 
 Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions.
 
-### whatsnew
+### reflect `v1.0.4`
+
+会话复盘 — 提取可沉淀的经验教训，区分知识类与行为类经验，精准写入规则。
+
+Session retrospective — extract reusable lessons with knowledge vs. behavior classification.
+
+### whatsnew `v1.0.0`
 
 版本更新查看器 — 查询 Claude Code release notes。
 
