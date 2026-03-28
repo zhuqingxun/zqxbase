@@ -43,6 +43,13 @@
       "description": "Claude Code changelog viewer: check what's new in any Claude Code release",
       "version": "1.0.0",
       "keywords": ["whatsnew", "changelog", "release-notes", "version"]
+    },
+    {
+      "name": "insight",
+      "source": "./plugins/insight",
+      "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
+      "version": "1.0.0",
+      "keywords": ["research", "insight", "deep-dive", "analysis", "brainstorm"]
     }
   ]
 }

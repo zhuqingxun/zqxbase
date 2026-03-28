@@ -116,7 +116,7 @@ argument-hint: [path-to-plan]
 ### 准备提交
 - 确认所有更改已完成
 - 确认所有验证通过（附证据）
-- 准备使用 `/commit` 命令
+- 准备使用 git commit 提交代码
 
 ## 完成后续
 

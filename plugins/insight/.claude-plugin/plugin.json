@@ -1,0 +1,10 @@
+{
+  "name": "insight",
+  "version": "1.0.0",
+  "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
+  "author": {
+    "name": "zhuqingxun"
+  },
+  "repository": "https://github.com/zhuqingxun/zqxbase",
+  "keywords": ["research", "insight", "deep-dive", "analysis", "brainstorm"]
+}

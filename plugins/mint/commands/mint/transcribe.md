@@ -16,7 +16,7 @@ argument-hint: "<音频文件路径> <人名或会议名>"
 
 示例：
 - `/mint:transcribe D:\Downloads\interview.mp3 张三访谈`
-- `/mint:transcribe "D:\华为云盘\录音\meeting.m4a" 产品评审会`
+- `/mint:transcribe "D:\Documents\录音\meeting.m4a" 产品评审会`
 
 ## 执行流程
 
@@ -149,7 +149,7 @@ stages:
 
 - **平台**：阿里云百炼（DashScope）
 - **模型**：Fun-ASR（Paraformer-v2，中文 SOTA 级别）
-- **API Key**：从密钥文件读取「阿里bailian (标准 DashScope)」条目
+- **API Key**：从环境变量 `DASHSCOPE_API_KEY` 读取（配置方式详见 SETUP.md）
 - **功能开关**：说话人分离 + 标点恢复 + 时间戳
 
 ## 异常处理
