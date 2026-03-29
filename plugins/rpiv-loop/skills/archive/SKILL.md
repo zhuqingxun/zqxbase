@@ -2,9 +2,8 @@
 name: rpiv-loop:archive
 description: "归档已完成的过程文件"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # Archive: 归档过程文件
 
 将已完成(status=completed)的过程文件移动到归档目录,保持工作目录清爽。

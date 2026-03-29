@@ -2,9 +2,8 @@
 name: rpiv-loop:execute
 description: "执行实施计划"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # Execute: 从计划实施
 
 ## 要执行的计划
@@ -118,7 +117,7 @@ version: 2.1.0
 ### 准备提交
 - 确认所有更改已完成
 - 确认所有验证通过（附证据）
-- 准备使用 git commit 提交代码
+- 准备使用 `/commit` 命令
 
 ## 完成后续
 

@@ -2,9 +2,8 @@
 name: rpiv-loop:brainstorm
 description: "通过访谈对话澄清产品需求"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # Brainstorm: 产品需求访谈
 
 ## 概述

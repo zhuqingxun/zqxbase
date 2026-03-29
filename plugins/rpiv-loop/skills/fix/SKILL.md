@@ -2,9 +2,8 @@
 name: rpiv-loop:fix
 description: "基于 rpiv/todo 下的待办文件进行分析和修复"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # Fix: 分析并修复待办条目
 
 读取 `rpiv/todo/` 下的待办文件（支持 issue/feature/todo 三种类型），根据类型执行对应的处理流程，并将处理记录回写到文件中。

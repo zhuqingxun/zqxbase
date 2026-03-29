@@ -2,10 +2,9 @@
 name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, TaskCreate, TaskUpdate, TaskGet, TaskList
-version: 2.1.0
+allowed-tools: Read, Write, Bash, Agent, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, TaskCreate, TaskUpdate, TaskGet, TaskList
+version: 2.1.1
 ---
-
 # Biubiubiu: 全自主 RPIV 团队执行
 
 从对话上下文中提取需求，启动 agent 团队自主完成完整 RPIV 开发流程（PRD → Plan → Execute → Validate），全程无需用户介入。
@@ -106,8 +105,8 @@ TeamCreate:
 提示词要点：
 - 你是 RPIV 团队的架构师，负责产品设计和技术架构
 - **首要步骤**：开始任何文档编写前，先读取项目 CLAUDE.md 获取部署平台、技术栈、架构等基础设施信息。PRD/Plan 中涉及部署、环境、技术栈的内容必须以 CLAUDE.md 为准，禁止自行推断
-- **阶段 1**：读取需求摘要文件 `{brainstorm-summary-path}`，将其 `status` 更新为 `in-progress`。按照 RPIV create-prd 规范创建 PRD → `rpiv/requirements/prd-{feature-name}.md`。PRD 创建完成后，将需求摘要的 `status` 更新为 `completed`。PRD 规范参考 `/rpiv-loop:create-prd` 技能
-- **阶段 2**：等待 tech-research 任务完成（通过 TaskList 检查），然后按照 RPIV plan-feature 规范创建实施计划 → `rpiv/plans/plan-{feature-name}.md`。计划规范参考 `/rpiv-loop:plan-feature` 技能。代码库分析要做充分，计划要足够详细，让 Dev agent 无需额外调研就能实现
+- **阶段 1**：读取需求摘要文件 `{brainstorm-summary-path}`，将其 `status` 更新为 `in-progress`。按照 RPIV create-prd 规范创建 PRD → `rpiv/requirements/prd-{feature-name}.md`。PRD 创建完成后，将需求摘要的 `status` 更新为 `completed`。PRD 规范参考读取 `C:\Users\zqx\.claude\commands\rpiv-loop\create-prd.md`
+- **阶段 2**：等待 tech-research 任务完成（通过 TaskList 检查），然后按照 RPIV plan-feature 规范创建实施计划 → `rpiv/plans/plan-{feature-name}.md`。计划规范参考读取 `C:\Users\zqx\.claude\commands\rpiv-loop\plan-feature.md`。代码库分析要做充分，计划要足够详细，让 Dev agent 无需额外调研就能实现
 - **阶段 4**：对比实现代码与计划，检查是否有偏离或遗漏，将审查结果通过 SendMessage 发给 team leader
 - **完成任务的固定顺序**：标记 TaskUpdate completed 之前，必须先 Edit 对应的 `rpiv/` 文件，将 frontmatter `status` 更新为 `completed`、`updated_at` 更新为当前时间戳。顺序：Edit frontmatter → TaskUpdate completed，不可颠倒
 - 完成每个任务后 TaskList 找下一个任务
@@ -138,7 +137,7 @@ TeamCreate:
 - **阶段 1**：分析需求，制定测试策略文档 `rpiv/validation/test-strategy-{feature-name}.md`（frontmatter status: `pending`）
 - **阶段 2**：基于 PRD 编写测试规格 `rpiv/validation/test-specs-{feature-name}.md`（frontmatter status: `pending`）和验收标准（等 PRD 完成后开始）
 - **阶段 3**：基于实施计划编写测试用例代码（与 Dev 并行）
-- **阶段 4**：运行测试 + 代码审查。测试全部通过后，将 test-strategy 和 test-specs 的 status 更新为 `completed`。代码审查规范参考 `/rpiv-loop:\validation:code-review` 技能。审查报告保存到 `rpiv/validation/code-review-{feature-name}.md`
+- **阶段 4**：运行测试 + 代码审查。测试全部通过后，将 test-strategy 和 test-specs 的 status 更新为 `completed`。代码审查规范参考读取 `C:\Users\zqx\.claude\commands\rpiv-loop\validation\code-review.md`。审查报告保存到 `rpiv/validation/code-review-{feature-name}.md`
 - 审查标准要苛刻：安全问题标记为 CRITICAL，每个问题精确到文件和行号
 - 如果发现 critical/high 问题，通过 SendMessage 立即告知 team leader
 - **完成任务的固定顺序**：标记 TaskUpdate completed 之前，必须先 Edit 对应的 `rpiv/` 文件，将 frontmatter `status` 更新为 `completed`、`updated_at` 更新为当前时间戳。顺序：Edit frontmatter → TaskUpdate completed，不可颠倒
@@ -160,7 +159,7 @@ TeamCreate:
 提示词要点：
 - 你是 RPIV 团队的开发工程师
 - 读取实施计划 `rpiv/plans/plan-{feature-name}.md`
-- 按照计划中的逐步任务实现代码。执行规范参考 `/rpiv-loop:execute` 技能
+- 按照计划中的逐步任务实现代码。执行规范参考读取 `C:\Users\zqx\.claude\commands\rpiv-loop\execute.md`
 - 你负责的范围：{Leader 根据 Plan 指定的具体模块/文件列表}
 - 严格按计划实现，不擅自扩展范围
 - 遵循项目 CLAUDE.md 中的编码规范

@@ -2,9 +2,8 @@
 name: rpiv-loop:record
 description: "从对话上下文或用户描述中记录问题/需求/待办到 rpiv/todo"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # Record: 记录待办条目
 
 将当前会话中发现的问题、功能需求或待办事项，结构化记录到 `rpiv/todo/` 目录下，形成可追踪的文件。支持三种类型：issue（问题/bug）、feature（功能需求）、todo（通用待办）。

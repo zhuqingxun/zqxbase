@@ -2,9 +2,8 @@
 name: rpiv-loop:\validation:system-review
 description: "分析实施与计划的对比，以改进流程"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # 系统审查
 
 对实施遵循计划的程度进行元级别分析，并识别流程改进。
@@ -34,7 +33,7 @@ version: 2.1.0
 2. 读取执行报告路径：$2
 3. 查找相关的 code-review 文件：`rpiv/validation/code-review-{同名}.md`
 4. 读取上述文件的 frontmatter，记录当前状态供后续分析
-5. **不修改**这些文件的 status — 它们由各自的上游技能负责管理（参见 `references/frontmatter-spec.md` 职责表）
+5. **不修改**这些文件的 status — 它们由各自的上游技能负责管理（参见 `~/.claude/references/rpiv-loop/frontmatter-spec.md` 职责表）
 
 ## 上下文和输入
 
@@ -42,7 +41,7 @@ version: 2.1.0
 
 **计划命令：**
 阅读此内容以了解规划流程和指导计划创建的指令。
-.claude/commands/rpiv_loop/plan-feature.md
+.claude/commands/rpiv-loop/plan-feature.md
 
 **生成的计划：**
 阅读此内容以了解代理应该做什么。
@@ -50,7 +49,7 @@ version: 2.1.0
 
 **执行命令：**
 阅读此内容以了解执行流程和指导实施的指令。
-.claude/commands/rpiv_loop/execute.md
+.claude/commands/rpiv-loop/execute.md
 
 **执行报告：**
 阅读此内容以了解代理实际做了什么以及原因。
@@ -230,7 +229,7 @@ root_cause: [计划不明确 | 缺少上下文 | 等]
 
 **审查完成后：**
 
-1. 更新以下文件的 status 为 `completed`，并更新 `updated_at`（参见 `references/frontmatter-spec.md` 职责表）：
+1. 更新以下文件的 status 为 `completed`，并更新 `updated_at`（参见 `~/.claude/references/rpiv-loop/frontmatter-spec.md` 职责表）：
    - 执行报告（$2）— 由本技能负责关闭
    - 当前系统审查文件 — 自己关闭自己
 2. **一致性校验**（只检查，不修改）：
@@ -241,7 +240,7 @@ root_cause: [计划不明确 | 缺少上下文 | 等]
    - 审查本报告中"系统改进行动"章节的每一条建议
    - 对每条 "更新 CLAUDE.md" 或 "创建新命令" 的建议，判断：是否足够通用、是否已有类似规则？
    - 如果确认需要更新，直接在审查报告末尾添加"待执行的规则更新"清单，格式：`[ ] 更新 {文件路径}：{具体变更内容}`
-   - 提醒用户确认后执行
+   - 提醒用户确认后执行，或使用 `/reflect` 进行更全面的复盘
 4. 提示用户："系统审查完成。建议使用 `/rpiv-loop:archive {feature-name}` 批量归档。"
    - 列出所有相关文件及其路径和当前状态
 

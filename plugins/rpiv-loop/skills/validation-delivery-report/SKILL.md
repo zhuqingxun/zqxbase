@@ -2,9 +2,8 @@
 name: rpiv-loop:\validation:delivery-report
 description: "生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
-
 # Delivery Report: 交付报告
 
 聚合一个功能的所有 RPIV 过程工件，生成面向外部（团队成员、利益相关方）的交付摘要文档。

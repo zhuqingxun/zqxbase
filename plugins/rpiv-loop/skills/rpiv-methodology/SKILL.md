@@ -3,7 +3,7 @@ name: rpiv-loop:rpiv-methodology
 description: >-
   RPIV 结构化开发方法论——四阶段功能开发流程(需求→计划→实施→验证)。
   当用户的项目安装了此插件时，自动加载 RPIV 方法论上下文。
-version: 2.1.0
+version: 2.1.1
 ---
 
 # RPIV 开发方法论
