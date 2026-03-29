@@ -5,7 +5,7 @@ description: >-
   默认执行全部四个阶段：Transcribe -> Refine -> Polish -> Extract，阶段间设门禁供用户审阅。
   当用户提到"处理录音""从头跑一遍""mint""完整处理"时触发。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill
-version: 2.1.0
+version: 2.1.1
 ---
 
 # MINT 一键流水线编排器

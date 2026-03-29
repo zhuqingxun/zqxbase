@@ -2,8 +2,10 @@
 name: mint:patch
 description: "MINT 词表修正——维护 ASR 纠错词表并批量刷新已生成的全部稿件。"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
+
+
 
 # MINT 词表修正（Patch）
 

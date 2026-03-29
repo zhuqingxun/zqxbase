@@ -3,8 +3,10 @@ name: mint:transcribe
 description: >-
   MINT 流水线 Stage 1: 语音转文本——调用阿里云百炼平台将录音文件转为带时间戳和说话人标记的原始口水稿。当用户提到"语音转文字""录音转文本""转录""transcribe""把录音转成文字""ASR"时使用。支持 mp3/m4a/wav/flac/ogg 等常见音频格式，自动启用说话人分离。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
+
+
 
 # mint:transcribe — 语音转文本
 
@@ -18,9 +20,51 @@ version: 2.1.0
 
 示例：
 - `/mint:transcribe D:\Downloads\interview.mp3 张三访谈`
-- `/mint:transcribe "D:\Documents\录音\meeting.m4a" 产品评审会`
+- `/mint:transcribe "D:\华为云盘\录音\meeting.m4a" 产品评审会`
 
 ## 执行流程
+
+### 前置检查：API Key 配置
+
+在执行任何操作之前，先确认百炼 API Key 已配置：
+
+```bash
+echo $DASHSCOPE_API_KEY
+```
+
+**已配置**（输出非空）→ 跳过此步骤，进入第一步。
+
+**未配置**（输出为空）→ 启动引导式配置流程：
+
+1. 使用 AskUserQuestion 告知用户并提供选项：
+   - **"我已有百炼 API Key"** — 直接输入 key
+   - **"我没有，引导我获取"** — 输出获取指引（见下方）
+   - **"跳过，我自行配置环境变量"** — 终止引导，提示 `export DASHSCOPE_API_KEY="sk-..."`
+
+2. **引导获取 API Key**（选择"引导我获取"时展示）：
+   ```
+   请按以下步骤获取百炼 API Key：
+   1. 访问 https://bailian.console.aliyun.com/
+   2. 登录阿里云账号（没有则需注册）
+   3. 进入控制台 → 左侧菜单「API-KEY 管理」
+   4. 点击「创建 API Key」，复制生成的 sk-... 格式密钥
+   ```
+
+3. **用户提供 key 后，验证有效性**：
+   ```bash
+   uv run python -c "
+   import dashscope
+   dashscope.api_key = '{用户输入的key}'
+   r = dashscope.Models.list()
+   print('VALID' if r.status_code == 200 else f'INVALID: {r.message}')
+   "
+   ```
+   - VALID → 继续配置
+   - INVALID → 提示 key 无效，请重新检查
+
+4. **持久化配置**（使用 AskUserQuestion 让用户选择）：
+   - **"写入 settings.json（推荐）"** — 调用 `/update-config` 将 `DASHSCOPE_API_KEY` 写入 `~/.claude/settings.json` 的 `env` 字段，跨会话永久生效
+   - **"仅本次会话"** — 执行 `export DASHSCOPE_API_KEY="sk-..."`，重启后需重新配置
 
 ### 第一步：解析参数
 
@@ -151,7 +195,7 @@ stages:
 
 - **平台**：阿里云百炼（DashScope）
 - **模型**：Fun-ASR（Paraformer-v2，中文 SOTA 级别）
-- **API Key**：从环境变量 `DASHSCOPE_API_KEY` 读取（配置方式详见 SETUP.md）
+- **API Key**：从密钥文件读取「阿里bailian (标准 DashScope)」条目
 - **功能开关**：说话人分离 + 标点恢复 + 时间戳
 
 ## 异常处理

@@ -2,8 +2,10 @@
 name: mint:revise
 description: "MINT 定向修订——对清洁稿及其全部派生文件执行内容层面的定制化修订。"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
+
+
 
 # MINT 定向修订（Revise）
 

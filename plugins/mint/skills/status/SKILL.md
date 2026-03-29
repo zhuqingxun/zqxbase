@@ -2,8 +2,10 @@
 name: mint:status
 description: "MINT 状态查看——读取 meta.yaml 展示当前会议处理进度、质量评分和修订历史。"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.0
+version: 2.1.1
 ---
+
+
 
 # MINT 状态查看（Status）
 

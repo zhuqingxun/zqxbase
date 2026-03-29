@@ -3,8 +3,9 @@ name: mint:refine
 description: >-
   MINT 流水线 Stage 2: 将 ASR 原始转录稿清洁为可读逐字稿。使用 Agent Team 双路交叉校对，包含架构师、双路校对员、审查员、人工澄清环节。支持保守/适度两种模式。
 allowed-tools: Read, Write, Bash, Agent, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, TaskCreate, TaskUpdate, TaskGet, TaskList
-version: 2.1.0
+version: 2.1.1
 ---
+
 
 # mint:refine — 校对清洁
 
@@ -18,7 +19,7 @@ version: 2.1.0
 
 - `<工作目录>`：MINT 会议目录路径（包含 `02_原始稿/` 子目录）
 - `[模式]`：可选，`保守` / `适度`（默认）
-- `--脱敏`：同时生成脱敏版本。脱敏规则参见 `references/lessons-learned.md` 第三节
+- `--脱敏`：同时生成脱敏版本。脱敏规则参见 `./references/lessons-learned.md` 第三节
 
 示例：
 - `/mint:refine D:/WORK/meetings/2026-03-20-周会` — 适度模式校对
@@ -86,9 +87,9 @@ Architect 将所有拿不准的项目按影响程度分级：
 2. "一个酒吧"（00:22:11）→ 可能是：A.某人名 B.搭档/伙伴 C.其他
 
 ### 中优先级（人名/术语确认）
-3. "强哥"和"枪哥"是同一人吗？
-4. "李山总"和"黎三总"是同一人吗？
-5. Speaker 1 是否为某某？Speaker 2 是否为访谈者？
+3. "泽哥"和"浙哥"是同一人吗？
+4. "王总"和"汪总"是同一人吗？
+5. Speaker 1 是否为李总？Speaker 2 是否为访谈者？
 
 ### 低优先级（可跳过）
 6. "趋应为"是否为"不得不配合"？
@@ -146,7 +147,7 @@ Reviewer 对每段的 A/B 两版输出进行交叉对比：
 ### 阶段 5: 输出与关闭
 
 1. 写入 `03_校对稿/{name}_校对稿.md`（如已有旧版本，先移至 `03_校对稿/old/`）
-2. 如果指定了 `--脱敏`，基于校对结果生成脱敏版本（移除受访者姓名/岗位/职级/个人经历细节/时间戳），写入 `03_校对稿/{name}_校对稿_脱敏.md`。脱敏规则详见 `references/lessons-learned.md` 第三节
+2. 如果指定了 `--脱敏`，基于校对结果生成脱敏版本（移除受访者姓名/岗位/职级/个人经历细节/时间戳），写入 `03_校对稿/{name}_校对稿_脱敏.md`。脱敏规则详见 `./references/lessons-learned.md` 第三节
 3. 更新 `meta.yaml` 中 refine 阶段状态
 4. 终端输出：统计报告 + 质量评分表 + 变更详情 + 人工澄清记录
 5. 关闭团队
@@ -185,7 +186,7 @@ stages:
 - 在保守基础上增加：清理所有口水词、精简冗余、口语书面化、语法修正
 - 保持：段落结构、核心观点、说话人语气立场
 
-详细的校对模式规则见 `references/worker-prompt.md`。
+详细的校对模式规则见 `./references/worker-prompt.md`。
 
 ## 校对通用规则
 
@@ -246,7 +247,7 @@ stages:
 | # | 原文 | 用户确认 |
 |---|------|---------|
 | 1 | "完全无味的人选" | → 具体的人选 |
-| 2 | "强哥"="枪哥" | → 是，同一人 |
+| 2 | "泽哥"="浙哥" | → 是，同一人 |
 | ... | | |
 
 ## 变更详情（典型示例）
@@ -259,10 +260,10 @@ stages:
 
 | 文件 | 用途 | 何时读取 |
 |------|------|---------|
-| `references/architect-prompt.md` | Architect 指引（含不确定项清单格式） | 阶段 1 |
-| `references/worker-prompt.md` | Worker 校对规则（两种模式+重叠区说明） | 阶段 2 |
-| `references/reviewer-prompt.md` | Reviewer 评分标准+交叉对比策略 | 阶段 3 |
-| `references/lessons-learned.md` | 历次校对积累的经验教训（高频错字表、语义陷阱、脱敏规则等） | Architect 阶段 1 + Reviewer 阶段 3 |
+| `./references/architect-prompt.md` | Architect 指引（含不确定项清单格式） | 阶段 1 |
+| `./references/worker-prompt.md` | Worker 校对规则（两种模式+重叠区说明） | 阶段 2 |
+| `./references/reviewer-prompt.md` | Reviewer 评分标准+交叉对比策略 | 阶段 3 |
+| `./references/lessons-learned.md` | 历次校对积累的经验教训（高频错字表、语义陷阱、脱敏规则等） | Architect 阶段 1 + Reviewer 阶段 3 |
 
 ## 异常处理
 
