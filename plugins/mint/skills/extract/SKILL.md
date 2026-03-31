@@ -2,10 +2,9 @@
 name: mint:extract
 description: >-
   MINT 流水线 Stage 4: 结构化信息提取——从逐字稿中提取要点摘要、发言人分析（含深度意图分析）、行动项、关键决策等结构化产出物。支持选择输入源（clean 或 polished 稿）和指定产出物子集。
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
+version: 2.1.2
 ---
-
 
 
 # mint:extract — 结构化信息提取
@@ -45,7 +44,7 @@ version: 2.1.1
 
 Executive Summary，1-2 页的精炼摘要，让读者快速了解全貌。
 
-详细生成指引见 `./references/summary-prompt.md`。
+详细生成指引见 `~/.claude/skills/mint/references/summary-prompt.md`。
 
 ### 2. 发言人分析（speakers）
 
@@ -53,7 +52,7 @@ Executive Summary，1-2 页的精炼摘要，让读者快速了解全貌。
 
 每位发言人的观点提炼 + 深度意图分析。不只是"说了什么"，更要分析"为什么这么说"。
 
-详细生成指引见 `./references/speaker-analysis-prompt.md`。
+详细生成指引见 `~/.claude/skills/mint/references/speaker-analysis-prompt.md`。
 
 ### 3. 行动项（actions）
 
@@ -85,7 +84,7 @@ Executive Summary，1-2 页的精炼摘要，让读者快速了解全貌。
 
 #### 3a. 发言人分析（speakers）
 
-使用 `./references/speaker-analysis-prompt.md` 中的详细指引，分析每位发言人的：
+使用 `~/.claude/skills/mint/references/speaker-analysis-prompt.md` 中的详细指引，分析每位发言人的：
 - 显性立场和核心观点
 - 隐性意图和策略行为
 - 利益诉求和关切点
@@ -162,7 +161,7 @@ Executive Summary，1-2 页的精炼摘要，让读者快速了解全貌。
 
 最后生成摘要，因为可以参考前面已生成的 speakers/actions/decisions 内容提高质量。
 
-使用 `./references/summary-prompt.md` 中的详细指引。
+使用 `~/.claude/skills/mint/references/summary-prompt.md` 中的详细指引。
 
 ### 第四步：版本管理与输出
 

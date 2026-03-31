@@ -1,16 +1,17 @@
 ---
 name: rpiv-loop:create-prd
-description: "基于对话上下文创建产品需求文档"
+description: 基于对话上下文创建产品需求文档
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+version: 2.1.2
 ---
+
 # Create PRD: 生成产品需求文档
 
 ## 概述
 
 1. 基于以下输入生成全面的产品需求文档（PRD）。
     - 当前对话上下文和讨论的需求
-    - $ARGUMENTS 
+    - $ARGUMENTS
 2. 使用下面定义的结构和章节创建完整、专业的 PRD。
 3. 针对输出文档架构中需要，但是未获取的内容，采用面试对话的形式和我互动，确保每一个关键细节都得到充分澄清。
 

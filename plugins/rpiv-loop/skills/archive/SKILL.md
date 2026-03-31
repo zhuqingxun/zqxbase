@@ -1,9 +1,10 @@
 ---
 name: rpiv-loop:archive
-description: "归档已完成的过程文件"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+description: 归档已完成的过程文件
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
+version: 2.1.2
 ---
+
 # Archive: 归档过程文件
 
 将已完成(status=completed)的过程文件移动到归档目录,保持工作目录清爽。
@@ -12,18 +13,18 @@ version: 2.1.1
 
 ```bash
 # 归档所有已完成的文件
-/archive all
+/rpiv-loop:archive all
 
 # 归档指定特性的所有相关文件
-/archive feature-name
+/rpiv-loop:archive feature-name
 
 # 归档指定文件
-/archive path/to/file.md
+/rpiv-loop:archive path/to/file.md
 ```
 
 ## 执行逻辑
 
-### 模式 1: 归档所有已完成文件 (`/archive all`)
+### 模式 1: 归档所有已完成文件 (`/rpiv-loop:archive all`)
 
 1. 扫描以下位置的所有 .md 文件:
    - `rpiv/requirements/`
@@ -36,7 +37,7 @@ version: 2.1.1
 4. 对每个文件执行归档操作(见下方)
 5. 生成归档报告
 
-### 模式 2: 归档特性相关文件 (`/archive feature-name`)
+### 模式 2: 归档特性相关文件 (`/rpiv-loop:archive feature-name`)
 
 1. 在以下位置查找匹配 `*-{feature-name}.md` 的文件:
    - `rpiv/requirements/prd-{feature-name}.md`
@@ -51,7 +52,7 @@ version: 2.1.1
 5. 如果某些文件 status 不是 completed,报告警告
 6. 生成归档报告
 
-### 模式 3: 归档指定文件 (`/archive path/to/file.md`)
+### 模式 3: 归档指定文件 (`/rpiv-loop:archive path/to/file.md`)
 
 1. 读取指定文件
 2. 检查是否有 frontmatter

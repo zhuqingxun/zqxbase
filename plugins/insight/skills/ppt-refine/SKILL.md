@@ -1,9 +1,12 @@
 ---
 name: insight:ppt-refine
 description: >-
-  将粗加工 PPT 升级为精加工版本。支持两种模式: (1) NBLM 增强——架构师主导布局重构 + NotebookLM 生成视觉资产嵌入; (2) 纯代码增强——用 python-pptx 改善字体/配色/布局/渐变，无需 NBLM。当用户提到'精加工 PPT'、'PPT 精修'、'ppt-refine'、'PPT 增强'、'美化 PPT'、'给 PPT 加图'、'PPT 排版优化'时使用。也适用于: 用户对已生成的 PPT 不满意想要视觉提升、想改善字体配色、或想给纯文字页面添加图解的场景。
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 1.1.0
+  将粗加工 PPT 升级为精加工版本。支持两种模式: (1) NBLM 增强——架构师主导布局重构 + NotebookLM 生成视觉资产嵌入;
+  (2) 纯代码增强——用 python-pptx 改善字体/配色/布局/渐变，无需 NBLM。
+  当用户提到'精加工 PPT'、'PPT 精修'、'ppt-refine'、'PPT 增强'、'美化 PPT'、'给 PPT 加图'、'PPT 排版优化'时使用。
+  也适用于: 用户对已生成的 PPT 不满意想要视觉提升、想改善字体配色、或想给纯文字页面添加图解的场景。
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
+version: 1.1.1
 ---
 
 # PPT 精加工
@@ -42,7 +45,7 @@ version: 1.1.0
 4. 上传源材料（按优先级）：
    - `research/*.md`（调研素材，最重要）
    - `site/docs/{项目目录}/*.md`（网站内容）
-   - 需求文档（`*.md`，如有）
+   - `rpiv/prd/*.md`（需求文档）
    - 每个文件：`notebooklm source add --file "{路径}"`
    - 上限 50 个源，超出则跳过重复性高的
 5. 保存 `nblm-meta.json`（含 notebook_id、sources_count、source_dirs）
@@ -96,8 +99,8 @@ nblm_tasks:    # [NBLM] 页面的资产需求
 
 content_fixes:   # 内容清洗清单
   - page: 25
-    issue: "包含内部站点 URL example.internal.com"
-    fix: "替换为 '{项目名} | {年份}'"
+    issue: "包含内部站点 URL insight.zqxbase.com"
+    fix: "替换为 'Insight Research | 2026'"
 ```
 
    **`position` 取值**：`right-half` / `left-half` / `bottom-strip` / `bottom-card` / `center-full` / `top-banner`

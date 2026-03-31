@@ -1,9 +1,11 @@
 ---
-name: rpiv-loop:\validation:validate
-description: "根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+name: rpiv-loop:validation:validate
+description: >-
+  根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
+allowed-tools: Read, Bash, Grep, Glob
+version: 2.1.2
 ---
+
 # 运行项目的全面验证
 
 按项目类型执行验证并报告。优先采用项目自定义的验证方式，否则根据检测到的技术栈自动选择 lint、测试、构建及可选的服务健康检查。

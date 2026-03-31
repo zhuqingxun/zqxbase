@@ -1,9 +1,11 @@
 ---
-name: rpiv-loop:\validation:code-review
-description: "在提交前运行的技术代码审查，用于质量和错误检查"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+name: rpiv-loop:validation:code-review
+description: >-
+  在提交前运行的技术代码审查，用于质量和错误检查
+allowed-tools: Read, Bash, Grep, Glob, Edit, Write
+version: 2.1.2
 ---
+
 对最近更改的文件执行技术代码审查。
 
 ## 核心原则

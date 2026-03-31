@@ -1,9 +1,10 @@
 ---
 name: rpiv-loop:flow-status
-description: "查看过程文件的状态"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+description: 查看过程文件的状态
+allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
+version: 2.1.2
 ---
+
 # Status: 查看文件状态
 
 显示过程文件的当前状态,帮助管理开发流程。
@@ -11,14 +12,14 @@ version: 2.1.1
 ## 用法
 
 ```bash
-/flow-status              # 精简摘要（默认）
-/flow-status all          # 按特性聚合的完整表格
-/flow-status pending      # 只显示待处理文件
-/flow-status in-progress  # 只显示进行中文件
-/flow-status completed    # 只显示已完成文件
-/flow-status feature-name # 某个特性的详细状态
-/flow-status check        # 一致性检查,报告异常
-/flow-status fix          # 交互式修复状态异常
+/rpiv-loop:flow-status              # 精简摘要（默认）
+/rpiv-loop:flow-status all          # 按特性聚合的完整表格
+/rpiv-loop:flow-status pending      # 只显示待处理文件
+/rpiv-loop:flow-status in-progress  # 只显示进行中文件
+/rpiv-loop:flow-status completed    # 只显示已完成文件
+/rpiv-loop:flow-status feature-name # 某个特性的详细状态
+/rpiv-loop:flow-status check        # 一致性检查,报告异常
+/rpiv-loop:flow-status fix          # 交互式修复状态异常
 ```
 
 ## 执行逻辑
@@ -31,7 +32,7 @@ version: 2.1.1
 2. 读取 frontmatter 的 status, type, created_at, updated_at, related_files（todo 使用 title 字段）
 3. 从文件名提取名称（去掉 `prd-`/`plan-`/`code-review-`/`exec-report-`/`system-review-`/`delivery-report-`/`test-strategy-`/`test-specs-`/`brainstorm-summary-`/`research-` 前缀；todo 文件去掉 `issue-`/`feature-`/`todo-` 前缀）
 4. 扫描 `rpiv/archive/` 统计已归档文件数
-5. **Status 值合法性校验**（参见 `~/.claude/references/rpiv-loop/frontmatter-spec.md`）：
+5. **Status 值合法性校验**（参见 `~/.claude/skills/rpiv-loop/references/frontmatter-spec.md`）：
    - 流程文件允许：`pending` / `in-progress` / `completed` / `superseded` / `archived`
    - Todo 文件允许：`open` / `in-progress` / `completed`
    - 辅助文件允许：`pending` / `completed`
@@ -56,7 +57,7 @@ version: 2.1.1
 ⚠️ 异常 1 | 🔄 进行中 1 | ⏳ 待处理 0 | ✓ 已完成 2 | 📦 已归档 2 | 📋 Todo 3
 
 ### ⚠️ 异常
-- prd-user-auth.md [in-progress] — 关联 Plan 已完成,建议更新 → `/flow-status fix`
+- prd-user-auth.md [in-progress] — 关联 Plan 已完成,建议更新 → `/rpiv-loop:flow-status fix`
 
 ### 🔄 进行中
 - plan-tray-flash.md — 托盘闪烁提醒 [Plan]
@@ -83,7 +84,7 @@ version: 2.1.1
 - 一行式计数摘要始终显示
 - 无 frontmatter 的文件归入单独的"未跟踪"区块（仅当存在时）
 
-### 模式 1: 完整表格 (`/flow-status all`)
+### 模式 1: 完整表格 (`/rpiv-loop:flow-status all`)
 
 按特性聚合为表格,每特性一行:
 
@@ -103,7 +104,7 @@ version: 2.1.1
 
 **表格符号:** ✓ completed, 🔄 in-progress, ⏳ pending, — 不存在
 
-### 模式 2: 按状态过滤 (`/flow-status {status}`)
+### 模式 2: 按状态过滤 (`/rpiv-loop:flow-status {status}`)
 
 只显示指定状态的文件,每文件一行,含路径:
 
@@ -116,7 +117,7 @@ version: 2.1.1
   更新于 2026-01-28 08:30
 ```
 
-### 模式 3: 特性详情 (`/flow-status feature-name`)
+### 模式 3: 特性详情 (`/rpiv-loop:flow-status feature-name`)
 
 该特性的所有文件详细信息（这是唯一展示完整时间戳的视图）:
 
@@ -139,7 +140,7 @@ version: 2.1.1
 建议归档 → `/rpiv-loop:archive user-auth`
 ```
 
-### 模式 4: 一致性检查 (`/flow-status check`)
+### 模式 4: 一致性检查 (`/rpiv-loop:flow-status check`)
 
 检查规则:
 
@@ -157,7 +158,7 @@ version: 2.1.1
 
 输出: 仅列出异常项,无异常则输出 `✓ 全部一致,无异常`
 
-### 模式 5: 自动修复 (`/flow-status fix`)
+### 模式 5: 自动修复 (`/rpiv-loop:flow-status fix`)
 
 1. 先运行一致性检查
 2. 可自动修复的直接执行（PRD 状态落后于 Plan → 自动更新）
@@ -170,4 +171,4 @@ version: 2.1.1
 - 按 updated_at 降序排列
 - 状态符号: ⏳ pending, 🔄 in-progress, ✓ completed, ⏪ superseded, 📦 archived
 - 辅助文件（brainstorm-summary、research）在精简摘要中归入独立的"📝 辅助文件"区块显示
-- Status 合法性规则参见 `~/.claude/references/rpiv-loop/frontmatter-spec.md`
+- Status 合法性规则参见 `~/.claude/skills/rpiv-loop/references/frontmatter-spec.md`

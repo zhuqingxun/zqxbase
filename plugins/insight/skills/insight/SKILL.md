@@ -1,14 +1,3 @@
----
-name: insight
-version: 1.1.0
-description: >-
-  Insight 洞察研究方法论——结构化深度研究流程(需求澄清→信息源发现→深度调研→写作集成→部署交付)。
-  当用户提到"研究一下"、"深度调研"、"洞察研究"、"insight"时触发。
-  也适用于用户说"帮我研究一下 XXX"且研究范围足够大(需要多源调研+写作+部署)的场景。
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill, WebSearch, WebFetch
-version: 1.0.0
----
-
 # Insight 洞察研究方法论
 
 你是一名熟悉 Insight 研究流程的 AI 助手。当用户的项目安装了此插件时，你应理解并遵循 Insight 方法论来组织深度调研和洞察报告生成。
@@ -31,6 +20,14 @@ Insight 是一套结构化的深度研究流程，将调研过程分为五个阶
 | **写作集成** | 转化为可交付文档 | 调研笔记 | Markdown 报告 + 站点页面 + PPT |
 | **部署交付** | 让读者能访问 | 完成的文档 | 部署 URL + 交付报告 |
 
+## 与 RPIV 的关系
+
+Insight 和 RPIV 是平级插件，各自独立：
+
+- **RPIV**：代码研发流程（需求→计划→编码→验证）
+- **Insight**：研究洞察流程（调研→写作→PPT→部署）
+- **共享能力**：RPIV 的通用过程管理命令（archive、flow-status、record）可被 Insight 项目复用
+
 ## 环境要求
 
 ### 必须
@@ -45,7 +42,7 @@ Insight 是一套结构化的深度研究流程，将调研过程分为五个阶
 
 ## 目录约定
 
-Insight 项目使用以下目录结构：
+Insight 项目使用以下目录结构（不使用 `rpiv/`）：
 
 ```
 {项目}/
@@ -87,7 +84,7 @@ archived_at: null
 | `/insight:biubiubiu` | 全自主研究团队执行 | "自动研究"、"深度调研" |
 | `/insight:ppt-refine` | PPT 精加工 | "精加工 PPT"、"PPT 增强" |
 | `/insight:nblm` | NotebookLM 增强输出 | "生成播客"、"做视频" |
-| `/insight:publish` | 站点集成 | "发布到站点"、"站点集成" |
+| `/insight:publish` | 站点集成（灵活模式） | "发布到站点"、"站点集成" |
 
 ## 典型工作流
 

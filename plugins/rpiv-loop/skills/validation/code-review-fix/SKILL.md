@@ -1,9 +1,11 @@
 ---
-name: rpiv-loop:\validation:code-review-fix
-description: "修复手动/AI 代码审查中发现的问题的流程"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+name: rpiv-loop:validation:code-review-fix
+description: >-
+  修复手动/AI 代码审查中发现的问题的流程
+allowed-tools: Read, Bash, Grep, Glob, Edit, Write
+version: 2.1.2
 ---
+
 我运行/执行了代码审查并发现了这些问题：
 
 代码审查（文件或问题描述）：$1
@@ -19,7 +21,7 @@ version: 2.1.1
 
 所有修复完成后：
 
-1. 运行验证命令（参见 commands/validate.md）以完成修复
+1. 运行 `/rpiv-loop:validation:validate` 以完成修复
 2. **回写审查文档闭环**：打开原始代码审查文件，将每个问题的 `status` 更新为以下三种之一（禁止存在无归属的 skipped 状态）：
    - `fixed` — 已修复的问题
    - `wont_fix` — 评估后决定不修复的问题，在 `status` 行下方追加 `wont_fix_reason: [原因]`（如：风格偏好、设计意图、已被其他修复覆盖、影响极低等）

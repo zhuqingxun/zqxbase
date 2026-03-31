@@ -1,10 +1,13 @@
 ---
 name: mint:sync
-description: "MINT 下游同步——将人工手动修改过的文件变更传播到下游所有派生文件。"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+description: >-
+  MINT 下游同步——将人工手动修改过的文件变更传播到下游所有派生文件。
+  当用户手动编辑了某个阶段的文件（如在校对稿中删除内容、修改表述），然后需要将这些变更同步到编辑稿、分析稿等下游文件时使用。
+  触发场景："同步到下游""我改了校对稿，帮我更新后面的""sync""手动改了，传播一下""把我的修改同步过去"。
+  与 revise 的区别：revise 是用户描述要改什么，AI 执行；sync 是用户已经改好了，AI 检测差异并传播。
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
+version: 2.1.2
 ---
-
 
 
 # MINT 下游同步（Sync）

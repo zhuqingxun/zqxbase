@@ -1,10 +1,12 @@
 ---
 name: mint:revise
-description: "MINT 定向修订——对清洁稿及其全部派生文件执行内容层面的定制化修订。"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+description: >-
+  MINT 定向修订——对清洁稿及其全部派生文件执行内容层面的定制化修订。
+  与 mint:patch（修词表错误）不同，本技能处理编辑决策：改措辞、删段落、换视角、脱敏调整等。
+  当用户说"把XX改成YY""删掉关于XX的部分""这段话换个说法""这里需要脱敏""修订一下稿件"时触发。
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
+version: 2.1.2
 ---
-
 
 
 # MINT 定向修订（Revise）

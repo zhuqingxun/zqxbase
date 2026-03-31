@@ -5,7 +5,7 @@ description: >-
   默认执行全部四个阶段：Transcribe -> Refine -> Polish -> Extract，阶段间设门禁供用户审阅。
   当用户提到"处理录音""从头跑一遍""mint""完整处理"时触发。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill
-version: 2.1.1
+version: 2.1.2
 ---
 
 # MINT 一键流水线编排器
@@ -84,7 +84,7 @@ Transcribe → Refine ──┬──→ Polish → Extract（默认路径）
 
 #### Stage 1: Transcribe（`--from transcribe` 或默认起点）
 
-**调用**：使用 `/mint:transcribe` 技能执行，传入音频路径和会议名
+**调用**：使用 Skill 工具调用 mint:transcribe，传入音频路径和会议名
 
 **摘要展示**：
 ```
@@ -105,7 +105,7 @@ Transcribe → Refine ──┬──→ Polish → Extract（默认路径）
 
 #### Stage 2: Refine（`--from refine`）
 
-**调用**：使用 `/mint:refine` 技能执行，传入工作目录和 mode 参数。如果指定了 `--脱敏`，同时传递给 refine
+**调用**：使用 Skill 工具调用 mint:refine，传入工作目录和 mode 参数。如果指定了 `--脱敏`，同时传递给 refine
 
 **摘要展示**：
 ```
@@ -129,7 +129,7 @@ Transcribe → Refine ──┬──→ Polish → Extract（默认路径）
 
 #### Stage 3: Polish（跳过条件：`--skip-polish`）
 
-**调用**：使用 `/mint:polish` 技能执行，传入工作目录。如果指定了 `--脱敏`，同时传递给 polish
+**调用**：使用 Skill 工具调用 mint:polish，传入工作目录。如果指定了 `--脱敏`，同时传递给 polish
 
 **摘要展示**：
 ```
@@ -156,7 +156,7 @@ Transcribe → Refine ──┬──→ Polish → Extract（默认路径）
 
 #### Stage 4: Extract（`--from extract`）
 
-**调用**：使用 `/mint:extract` 技能执行，传入工作目录
+**调用**：使用 Skill 工具调用 mint:extract，传入工作目录
 
 **来源选择逻辑**：
 - 如果 `04_编辑稿/` 目录存在且有内容 → source = "polished"

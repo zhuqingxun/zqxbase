@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "keywords": [
         "rpiv",
         "workflow",
@@ -25,7 +25,7 @@
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.1.1",
+      "version": "2.1.2",
       "keywords": [
         "meeting",
         "transcription",
@@ -75,7 +75,7 @@
       "name": "insight",
       "source": "./plugins/insight",
       "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "keywords": [
         "research",
         "insight",

@@ -1,6 +1,6 @@
 {
   "name": "mint",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
   "author": {
     "name": "zhuqingxun"

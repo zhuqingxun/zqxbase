@@ -2,10 +2,9 @@
 name: mint:polish
 description: >-
   MINT 流水线 Stage 3: 编辑稿生成——将清洁逐字稿转化为高可读性的编辑稿，产出三种文档：书面化文稿、观点+原声对照、精华语录集。适用于需要将访谈/会议记录转化为可交付文档的场景。
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
+version: 2.1.2
 ---
-
 
 
 # mint:polish — 编辑稿生成
@@ -58,7 +57,7 @@ version: 2.1.1
 - 如果提供了 `--template`，按模板的问题结构组织
 - 如果没有模板，自动从对话中提炼话题结构
 - 每个话题/问题下包含：观点概括 + 关键原声引用
-- 详细格式和写作规则见 `./references/structured-prompt.md`
+- 详细格式和写作规则见 `~/.claude/skills/mint/references/structured-prompt.md`
 
 ### 3. 精华语录集（quotes）
 
@@ -69,7 +68,7 @@ version: 2.1.1
 特征：
 - 精选最有冲击力、信息量最大的发言
 - 按话题分类，每条附说话人和上下文简述
-- 详细选取标准见 `./references/quotes-prompt.md`
+- 详细选取标准见 `~/.claude/skills/mint/references/quotes-prompt.md`
 
 ## 执行流程
 
@@ -109,7 +108,7 @@ version: 2.1.1
 
 ### 第四步：生成观点原声对照
 
-使用 `./references/structured-prompt.md` 中的详细指引。
+使用 `~/.claude/skills/mint/references/structured-prompt.md` 中的详细指引。
 
 - 如果提供了 `--template`：按模板的问题结构提取
 - 如果没有模板：先让 LLM 从对话中自动提炼 5-10 个核心话题作为结构
@@ -118,7 +117,7 @@ version: 2.1.1
 
 ### 第五步：生成精华语录集
 
-使用 `./references/quotes-prompt.md` 中的详细指引。
+使用 `~/.claude/skills/mint/references/quotes-prompt.md` 中的详细指引。
 
 从 clean 稿中精选最有价值的发言片段，按话题分类组织。
 

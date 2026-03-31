@@ -1,9 +1,10 @@
 ---
 name: rpiv-loop:record
-description: "从对话上下文或用户描述中记录问题/需求/待办到 rpiv/todo"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+description: 从对话上下文或用户描述中记录问题/需求/待办到 rpiv/todo
+allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
+version: 2.1.2
 ---
+
 # Record: 记录待办条目
 
 将当前会话中发现的问题、功能需求或待办事项，结构化记录到 `rpiv/todo/` 目录下，形成可追踪的文件。支持三种类型：issue（问题/bug）、feature（功能需求）、todo（通用待办）。
@@ -30,7 +31,7 @@ version: 2.1.1
    | 信号 | 推断类型 |
    |------|---------|
    | 错误信息、异常行为、"不工作"、"崩溃"、"报错"、回归问题 | `issue` |
-   | "希望能…"、"增加…功能"、"支持…"、新 UI/交互、新接口 | `feature` |
+   | "希望能..."、"增加...功能"、"支持..."、新 UI/交互、新接口 | `feature` |
    | 调研任务、配置变更、文档更新、迁移、清理、一次性操作 | `todo` |
 
 3. 如果对话上下文中信息不足，且 $ARGUMENTS 提供了新的描述，则以 $ARGUMENTS 为主。
@@ -46,7 +47,7 @@ version: 2.1.1
 - 优先级（high/medium/low）
 - 是否有已知的 workaround 或补充信息
 
-不要过度追问——文件后续可通过 `/fix` 或 `/rpiv-loop:create-prd` 流程补充。
+不要过度追问——文件后续可通过 `/rpiv-loop:fix` 或 `/rpiv-loop:create-prd` 流程补充。
 
 ### 阶段 3：生成文件
 
@@ -117,7 +118,7 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 
 ## 已尝试的方案
 
-{在发现问题过程中已尝试但未解决的方案，帮助后续 /fix 避免重复尝试}
+{在发现问题过程中已尝试但未解决的方案，帮助后续 /rpiv-loop:fix 避免重复尝试}
 
 ## 参考
 
