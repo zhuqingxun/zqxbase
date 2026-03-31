@@ -3,7 +3,7 @@ name: rpiv-loop:validation:code-review-fix
 description: >-
   修复手动/AI 代码审查中发现的问题的流程
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.1.2
+version: 2.1.3
 ---
 
 我运行/执行了代码审查并发现了这些问题：

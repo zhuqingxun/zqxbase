@@ -3,7 +3,7 @@ name: rpiv-loop:validation:system-review
 description: >-
   分析实施与计划的对比，以改进流程
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.1.2
+version: 2.1.3
 ---
 
 # 系统审查

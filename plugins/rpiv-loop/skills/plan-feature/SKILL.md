@@ -2,7 +2,7 @@
 name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.1.2
+version: 2.1.3
 ---
 
 # 规划新任务
@@ -196,6 +196,7 @@ version: 2.1.2
 **估计复杂度**：[低/中/高]
 **主要受影响的系统**：[主要组件/服务列表]
 **依赖项**：[所需的外部库或服务]
+**隔离开发**：[是/否] — 中大型功能或需要随时切回主分支时选"是"，execute 阶段据此决定是否创建 Git Worktree
 
 ---
 
@@ -287,7 +288,7 @@ version: 2.1.2
 
 ## 逐步任务
 
-重要：按顺序从上到下执行每个任务。每个任务都是原子的且可独立测试。
+默认按顺序从上到下执行。标记了 `DEPENDS_ON` 的任务，无依赖项之间可并行执行（biubiubiu 模式下由 Leader 据此分配 Dev agent）。每个任务都是原子的且可独立验证。
 
 ### 任务格式指南
 
@@ -300,13 +301,14 @@ version: 2.1.2
 - **REFACTOR**：在不改变行为的情况下重构
 - **MIRROR**：从代码库的其他地方复制模式
 
-### {ACTION} {target_file}
+### 任务 N：{ACTION} {target_file}
 
+- **DEPENDS_ON**：[前置任务编号，无依赖则留空] — 用于识别可并行的任务
 - **IMPLEMENT**：{具体实施细节}
 - **PATTERN**：{对现有模式的引用 - 文件:行号}
 - **IMPORTS**：{所需的导入和依赖项}
 - **GOTCHA**：{要避免的已知问题或约束}
-- **VALIDATE**：`{可执行的验证命令}`
+- **VALIDATE**（必填）：`{该任务完成后的独立验证命令}`
 
 <按依赖顺序继续所有任务...>
 
