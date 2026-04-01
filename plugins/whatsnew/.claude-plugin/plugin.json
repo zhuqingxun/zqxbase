@@ -1,10 +1,15 @@
 {
   "name": "whatsnew",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Claude Code changelog viewer: check what's new in any Claude Code release",
   "author": {
     "name": "zhuqingxun"
   },
   "repository": "https://github.com/zhuqingxun/zqxbase",
-  "keywords": ["whatsnew", "changelog", "release-notes", "version"]
+  "keywords": [
+    "whatsnew",
+    "changelog",
+    "release-notes",
+    "version"
+  ]
 }

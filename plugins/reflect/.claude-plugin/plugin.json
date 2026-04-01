@@ -1,10 +1,15 @@
 {
   "name": "reflect",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
   "author": {
     "name": "zhuqingxun"
   },
   "repository": "https://github.com/zhuqingxun/zqxbase",
-  "keywords": ["reflect", "retrospective", "lessons-learned", "productivity"]
+  "keywords": [
+    "reflect",
+    "retrospective",
+    "lessons-learned",
+    "productivity"
+  ]
 }

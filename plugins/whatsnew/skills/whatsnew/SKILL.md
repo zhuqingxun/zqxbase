@@ -3,7 +3,6 @@ name: whatsnew
 description: 列出 Claude Code 指定版本的更新内容。当用户询问 Claude Code 更新了什么、新版本功能、changelog、release notes、最新版本变化时使用
 argument-hint: [版本号，如 2.1.59、59-61、2.1.59-61，留空则查最新版本]
 allowed-tools: Bash, WebSearch, WebFetch
-version: 1.0.0
 ---
 
 ## 任务

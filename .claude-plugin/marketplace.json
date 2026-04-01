@@ -38,7 +38,7 @@
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
-      "version": "1.0.4",
+      "version": "1.0.5",
       "keywords": [
         "reflect",
         "retrospective",
@@ -63,7 +63,7 @@
       "name": "whatsnew",
       "source": "./plugins/whatsnew",
       "description": "Claude Code changelog viewer: check what's new in any Claude Code release",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "keywords": [
         "whatsnew",
         "changelog",
