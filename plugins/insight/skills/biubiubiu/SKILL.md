@@ -1,34 +1,34 @@
 ---
 name: insight:biubiubiu
 description: >-
-  一键启动全自主 agent 团队，自动完成从信息源发现到PPT交付的完整研究流程。insight:brainstorm 完成后使用此命令，无需人工介入。
+  一键启动全自主 agent 团队，自动完成从信息源发现到部署的完整研究流程。insight:brainstorm 完成后使用此命令，无需人工介入。
   当用户提到'自动研究'、'全自主研究'、'research biubiubiu'、'启动研究团队'、'深度调研'时触发。
   也适用于用户说'帮我研究一下 XXX'且研究范围足够大（需要多源调研+写作+部署）的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch, Skill, TeamCreate, SendMessage, TeamDelete, TaskCreate, TaskUpdate, TaskGet, TaskList
-version: 1.1.1
+version: 1.1.2
 ---
 
 # Biubiubiu Research: 全自主研究团队执行
 
-从对话上下文中提取研究需求，启动 agent 团队自主完成完整深度研究流程（信息源发现 → 深度调研 → 写作 → PPT 交付），全程无需用户介入。
+从对话上下文中提取研究需求，启动 agent 团队自主完成完整深度研究流程（信息源发现 → 深度调研 → 写作 → 集成 → 部署），全程无需用户介入。
 
 ## 与代码版 biubiubiu 的核心差异
 
 | 维度 | biubiubiu（代码） | biubiubiu-research（研究） |
 |------|-------------------|---------------------------|
-| 核心工作 | PRD → Plan → Code → Test | Source Discovery → Research → Writing → PPT |
-| 工作量分布 | 20% 设计 + 80% 编码 | 80% 调研写作 + 20% PPT 生成 |
+| 核心工作 | PRD → Plan → Code → Test | Source Discovery → Research → Writing → Deploy |
+| 工作量分布 | 20% 设计 + 80% 编码 | 80% 调研写作 + 20% 集成部署 |
 | 质量标准 | 测试通过 + 代码审查 | 五层深度检验 + 溯源率 100% |
 | 并行模式 | Dev-1/Dev-2 并行编码 | Analyst-1/2 并行写不同专题 |
 | 特色集成 | — | — |
-| 产出物 | 代码 + 测试 | Markdown 报告 + 朴素 PPTX |
-| 后续增强 | — | `/ppt-refine` 精加工 PPT + `/nblm` 播客/视频 |
+| 产出物 | 代码 + 测试 | Markdown 报告 + 站点部署 |
+| 后续增强 | — | `/ppt:create` 生成演示文稿 + `/nblm` 播客/视频 |
 
 ## 团队架构
 
 | 角色 | 职责 | 活跃阶段 |
 |------|------|----------|
-| **Leader**（你自己） | 协调、质量门禁、PPT 交付 | 全程 |
+| **Leader**（你自己） | 协调、质量门禁、部署 | 全程 |
 | **Scout** | 信息源发现（Web + YouTube）、素材提取 | 阶段 1-2 |
 | **Analyst-1** | 深度调研 + 专题写作（分配的模块） | 阶段 2-4 |
 | **Analyst-2**（大型项目） | 深度调研 + 专题写作（分配的模块） | 阶段 2-4 |
@@ -77,7 +77,6 @@ archived_at: null
 
 ## 产出物
 - Markdown 报告：是/否
-- 朴素 PPTX：是/否
 
 ## 信息源方向
 - 官方来源：...
@@ -97,9 +96,8 @@ archived_at: null
 ```
 {topic}/
 ├── pyproject.toml
-├── generate_ppt.py
 ├── research/           # 调研笔记 + nblm-meta.json
-└── output/             # 生成的 PPTX
+└── output/             # Markdown 报告等产出物
 site/docs/{topic}/
 ├── index.md               # 主线概览
 ├── assets/                # 架构图/截图
@@ -109,7 +107,7 @@ site/docs/{topic}/
 **模式 B：独立研究项目**（无 `site/mkdocs.yml`）：
 ```
 research/              # 调研笔记 + nblm-meta.json
-output/                # Markdown 报告 + PPTX
+output/                # Markdown 报告等产出物
 docs/                      # 研究报告输出
 ```
 
@@ -137,9 +135,8 @@ TeamCreate:
   T3 write-modules        → Analyst(s) 撰写各专题模块               [blockedBy: T2]
   T4 write-overview       → Analyst 撰写主线概览 + 参考资料归档      [blockedBy: T3]
 
-阶段 4：PPT 生成与交付
-  T5 generate-ppt         → Analyst 编写 PPT 脚本 + 生成             [blockedBy: T3]
-  T6 delivery-report      → Leader 生成交付报告                     [blockedBy: T4, T5]
+阶段 4：集成&部署
+  T5 delivery-report      → Leader 生成交付报告                     [blockedBy: T4]
 ```
 
 ### 步骤 6：启动团队
@@ -192,11 +189,6 @@ TeamCreate:
 - **信息获取优先级**：
   1. 先检查 `{research-dir}/` 已有调研笔记
   2. 不足则自行 `WebSearch`/`WebFetch` 补充
-- **PPT 脚本编写**（T8 任务）：
-  - 从已完成的 Markdown 中提炼关键结论
-  - 使用 python-pptx 编程构建（参考项目中已有的 `generate_ppt.py` 模式）
-  - 规格：16:9（13.333" x 7.5"），Microsoft YaHei 字体
-  - 内容聚焦结论和架构图，详细论证指向在线文档
 - **完成任务的固定顺序**：Edit frontmatter → TaskUpdate completed，不可颠倒
 - 全程使用中文
 
@@ -229,11 +221,11 @@ Scout 完成 material-fetch 后：
 - **图片检查**：每个模块至少 1 张图片且有来源标注
 - **交叉链接检查**：模块间引用是否指向正确的文件路径
 - 有质量问题 → SendMessage 要求 Analyst 修改（最多 2 轮）
-- 通过 → 概览写作 + PPT 脚本编写
+- 通过 → 概览写作
 
-#### 门禁 4：PPT 生成完成
+#### 门禁 4：集成完成
 
-- **PPT 验证**：`uv run python generate_ppt.py` 执行成功，输出文件存在
+- **站点构建**（如适用）：零错误
 - 通过 → 交付
 
 ### 步骤 8：完成交付
@@ -268,15 +260,14 @@ related_files:
 - 内容模块数量：{N} 个专题 + 1 个概览
 - 信息源数量：{N} 个（Tier 1-5 分布）
 - 图片数量：{N} 张架构图/截图
-- PPT 页数：{N} 页
 
 ## 产出物清单
 - Markdown 报告：{文件路径列表}
-- PPT 报告：{路径}
 
 ## 后续可选步骤
 - `/insight:publish` — 将研究成果集成到站点（如有 MkDocs 等站点框架）
-- `/insight:ppt-refine` — PPT 视觉增强（纯代码模式或 NBLM 增强模式）
+- `/ppt:create` — 基于研究报告生成演示文稿
+- `/nblm` — 生成播客、视频等增强输出
 
 ## 关键发现摘要
 {3-5 条最重要的研究发现}
@@ -290,7 +281,7 @@ related_files:
 
 2. **关闭团队**：对所有 agent 发送 `shutdown_request`，等待确认后 `TeamDelete`
 3. **归档过程文件**：将 `research/` 下的过程文件归档到 `research/archive/`（与 biubiubiu 相同流程）
-4. **向用户报告**：输出产物清单，提示可用 `/insight:publish` 站点集成 + `/insight:nblm` 增强输出
+4. **向用户报告**：输出产物清单，提示可用 `/insight:publish` 站点集成 + `/ppt:create` 生成演示文稿 + `/nblm` 增强输出
 ## 规模自适应
 
 根据内容模块数量调整团队配置：

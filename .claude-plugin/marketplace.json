@@ -75,7 +75,7 @@
       "name": "insight",
       "source": "./plugins/insight",
       "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "keywords": [
         "research",
         "insight",

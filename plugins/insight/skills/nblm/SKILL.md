@@ -4,7 +4,7 @@ description: >-
   使用 NotebookLM 生成增强输出（精美 PPTX、播客音频、视频等）。需已有 NotebookLM notebook。
   当用户提到"生成播客"、"做视频"、"精美PPT"、"nblm"、"NotebookLM 增强"时触发。
 allowed-tools: Read, Write, Bash, Glob, AskUserQuestion
-version: 1.1.1
+version: 1.1.2
 ---
 
 > **依赖声明**：本命令依赖 `notebooklm` CLI，这是基于 Google NotebookLM 非官方 API 的第三方工具（非 Google 官方产品）。API 接口可能随时变更导致功能失效。安装：`uv tool install notebooklm-mcp-cli`
