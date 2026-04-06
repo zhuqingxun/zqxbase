@@ -4,7 +4,7 @@ description: >-
   MINT 状态查看——读取 meta.yaml 展示当前会议处理进度、质量评分和修订历史。
   当用户说"看看进度""处理到哪了""status""状态"时触发。
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.2
+version: 2.1.3
 ---
 
 

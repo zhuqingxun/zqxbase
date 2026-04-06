@@ -6,10 +6,13 @@ description: >-
   支持两种模式：保守（仅修错字和口水词）、适度（句子级优化，默认）。
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage
-version: 2.1.2
+version: 2.1.3
 ---
 
 # mint:refine — 校对清洁
+
+> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录。首次引用时通过
+> `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 将 ASR 原始转录稿清洁为可读逐字稿。使用 Agent Team 双路交叉校对，包含架构师、双路校对员、审查员、人工澄清环节。
 
@@ -21,7 +24,7 @@ version: 2.1.2
 
 - `<工作目录>`：MINT 会议目录路径（包含 `02_原始稿/` 子目录）
 - `[模式]`：可选，`保守` / `适度`（默认）
-- `--脱敏`：同时生成脱敏版本。脱敏规则参见 `~/.claude/skills/mint/references/lessons-learned.md` 第三节
+- `--脱敏`：同时生成脱敏版本。脱敏规则参见 `{MINT_REF}/lessons-learned.md` 第三节
 
 示例：
 - `/mint:refine D:/WORK/meetings/2026-03-20-周会` — 适度模式校对
@@ -149,10 +152,15 @@ Reviewer 对每段的 A/B 两版输出进行交叉对比：
 ### 阶段 5: 输出与关闭
 
 1. 写入 `03_校对稿/{name}_校对稿.md`（如已有旧版本，先移至 `03_校对稿/old/`）
-2. 如果指定了 `--脱敏`，基于校对结果生成脱敏版本（移除受访者姓名/岗位/职级/个人经历细节/时间戳），写入 `03_校对稿/{name}_校对稿_脱敏.md`。脱敏规则详见 `~/.claude/skills/mint/references/lessons-learned.md` 第三节
-3. 更新 `meta.yaml` 中 refine 阶段状态
-4. 终端输出：统计报告 + 质量评分表 + 变更详情 + 人工澄清记录
-5. 关闭团队
+2. 如果指定了 `--脱敏`，基于校对结果生成脱敏版本（移除受访者姓名/岗位/职级/个人经历细节/时间戳），写入 `03_校对稿/{name}_校对稿_脱敏.md`。脱敏规则详见 `{MINT_REF}/lessons-learned.md` 第三节
+3. **词表沉淀**：将本次人工澄清确认的新词条 + Reviewer 交叉审查中发现的新错字，沉淀到 `{MINT_REF}/lessons-learned.md`。具体操作：
+   - 逐条对比已有高频错字表，**已有的追加变体**（如已有"ASR错误A→正确A"，新发现"ASR错误B"则追加为"ASR错误A/ASR错误B→正确A"）
+   - **新发现的**追加到表格末尾，格式与现有条目一致
+   - 如有新的语义陷阱或 Worker 失败模式，追加到对应章节
+   - 更新文件末尾的「最后更新」日期
+4. 更新 `meta.yaml` 中 refine 阶段状态
+5. 终端输出：统计报告 + 质量评分表 + 变更详情 + 人工澄清记录 + **词表沉淀条数**
+6. 关闭团队
 
 ## meta.yaml 更新
 
@@ -188,7 +196,7 @@ stages:
 - 在保守基础上增加：清理所有口水词、精简冗余、口语书面化、语法修正
 - 保持：段落结构、核心观点、说话人语气立场
 
-详细的校对模式规则见 `~/.claude/skills/mint/references/worker-prompt.md`。
+详细的校对模式规则见 `{MINT_REF}/worker-prompt.md`。
 
 ## 校对通用规则
 
@@ -262,10 +270,10 @@ stages:
 
 | 文件 | 用途 | 何时读取 |
 |------|------|---------|
-| `~/.claude/skills/mint/references/architect-prompt.md` | Architect 指引（含不确定项清单格式） | 阶段 1 |
-| `~/.claude/skills/mint/references/worker-prompt.md` | Worker 校对规则（两种模式+重叠区说明） | 阶段 2 |
-| `~/.claude/skills/mint/references/reviewer-prompt.md` | Reviewer 评分标准+交叉对比策略 | 阶段 3 |
-| `~/.claude/skills/mint/references/lessons-learned.md` | 历次校对积累的经验教训（高频错字表、语义陷阱、脱敏规则等） | Architect 阶段 1 + Reviewer 阶段 3 |
+| `{MINT_REF}/architect-prompt.md` | Architect 指引（含不确定项清单格式） | 阶段 1 |
+| `{MINT_REF}/worker-prompt.md` | Worker 校对规则（两种模式+重叠区说明） | 阶段 2 |
+| `{MINT_REF}/reviewer-prompt.md` | Reviewer 评分标准+交叉对比策略 | 阶段 3 |
+| `{MINT_REF}/lessons-learned.md` | 历次校对积累的经验教训（高频错字表、语义陷阱、脱敏规则等） | Architect 阶段 1 + Reviewer 阶段 3 |
 
 ## 异常处理
 

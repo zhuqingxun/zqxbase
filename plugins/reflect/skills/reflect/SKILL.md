@@ -1,7 +1,7 @@
 ---
 name: reflect
 description: 复盘当前会话，提取可沉淀的经验。当用户要求复盘、总结经验、提取教训、回顾会话收获时使用
-version: 1.0.5
+version: 1.0.6
 ---
 
 复盘本次会话，按以下流程执行：
@@ -63,11 +63,14 @@ version: 1.0.5
 
 将通过过滤的知识类经验抽象为简洁规则（3-5行），判断写入位置：
 
-| 级别 | 写入位置 | 判断标准 |
-|------|----------|----------|
-| **全局规则** | `~/.claude/CLAUDE.md` | 跨项目通用的平台/工具特定知识 |
-| **项目规则** | 项目根目录 `CLAUDE.md` | 仅限当前项目的架构/API 特定知识 |
-| **Auto Memory** | `~/.claude/projects/*/memory/` | 参考性经验、历史决策记录 |
+| 优先级 | 写入位置 | 判断标准 |
+|--------|----------|----------|
+| **1. 全局 rules 文件** | `~/.claude/rules/<topic>.md` | 跨项目通用，且已有同主题 rules 文件(如 python-development.md)。先 `ls ~/.claude/rules/` 检查 |
+| **2. 全局 CLAUDE.md** | `~/.claude/CLAUDE.md` | 跨项目通用，但无匹配的 rules 文件，或属于工作流偏好/协作规范 |
+| **3. 项目规则** | 项目根目录 `CLAUDE.md` | 仅限当前项目的架构/API 特定知识 |
+| **4. Auto Memory** | `~/.claude/projects/*/memory/` | 参考性经验、历史决策记录 |
+
+**决策流程**：全局规则优先写入已有的同主题 rules 文件(保持 CLAUDE.md 精简)，只有没有匹配的 rules 文件时才写入 CLAUDE.md。
 
 ## 5. 确认写入
 

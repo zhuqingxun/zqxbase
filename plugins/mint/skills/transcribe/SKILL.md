@@ -3,11 +3,15 @@ name: mint:transcribe
 description: >-
   MINT 流水线 Stage 1: 语音转文本——调用阿里云百炼平台将录音文件转为带时间戳和说话人标记的原始口水稿。当用户提到"语音转文字""录音转文本""转录""transcribe""把录音转成文字""ASR"时使用。支持 mp3/m4a/wav/flac/ogg 等常见音频格式，自动启用说话人分离。
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.2
+version: 2.1.3
 ---
 
 
 # mint:transcribe — 语音转文本
+
+> **路径约定**：`{MINT_REF}` = mint 插件 `references/` 目录，`{MINT_SCRIPTS}` = 同级 `scripts/` 目录。
+> 首次引用时通过 `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径。
+> `{MINT_SCRIPTS}` 与 `{MINT_REF}` 在同一插件根目录下。
 
 调用阿里云百炼平台（DashScope Fun-ASR）将录音转为口水稿，自动启用说话人分离和标点恢复。
 
@@ -116,7 +120,7 @@ revisions: []
 
 确认转录脚本的依赖可用：
 ```bash
-uv run --script ~/.claude/skills/mint/scripts/transcribe.py --help 2>/dev/null || echo "需要安装依赖"
+uv run --script {MINT_SCRIPTS}/transcribe.py --help 2>/dev/null || echo "需要安装依赖"
 ```
 
 脚本使用 PEP 723 inline metadata，`uv run --script` 会自动处理依赖安装。
@@ -125,7 +129,7 @@ uv run --script ~/.claude/skills/mint/scripts/transcribe.py --help 2>/dev/null |
 
 运行转录脚本：
 ```bash
-uv run --script ~/.claude/skills/mint/scripts/transcribe.py "<音频路径>" "<名称>"
+uv run --script {MINT_SCRIPTS}/transcribe.py "<音频路径>" "<名称>"
 ```
 
 脚本会：

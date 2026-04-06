@@ -6,11 +6,14 @@ description: >-
   触发场景："加到词表""刷新稿件""纠错""这个词错了应该是XX""补丁""更新词表"，
   或在阅读任意稿件时指出某个词识别错误（如"XX应该是YY"）。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.2
+version: 2.1.3
 ---
 
 
 # MINT 词表修正（Patch）
+
+> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录。首次引用时通过
+> `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 将 ASR 纠错经验沉淀到词表，并批量修正工作目录中已生成的全部稿件——一次修正，全局生效。
 
@@ -48,7 +51,7 @@ version: 2.1.2
 
 ### 第二步：更新词表
 
-词表文件位置：`~/.claude/skills/mint/references/lessons-learned.md`
+词表文件位置：`{MINT_REF}/lessons-learned.md`
 
 1. Read 词表文件
 2. 在 ASR 同音错字高频表 中检查是否已有相同条目（去重）
