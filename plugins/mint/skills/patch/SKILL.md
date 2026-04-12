@@ -6,7 +6,7 @@ description: >-
   触发场景："加到词表""刷新稿件""纠错""这个词错了应该是XX""补丁""更新词表"，
   或在阅读任意稿件时指出某个词识别错误（如"XX应该是YY"）。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.3
+version: 2.1.4
 ---
 
 
