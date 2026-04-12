@@ -1,9 +1,9 @@
 ---
-name: rpiv-loop:validation:code-audit
+name: rpiv-loop:code-audit
 description: >-
   对指定目录/模块进行全量代码审计（不依赖 git diff）。支持 5 个维度的并行审查，置信度评分过滤误报，高严重度问题自动评估爆炸半径。
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write
-version: 2.1.3
+version: 2.1.4
 ---
 
 对指定目录进行全量代码审计。
@@ -267,7 +267,7 @@ blast_radius: |
   - 75-89：高度可能是问题，上下文支持判断
   - 50-74：可能是问题，但也可能有合理理由
   - 0-49：不确定，可能是误报
-- 输出报告兼容 `code-review-fix` 流程（`status: open` 字段），修复时使用 `/rpiv-loop:validation:code-review-fix`
+- 输出报告兼容 `code-review-fix` 流程（`status: open` 字段），修复时使用 `/rpiv-loop:code-review-fix`
 
 ## Deferred 问题跟踪文件
 

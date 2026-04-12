@@ -1,9 +1,9 @@
 ---
-name: rpiv-loop:validation:delivery-report
+name: rpiv-loop:delivery-report
 description: >-
   生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.1.3
+version: 2.1.4
 ---
 
 # Delivery Report: 交付报告
@@ -19,7 +19,7 @@ version: 2.1.3
 ## 用法
 
 ```bash
-/rpiv-loop:validation:delivery-report feature-name
+/rpiv-loop:delivery-report feature-name
 ```
 
 ## 前置条件

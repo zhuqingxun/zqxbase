@@ -1,9 +1,9 @@
 ---
-name: rpiv-loop:validation:execution-report
+name: rpiv-loop:execution-report
 description: >-
   为系统审查生成实施报告
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.1.3
+version: 2.1.4
 ---
 
 # 执行报告

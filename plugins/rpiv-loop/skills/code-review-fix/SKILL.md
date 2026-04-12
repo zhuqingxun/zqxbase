@@ -1,9 +1,9 @@
 ---
-name: rpiv-loop:validation:code-review-fix
+name: rpiv-loop:code-review-fix
 description: >-
   修复手动/AI 代码审查中发现的问题的流程
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.1.3
+version: 2.1.4
 ---
 
 我运行/执行了代码审查并发现了这些问题：
@@ -21,7 +21,7 @@ version: 2.1.3
 
 所有修复完成后：
 
-1. 运行 `/rpiv-loop:validation:validate` 以完成修复
+1. 运行 `/rpiv-loop:validate` 以完成修复
 2. **回写审查文档闭环**：打开原始代码审查文件，将每个问题的 `status` 更新为以下三种之一（禁止存在无归属的 skipped 状态）：
    - `fixed` — 已修复的问题
    - `wont_fix` — 评估后决定不修复的问题，在 `status` 行下方追加 `wont_fix_reason: [原因]`（如：风格偏好、设计意图、已被其他修复覆盖、影响极低等）
@@ -37,6 +37,6 @@ version: 2.1.3
    - 扫描 `rpiv/todo/` 中与本次修复工作相关的 todo 文件（按文件名关键词或 `grep -rl` 内容匹配）
    - 对每个 status=open 且本次修复已完整解决其描述问题的 todo 文件：
      - 更新 frontmatter：`status: completed`，更新 `updated_at`
-     - 在文件末尾追加：`## 完成记录\n\n通过 /rpiv-loop:validation:code-review-fix 修复完成。审查文件：{review-file}。时间：{timestamp}`
+     - 在文件末尾追加：`## 完成记录\n\n通过 /rpiv-loop:code-review-fix 修复完成。审查文件：{review-file}。时间：{timestamp}`
    - 如果某个 todo 仅被部分解决，不更新状态，但在输出中提示用户
    - 如果没有找到关联 todo 文件，静默跳过（不是所有修复都有对应 todo）

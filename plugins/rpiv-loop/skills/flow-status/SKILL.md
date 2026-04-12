@@ -2,10 +2,13 @@
 name: rpiv-loop:flow-status
 description: 查看过程文件的状态
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.3
+version: 2.1.4
 ---
 
 # Status: 查看文件状态
+
+> **`{RPIV_REF}` 路径约定**：指 rpiv-loop 插件的 `references/` 目录。首次引用时通过
+> `Glob("**/plugins/rpiv-loop/references/frontmatter-spec.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 显示过程文件的当前状态,帮助管理开发流程。
 
@@ -32,7 +35,7 @@ version: 2.1.3
 2. 读取 frontmatter 的 status, type, created_at, updated_at, related_files（todo 使用 title 字段）
 3. 从文件名提取名称（去掉 `prd-`/`plan-`/`code-review-`/`exec-report-`/`system-review-`/`delivery-report-`/`test-strategy-`/`test-specs-`/`brainstorm-summary-`/`research-` 前缀；todo 文件去掉 `issue-`/`feature-`/`todo-` 前缀）
 4. 扫描 `rpiv/archive/` 统计已归档文件数
-5. **Status 值合法性校验**（参见 `~/.claude/skills/rpiv-loop/references/frontmatter-spec.md`）：
+5. **Status 值合法性校验**（参见 `{RPIV_REF}/frontmatter-spec.md`）：
    - 流程文件允许：`pending` / `in-progress` / `completed` / `superseded` / `archived`
    - Todo 文件允许：`open` / `in-progress` / `completed`
    - 辅助文件允许：`pending` / `completed`
@@ -171,4 +174,4 @@ version: 2.1.3
 - 按 updated_at 降序排列
 - 状态符号: ⏳ pending, 🔄 in-progress, ✓ completed, ⏪ superseded, 📦 archived
 - 辅助文件（brainstorm-summary、research）在精简摘要中归入独立的"📝 辅助文件"区块显示
-- Status 合法性规则参见 `~/.claude/skills/rpiv-loop/references/frontmatter-spec.md`
+- Status 合法性规则参见 `{RPIV_REF}/frontmatter-spec.md`

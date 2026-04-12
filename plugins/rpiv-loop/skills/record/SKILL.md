@@ -2,7 +2,7 @@
 name: rpiv-loop:record
 description: 从对话上下文或用户描述中记录问题/需求/待办到 rpiv/todo
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.3
+version: 2.1.4
 ---
 
 # Record: 记录待办条目

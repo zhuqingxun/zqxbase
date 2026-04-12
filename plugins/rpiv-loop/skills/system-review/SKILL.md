@@ -1,12 +1,15 @@
 ---
-name: rpiv-loop:validation:system-review
+name: rpiv-loop:system-review
 description: >-
   分析实施与计划的对比，以改进流程
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.1.3
+version: 2.1.4
 ---
 
 # 系统审查
+
+> **路径约定**：`{RPIV_REF}` = rpiv-loop 插件 `references/` 目录，`{RPIV_SKILLS}` = 同级 `skills/` 目录。
+> 首次引用时通过 `Glob("**/plugins/rpiv-loop/references/frontmatter-spec.md")` 定位，多结果时优先非 `marketplaces/` 路径。
 
 对实施遵循计划的程度进行元级别分析，并识别流程改进。
 
@@ -35,7 +38,7 @@ version: 2.1.3
 2. 读取执行报告路径：$2
 3. 查找相关的 code-review 文件：`rpiv/validation/code-review-{同名}.md`
 4. 读取上述文件的 frontmatter，记录当前状态供后续分析
-5. **不修改**这些文件的 status — 它们由各自的上游技能负责管理（参见 `~/.claude/skills/rpiv-loop/references/frontmatter-spec.md` 职责表）
+5. **不修改**这些文件的 status — 它们由各自的上游技能负责管理（参见 `{RPIV_REF}/frontmatter-spec.md` 职责表）
 
 ## 上下文和输入
 
@@ -43,7 +46,7 @@ version: 2.1.3
 
 **计划命令：**
 阅读此内容以了解规划流程和指导计划创建的指令。
-~/.claude/skills/rpiv-loop/plan-feature/SKILL.md
+{RPIV_SKILLS}/plan-feature/SKILL.md
 
 **生成的计划：**
 阅读此内容以了解代理应该做什么。
@@ -51,7 +54,7 @@ version: 2.1.3
 
 **执行命令：**
 阅读此内容以了解执行流程和指导实施的指令。
-~/.claude/skills/rpiv-loop/execute/SKILL.md
+{RPIV_SKILLS}/execute/SKILL.md
 
 **执行报告：**
 阅读此内容以了解代理实际做了什么以及原因。
@@ -231,7 +234,7 @@ root_cause: [计划不明确 | 缺少上下文 | 等]
 
 **审查完成后：**
 
-1. 更新以下文件的 status 为 `completed`，并更新 `updated_at`（参见 `~/.claude/skills/rpiv-loop/references/frontmatter-spec.md` 职责表）：
+1. 更新以下文件的 status 为 `completed`，并更新 `updated_at`（参见 `{RPIV_REF}/frontmatter-spec.md` 职责表）：
    - 执行报告（$2）— 由本技能负责关闭
    - 当前系统审查文件 — 自己关闭自己
 2. **一致性校验**（只检查，不修改）：

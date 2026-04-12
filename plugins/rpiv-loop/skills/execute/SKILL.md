@@ -2,7 +2,7 @@
 name: rpiv-loop:execute
 description: 执行实施计划
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.3
+version: 2.1.4
 ---
 
 # Execute: 从计划实施
@@ -151,7 +151,7 @@ version: 2.1.3
    - 对计划文件自身执行相同归档操作
    - 对 status 不是 completed/superseded 的关联文件，在报告中标注警告但不归档
 4. 提示用户："执行已完成。计划及关联文件已归档。"
-5. 建议下一步："建议 `/clear` 后执行验证流程：`/rpiv-loop:validation:code-review` → `/rpiv-loop:validation:execution-report` → `/rpiv-loop:validation:system-review`"
+5. 建议下一步："建议 `/clear` 后执行验证流程：`/rpiv-loop:code-review` → `/rpiv-loop:execution-report` → `/rpiv-loop:system-review`"
 
 ## 备注
 
