@@ -3,7 +3,7 @@ name: rpiv-loop:delivery-report
 description: >-
   生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.1.4
+version: 2.1.5
 ---
 
 # Delivery Report: 交付报告

@@ -3,13 +3,13 @@ name: mint:polish
 description: >-
   MINT 流水线 Stage 3: 编辑稿生成——将清洁逐字稿转化为高可读性的编辑稿，产出三种文档：书面化文稿、观点+原声对照、精华语录集。包含独立 Reviewer 阶段做七维审查：观点覆盖完整性（核心）、话题/数据漏检扫描、结构化质量、原声质量、观点准确性、脱敏安全、格式可读性。适用于需要将访谈/会议记录转化为可交付文档的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.4
+version: 2.1.5
 ---
 
 
 # mint:polish — 编辑稿生成
 
-> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录。首次引用时通过
+> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录，`{MINT_SCRIPTS}` 为同级 `scripts/` 目录。首次引用时通过
 > `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 将清洁逐字稿（clean）转化为高可读性的编辑稿，产出三种文档。
@@ -78,11 +78,50 @@ version: 2.1.4
 
 ## 执行流程
 
+### 第零步：解析 template
+
+在验证环境之前，先通过 `meta_io.py` 的 `resolve-template` 子命令按三层兜底规则决定本次 polish 使用的 template：
+
+1. **显式 `--template <id-or-path>`** 最高优先
+2. **meta.yaml.interviewee_type** + `workspace.yaml.interviewee_types[].default_template_id`
+3. **无模板模式**（老 workspace 或 `default_template_id == null`）
+
+调用 CLI：
+
+```bash
+if [ -n "$TEMPLATE_OVERRIDE" ]; then
+  RESOLVE_JSON=$(uv run --script {MINT_SCRIPTS}/meta_io.py resolve-template "<工作目录>" --template-override "$TEMPLATE_OVERRIDE")
+else
+  RESOLVE_JSON=$(uv run --script {MINT_SCRIPTS}/meta_io.py resolve-template "<工作目录>")
+fi
+```
+
+- `$TEMPLATE_OVERRIDE` 来自 CLI 参数 `--template`；未传则不加 flag
+- resolve-template 失败（exit 非 0，stderr 含 `ERROR:`）→ 直接透传错误退出，不继续后续步骤
+
+解析返回的 JSON（三个字段）：
+
+| 字段 | 含义 |
+|------|------|
+| `template_path` | 后续步骤使用的提纲文件绝对路径（null 表示无模板模式） |
+| `template_id` | 写入 meta.yaml.stages.polish.params.template_override（用于 templates-remove 引用完整性检查；null 或 "adhoc" 可能出现） |
+| `source` | `explicit` / `type_default` / `none`（用于日志和 Reviewer 报告） |
+
+分支处理：
+
+- `source in {"explicit", "type_default"}` 且 `template_path` 非 null → 正常 7 维审查（维度 1 观点覆盖度用 `template_path`）
+- `source == "none"` → **无模板模式**：
+  - 第四步"观点原声对照"自动从对话中提炼话题结构（不按模板问题分组）
+  - 第六步 Reviewer 跳过维度 1（观点覆盖完整性），权重 25% 按比例重分到维度 2-7
+  - 第八步 meta.yaml `stages.polish.review.mode` 写入 `"no_template"`
+
+PRD 6.3 的报错分支（缺 interviewee_type 但 workspace.yaml.types[] 非空、type.default_template_id 指向不存在的 template 等）均由 resolve-template CLI 直接 exit 2 + stderr `ERROR: ...` 返回，polish 不做二次判定。
+
 ### 第一步：验证环境
 
 1. 读取 `meta.yaml`，确认工作目录有效
 2. 确认 `03_校对稿/` 中存在输入文件
-3. 如有 `--template`，读取并验证模板文件
+3. 第零步已完成 template 解析；若 `template_path` 非 null 则读取并验证该文件存在（失败 → 报错退出；这属于注册表与实际文件系统不一致的罕见情况）
 4. 从 meta.yaml 提取项目信息（project 名称等）
 
 ### 第二步：读取输入
@@ -116,8 +155,8 @@ version: 2.1.4
 
 使用 `{MINT_REF}/structured-prompt.md` 中的详细指引。
 
-- 如果提供了 `--template`：按模板的问题结构提取
-- 如果没有模板：先让 LLM 从对话中自动提炼 5-10 个核心话题作为结构
+- 如果第零步解析出的 `template_path` 非 null（source = explicit / type_default）：按模板的问题结构提取
+- 如果 source = none（无模板模式）：先让 LLM 从对话中自动提炼 5-10 个核心话题作为结构
 
 对于长文本或问题较多（>4 个）的场景，按 3-4 个问题一组分批处理，每批读取完整 clean 稿。
 
@@ -147,8 +186,20 @@ Leader 启动一个独立的 general-purpose agent 作为 Reviewer，传入：
 - **维度 6：脱敏安全（权重 15%，仅脱敏场景）** — 7 类扫描模式全部 grep 执行
 - **维度 7：格式与可读性（权重 5%）**
 
+**无模板模式**（第零步 `source == "none"`）：
+- 维度 1 无 template 做观点分组参照 → 跳过维度 1（观点提取与覆盖对照均不执行）
+- 其 25% 权重按比例重分到维度 2-7：新权重 = 原权重 × (1 / (1 - 0.25)) = 原权重 × 4/3
+  - 维度 2: 15% → 20%
+  - 维度 3: 15% → 20%
+  - 维度 4: 15% → 20%
+  - 维度 5: 10% → 13.3%
+  - 维度 6: 15% → 20%（仅脱敏场景）
+  - 维度 7: 5% → 6.7%
+- 强制退回触发条件相应调整：维度 1 漏检条件在无模板模式下**不适用**；维度 6 critical 和加权总分 < 85 仍生效
+- Reviewer 报告开头必须注明 `模式: 无模板（workspace.yaml.types[].default_template_id 为 null 或老 workspace）`
+
 **强制退回触发条件**（任一满足即退回）：
-- 维度 1 任意 critical 观点漏检
+- 维度 1 任意 critical 观点漏检（仅非无模板模式下适用）
 - 维度 6 任意脱敏扫描命中
 - 加权总分 < 85 或有 critical 级问题
 
@@ -189,19 +240,21 @@ stages:
     completed_at: {当前 ISO 时间}
     params:
       model: "{使用的 LLM 模型}"
-      has_template: true/false
+      has_template: true/false      # 历史遗留字段，polish 新代码不再读，保留不删（与 template_override 同步语义）
+      template_override: "{id}"     # 第零步 resolve-template 返回的 template_id（或 "adhoc"/null）；用于 /mint:templates remove 引用完整性扫描
       desensitized: false    # 是否生成了脱敏版本
       outputs:               # 本次生成的产出物列表
         - {文件名 1}
         - {文件名 2}
     review:                  # Reviewer 审查结果（七维）
       enabled: true          # --skip-review 时为 false
+      mode: normal           # normal / no_template（第零步 source == none 时写 no_template）
       rounds: 1              # 审查轮次
       final_score: 92        # 最终加权总分
       passed: true           # 是否通过
       critical_issues: 0     # critical 问题数（修正后）
       high_issues: 1         # high 问题数（修正后）
-      dimension_scores:      # 七维得分
+      dimension_scores:      # 七维得分（无模板模式下 content_coverage 缺失或置 null）
         content_coverage: 92            # 维度 1 观点覆盖完整性
         detail_coverage: 95             # 维度 2 话题/数据漏检
         structure: 90                   # 维度 3 结构化质量
@@ -209,7 +262,7 @@ stages:
         viewpoint_accuracy: 96          # 维度 5 观点准确性
         desensitization: 100            # 维度 6 脱敏安全
         format: 98                      # 维度 7 格式可读性
-      content_coverage:      # 维度 1 观点覆盖详情
+      content_coverage:      # 维度 1 观点覆盖详情（无模板模式下省略或置 null）
         total_viewpoints: 32           # 观点提取总数
         fully_covered: 30              # 完全覆盖数
         partially_covered: 1           # 覆盖不完整数
@@ -225,9 +278,34 @@ stages:
         alias_consistency: pass
 ```
 
+**params.template_override 语义**：
+- 第零步 `source == "explicit"` → 写 resolve-template 返回的 `template_id`（若用户传 `--template <path>` 且不在注册表内，该字段为 `"adhoc"`）
+- 第零步 `source == "type_default"` → 写对应 `default_template_id`
+- 第零步 `source == "none"` → 字段置 null（或省略）
+
+此字段是 `/mint:templates remove <id>` 引用扫描的唯一来源（scan_meeting_template_overrides 读取），禁止留空或写别的值。
+
 ### 第九步：报告结果
 
-报告本次生成的文件路径和各自的字数统计，附上 Reviewer 最终评分和主要问题修正记录。提示后续可执行 `/mint:extract` 进行结构化信息提取。
+报告本次生成的文件路径和各自的字数统计，附上 Reviewer 最终评分和主要问题修正记录。
+
+同时更新 `current`：
+- `current.cursor` = `"polish"`
+- `current.last_action_desc` = `"完成编辑稿"`
+
+### 最后一步：更新元数据并输出引导块
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+
+2. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用 compute-next-hints 输出的 JSON 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+   - `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）
 
 ## 质量控制
 
@@ -377,6 +455,8 @@ registry:
 | 模板文件不存在 | 报错提示检查路径 |
 | 文本超长（>50000 字） | 提示用户确认，分段处理 |
 | LLM 调用失败 | 报告错误，已完成的产出物保留 |
+| resolve-template 报错（第零步） | 透传 stderr `ERROR: ...` 并退出。常见原因：workspace.yaml.types[] 非空但 meta.interviewee_type 缺失（老会议未升级）、type.default_template_id 指向不存在的 template、显式 `--template` 既不在注册表也不是有效路径 |
+| `--template` 传入的 id 不存在于注册表 | resolve-template 会尝试当路径处理，若路径也不存在 → exit 2 + stderr |
 | Reviewer agent 启动失败 | 降级为 Leader 自检（执行 `{MINT_REF}/polish-reviewer-prompt.md` 中的 7 维 checklist），在 meta.yaml 中标记 `review.enabled: true, review.mode: fallback_self_check` |
 | Reviewer 第 3 轮仍退回 | 汇总全部问题清单，通过 AskUserQuestion 呈现给用户，由用户决定是否接受当前版本或人工介入 |
 | Reviewer 报告脱敏 critical 失败 | **禁止**静默通过或跳过扫描。必须 Edit 定点修复命中位置后重新扫描，直到全部 PASS。若无法修复（如原文没有合适的脱敏方案），上报用户 |

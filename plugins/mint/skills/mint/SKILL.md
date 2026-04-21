@@ -5,7 +5,7 @@ description: >-
   默认执行全部四个阶段：Transcribe -> Refine -> Polish -> Extract，阶段间设门禁供用户审阅。
   当用户提到"处理录音""从头跑一遍""mint""完整处理"时触发。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill
-version: 2.1.4
+version: 2.1.5
 ---
 
 # MINT 一键流水线编排器
@@ -68,6 +68,25 @@ Transcribe → Refine ──┬──→ Polish → Extract（默认路径）
 > **命名约定**：`{name}` = 受访者/会议真实名称；`{脱敏名}` = 脱敏代号（如 `受访者_01`），由全局注册表（工作目录上级的 `desensitization_registry.yaml`）统一分配，确保跨项目唯一。各项目 `meta.yaml` 的 `desensitization.name_map` 存储本项目的映射副本。
 
 ## 编排流程
+
+> **`{MINT_SCRIPTS}` / `{MINT_REF}` 路径约定**：分别指 mint 插件的 `scripts/` 和 `references/` 目录。首次引用时通过
+> `Glob("**/plugins/mint/scripts/meta_io.py")` 定位，多结果时优先非 `marketplaces/` 路径。
+
+### 0. 工作区初始化前置检查
+
+执行任何阶段之前，先验证当前所处工作区已通过 `mint:init` 初始化：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py find-workspace-root
+```
+
+- 返回 exit 0 且输出工作区根路径 → 继续
+- 返回 exit 1（找不到 `.mint/workspace.yaml`） → **立即中止**并输出：
+  ```
+  工作区未初始化：当前目录及其祖先目录均未找到 .mint/workspace.yaml。
+  请先运行 /mint:init 创建工作区（会引导填写 scenario / goal / deliverables），然后再跑 /mint。
+  ```
+  此错误文本必须包含关键词 `工作区未初始化` 和 `mint:init`（PRD MINT-01 断言）。
 
 ### 1. 参数解析与初始化
 
@@ -207,6 +226,25 @@ Transcribe → Refine ──┬──→ Polish → Extract（默认路径）
 
 提示：使用 /mint:status 查看处理状态，/mint:patch 修正错字，/mint:revise 修订内容。
 ```
+
+### 4. 最后一步：更新元数据并输出引导块
+
+全部阶段完成后，刷新 meta.yaml 并输出统一引导块：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+```
+
+同时将 `current.cursor` 更新为 `"extract"`（或 --skip-polish 场景下的实际最终阶段）、`current.last_action_desc` 更新为 `"一键流水线完成"`。
+
+然后：
+- Read `{MINT_REF}/next-hints-template.md`
+- 用 compute-next-hints JSON 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+- `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+- 原样输出填充后的模板（保留开头的 `---` 分隔线）
+
+对于 4/4 全部完成的会议，next_hints 通常推荐 `/mint:status <工作目录>` 查看最终产出快照，或 `/mint:next` 在工作区级查看全景以决定下一个会议。
 
 ## meta.yaml 管理
 

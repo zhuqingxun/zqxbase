@@ -6,7 +6,7 @@ description: >-
   触发场景："加到词表""刷新稿件""纠错""这个词错了应该是XX""补丁""更新词表"，
   或在阅读任意稿件时指出某个词识别错误（如"XX应该是YY"）。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.4
+version: 2.1.5
 ---
 
 
@@ -134,3 +134,33 @@ revisions:
 - **替换是确定性操作**：直接执行并报告结果，无需逐文件确认
 - **词表是共享资源**：更新后的词表会被 /mint:refine 引用，语境说明要写清楚
 - **meta.yaml 修订记录必须更新**：每次 patch 操作都要在 revisions 中留痕
+
+## blocker 自动解除
+
+patch 替换完成后，遍历当前会议 meta.yaml 的 `current.blockers[]`：若某 blocker description 包含本次 patch 的错误词，说明该 ASR 同音歧义已通过词表修正，自动解除（PRD BLOCKER-01）：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py resolve-blockers "<工作目录>" "<错误词>"
+```
+
+日志输出 `自动解除 blocker: <原 description>`。
+
+## 最后一步：更新元数据并输出引导块
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+   同时将 `current.cursor` 更新为 `"patch"`、`current.last_action_desc` 更新为 `"词表补丁({纠错条数}条)"`。
+
+2. **"返回主流水线"语义覆盖**（PRD 7.3）：patch 修了词表并刷新全部稿件，手工覆盖 next_hints：
+
+   - primary: `/mint:status <工作目录>` — 验证稿件已刷新，查看状态快照
+   - alternatives: `/mint:refine <工作目录>`（如发现校对质量下降需重跑）、`/mint:next`（基于新状态查引导）
+
+3. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用覆盖后的 next_hints 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+   - `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）

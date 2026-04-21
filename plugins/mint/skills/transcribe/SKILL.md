@@ -3,7 +3,7 @@ name: mint:transcribe
 description: >-
   MINT 流水线 Stage 1: 语音转文本——调用阿里云百炼平台将录音文件转为带时间戳和说话人标记的原始口水稿。当用户提到"语音转文字""录音转文本""转录""transcribe""把录音转成文字""ASR"时使用。支持 mp3/m4a/wav/flac/ogg 等常见音频格式，自动启用说话人分离。
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.4
+version: 2.1.5
 ---
 
 
@@ -95,7 +95,7 @@ echo $DASHSCOPE_API_KEY
 └── meta.yaml
 ```
 
-创建初始 `meta.yaml`：
+创建初始 `meta.yaml`（严格按以下字段顺序写入，不要按字母序）：
 ```yaml
 project: "{name}"
 created: {当前日期}
@@ -112,7 +112,30 @@ stages:
     status: pending
 
 revisions: []
+
+desensitization:
+  name_map: {}
+
+intent:
+  goal: ""
+  deliverables: []
+  skip_stages: []
+  scenario: ""
+
+current:
+  cursor: ""
+  last_action: null
+  last_action_desc: ""
+  blockers: []
+
+next_hints:
+  primary:
+    cmd: ""
+    reason: ""
+  alternatives: []
 ```
+
+说明：`intent` / `current` / `next_hints` 三块为空初始值，后续各 skill 会刷新。`intent.goal` 和 `intent.deliverables` 为空时，读取方（如 `mint:next`）会从工作区级 `.mint/workspace.yaml` 继承。
 
 如果工作目录已存在（meta.yaml 已有），跳过创建，直接进入转录。
 
@@ -161,6 +184,10 @@ stages:
       speakers: {识别到的说话人数}
 ```
 
+同时更新 `current`：
+- `current.cursor` = `"transcribe"`
+- `current.last_action_desc` = `"完成转录"`
+
 如果是重新转录，version 递增。
 
 ### 第七步：验证并报告
@@ -171,7 +198,23 @@ stages:
    - 输出文件路径和字数
    - 识别到的说话人数量
    - 音频时长
-3. 提示后续步骤：`/mint:refine` 进行逐字稿清洁
+
+### 最后一步：更新元数据并输出引导块
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+   第二条命令同时输出 JSON（含 primary.cmd / primary.reason / alternatives[]）到 stdout。
+
+2. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用 compute-next-hints 输出的 JSON 填充占位符：
+     - `{primary_cmd}` ← primary.cmd
+     - `{primary_reason}` ← primary.reason
+     - `{alternatives_block}` ← 按每行 `- {cmd}: {when}` 循环展开；空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）
 
 ## 输出格式
 

@@ -6,12 +6,12 @@ description: >-
   支持两种模式：保守（仅修错字和口水词）、适度（句子级优化，默认）。
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage
-version: 2.1.4
+version: 2.1.5
 ---
 
 # mint:refine — 校对清洁
 
-> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录。首次引用时通过
+> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录，`{MINT_SCRIPTS}` 为同级 `scripts/` 目录。首次引用时通过
 > `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 将 ASR 原始转录稿清洁为可读逐字稿。使用 Agent Team 双路交叉校对，包含架构师、双路校对员、审查员、人工澄清环节。
@@ -282,6 +282,36 @@ stages:
 
 已保存: 03_校对稿/{name}_校对稿.md
 ```
+
+## blocker 自动解除
+
+refine 开始执行前（加载 meta.yaml 之后、进入双路校对之前），先读取 `current.blockers[]`——若存在与 ambiguity 类型相关的旧条目，本次执行过程中重新评估：
+
+- 若 Architect 在新一轮"不确定项清单"中**未再提出**同样文本的歧义（说明 patch 词表或新一轮校对已解决），则该 blocker 自动移除：
+  ```bash
+  uv run --script {MINT_SCRIPTS}/meta_io.py resolve-blockers "<工作目录>" "<blocker description 中的关键短语>"
+  ```
+- 日志必须明确输出 `自动解除 blocker: <原 description>`（供审计，PRD BLOCKER-01 断言关键词）。
+
+若本次仍检测到新的歧义/缺输入/待决策，使用：
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py add-blocker "<工作目录>" "ambiguity" "<description>" "<suggested_action>"
+```
+
+## 最后一步：更新元数据并输出引导块
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+   同时将 `current.cursor` 更新为 `"refine"`、`current.last_action_desc` 更新为 `"完成校对"`（在上述命令之前或通过 Edit 工具写入 meta.yaml）。
+
+2. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用 compute-next-hints 输出的 JSON 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+   - `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）
 
 ## 参考文件
 

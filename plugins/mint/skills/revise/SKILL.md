@@ -5,7 +5,7 @@ description: >-
   与 mint:patch（修词表错误）不同，本技能处理编辑决策：改措辞、删段落、换视角、脱敏调整等。
   当用户说"把XX改成YY""删掉关于XX的部分""这段话换个说法""这里需要脱敏""修订一下稿件"时触发。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.4
+version: 2.1.5
 ---
 
 
@@ -171,3 +171,28 @@ revisions:
 - **语录集的完整性**：删除语录时确认引用来源标注同步清理
 - **不确定就问**：如果修订指令可能导致内容歧义或大段删除，先通过 AskUserQuestion 确认再动手
 - **meta.yaml 修订记录必须更新**：每次 revise 操作都要在 revisions 中留痕
+
+## 最后一步：更新元数据并输出引导块
+
+> **`{MINT_SCRIPTS}` / `{MINT_REF}` 路径约定**：分别指 mint 插件的 `scripts/` 和 `references/` 目录。首次引用时通过 `Glob` 定位对应目录下的任一文件，多结果时优先非 `marketplaces/` 路径。
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+   同时将 `current.cursor` 更新为 `"revise"`、`current.last_action_desc` 更新为 `"定向修订({--from 阶段})"`。
+
+2. **"返回主流水线"语义覆盖**（PRD 7.3）：由于 revise 是非线性维护操作，compute-next-hints 的默认推荐可能偏移。根据本次修订的 `--from` 阶段和实际受影响文件，手工覆盖 next_hints 并写回 meta.yaml.next_hints：
+
+   | --from | 推荐 primary | 备选 |
+   |---|---|---|
+   | 校对稿/refine | `/mint:polish <工作目录>` — 下游编辑稿需重新生成以反映修订 | `/mint:extract <工作目录>`、`/mint:status` |
+   | 编辑稿/polish | `/mint:extract <工作目录>` — 下游分析稿需刷新 | `/mint:status` |
+   | 分析稿/extract | `/mint:status` — 分析稿无下游，建议查看最终产出 | `/mint:next`、`/mint:patch` |
+
+3. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用覆盖后的 next_hints 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+   - `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）

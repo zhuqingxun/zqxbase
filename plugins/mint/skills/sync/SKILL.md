@@ -6,7 +6,7 @@ description: >-
   触发场景："同步到下游""我改了校对稿，帮我更新后面的""sync""手动改了，传播一下""把我的修改同步过去"。
   与 revise 的区别：revise 是用户描述要改什么，AI 执行；sync 是用户已经改好了，AI 检测差异并传播。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.4
+version: 2.1.5
 ---
 
 
@@ -172,3 +172,23 @@ revisions:
 - **只传播变更，不额外优化**：同步的目标是让下游文件反映源文件的变更，不顺手改其他内容
 - **无法确定的变更要标注**：如果某个变更在下游文件中找不到对应内容，在报告中标注"无对应内容，跳过"
 - **meta.yaml 修订记录必须更新**：每次 sync 操作都要在 revisions 中留痕
+
+## 最后一步：更新元数据并输出引导块
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+   同时将 `current.cursor` 更新为 `"sync"`、`current.last_action_desc` 更新为 `"从{源阶段}同步到下游"`。
+
+2. **"返回主流水线"语义覆盖**（PRD 7.3）：sync 已把修改传播到全部下游，手工覆盖 next_hints：
+
+   - primary: `/mint:status <工作目录>` — 查看同步后的最终产出状态
+   - alternatives: `/mint:patch`（若本次同步包含术语/人名修正，建议沉淀到词表）、`/mint:next`
+
+3. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用覆盖后的 next_hints 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+   - `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）

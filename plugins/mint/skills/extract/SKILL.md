@@ -3,13 +3,13 @@ name: mint:extract
 description: >-
   MINT 流水线 Stage 4: 结构化信息提取——从逐字稿中提取要点摘要、发言人分析（含深度意图分析）、行动项、关键决策等结构化产出物。支持选择输入源（clean 或 polished 稿）和指定产出物子集。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.4
+version: 2.1.5
 ---
 
 
 # mint:extract — 结构化信息提取
 
-> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录。首次引用时通过
+> **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录，`{MINT_SCRIPTS}` 为同级 `scripts/` 目录。首次引用时通过
 > `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 从逐字稿中提取结构化信息，产出四种文档。
@@ -194,6 +194,26 @@ stages:
 - speakers：分析了几位发言人
 - actions：提取了几条行动项
 - decisions：提取了几个决策 + 几个遗留问题
+
+同时更新 `current`：
+- `current.cursor` = `"extract"`
+- `current.last_action_desc` = `"完成结构化提取"`
+
+在 `stages.extract` 中写入 `produced` 字段（本次生成的 artifacts 列表），供 mint:next 的 Rule 3 判断交付物是否对齐。
+
+### 最后一步：更新元数据并输出引导块
+
+1. **刷新 current.last_action + 计算 next_hints**：
+   ```bash
+   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
+   ```
+
+2. **渲染引导块**：
+   - Read `{MINT_REF}/next-hints-template.md`
+   - 用 compute-next-hints 输出的 JSON 填充 `{primary_cmd}` / `{primary_reason}` / `{alternatives_block}`
+   - `{alternatives_block}` 按每行 `- {cmd}: {when}` 循环展开，空数组输出单行 `- 无`
+   - 原样输出填充后的模板（保留开头的 `---` 分隔线）
 
 ## 质量控制
 
