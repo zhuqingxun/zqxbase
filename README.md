@@ -34,7 +34,7 @@ Structured development workflow: **Requirements → Plan → Implementation → 
 
 提供完整的功能开发生命周期管理：头脑风暴、PRD 创建、计划制定、实施执行、多维度验证（代码审查、审计、交付报告）。
 
-**主要命令**: `/rpiv-loop:brainstorm`, `/rpiv-loop:plan-feature`, `/rpiv-loop:execute`, `/rpiv-loop:validation:code-review`
+**主要命令**: `/rpiv-loop:brainstorm`, `/rpiv-loop:plan-feature`, `/rpiv-loop:execute`, `/rpiv-loop:code-review`
 
 ### mint
 **MINT (Meeting Intelligence)** — 从录音到结构化洞察的全流程管线。
@@ -58,7 +58,7 @@ Audio-to-insights pipeline for meeting recordings.
 
 Deep research methodology: brainstorm → source discovery → deep research → writing → delivery.
 
-**主要命令**: `/insight:brainstorm`, `/insight:biubiubiu`, `/insight:nblm`, `/insight:ppt-refine`
+**主要命令**: `/insight:brainstorm`, `/insight:biubiubiu`, `/insight:nblm`
 
 ### challenge
 红蓝对抗 — 结构化攻防审查方案和决策。
