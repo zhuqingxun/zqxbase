@@ -2,7 +2,7 @@
 name: rpiv-loop:execute
 description: 执行实施计划
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.5
+version: 2.1.6
 ---
 
 # Execute: 从计划实施

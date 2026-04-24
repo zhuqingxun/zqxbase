@@ -3,7 +3,7 @@ name: rpiv-loop:execution-report
 description: >-
   为系统审查生成实施报告
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.1.5
+version: 2.1.6
 ---
 
 # 执行报告

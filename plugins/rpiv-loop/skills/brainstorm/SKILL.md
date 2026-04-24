@@ -1,11 +1,21 @@
 ---
 name: rpiv-loop:brainstorm
 description: 通过访谈对话澄清产品需求
-allowed-tools: Read, Write, AskUserQuestion, Skill
-version: 2.1.5
+allowed-tools: Read, Write, Bash, AskUserQuestion, Skill
+version: 2.1.6
 ---
 
 # Brainstorm: 产品需求访谈
+
+## 前置初始化
+
+首次执行前调用（幂等，已存在则静默跳过）：
+
+```bash
+uv run D:/CODE/plugins/rpiv-loop/tools/ensure_project_dod.py
+```
+
+该脚本若发现 `rpiv/dod.yaml` 缺失则从 `tools/dod_template.yaml` 拷贝初始化；已存在则静默跳过。确保项目级 DoD 通用门在后续 RPIV 各阶段可用。
 
 ## 概述
 

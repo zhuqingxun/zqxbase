@@ -2,8 +2,8 @@
 name: rpiv-loop:validate
 description: >-
   根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
-allowed-tools: Read, Bash, Grep, Glob
-version: 2.1.5
+allowed-tools: Read, Bash, Edit, Grep, Glob
+version: 2.1.6
 ---
 
 # 运行项目的全面验证
@@ -107,6 +107,55 @@ cargo test
   - **Unix**：`lsof -ti:<端口> | xargs kill -9` 或 `pkill -f <可识别子串>`
   - 若无法可靠停止或存在权限/环境差异，可**不执行停止**，只在报告中写明「已进行健康检查，请必要时手动停止服务」
 - **未写明**：跳过并注明「未发现启动命令与健康检查 URL，已跳过服务验证」
+
+---
+
+## AC 逐条证据采集（强约束）
+
+**输入契约**：`rpiv/validation/<feature>/acceptance.yaml`（由 plan-feature 阶段产出骨架，已含 `id / given / when / then / verification_method / blocking`）。
+
+**本阶段职责**：对 `acceptance.yaml` 中的每一条 AC，执行其 `verification_method` 并**逐条填写 `evidence` 与 `status`**。
+
+### 操作步骤
+
+1. **读取 acceptance.yaml**：通过 `Read` 工具载入全部 AC 条目
+2. **逐条执行 `verification_method`**：
+   - 命令型（如 `uv run pytest ...`）→ 运行并捕获输出
+   - 脚本型（如 `bash tests/integration/*.sh`）→ 运行并记录退出码
+   - 可视/手工型（如 smoke screenshot）→ 产生截图后登记路径
+3. **翻 `status`**：
+   - `passed`：执行成功且证据充分
+   - `failed`：执行失败或证据与 `then` 断言不符
+   - `not_applicable`：环境不支持（此时 `notes` 必须说明理由）
+4. **填 `evidence`**（**禁止模糊文本**）：
+   - 测试类：`tests/test_xxx.py::test_name` 或 `tests/test_xxx.py:123`
+   - 命令类：关键 stdout/stderr 片段（≤ 200 字符）或完整输出文件路径
+   - 日志类：`logs/validate-<date>.log` 的行号片段
+   - 截图类：`docs/screenshots/<feature>-ac-NNN.png`
+   - **反例**：`evidence: "已测"`、`evidence: "OK"`、`evidence: "通过"` — 这类一律视为 failed
+
+### 禁止修改的字段
+
+本阶段**只能**动 `evidence / status / notes` 三个字段。以下字段是 plan 阶段产出的契约，validate 阶段**禁止改动**：
+
+- `id` — 唯一标识
+- `given / when / then` — Gherkin 三段
+- `verification_method` — 验证手段
+- `blocking` — 强/软约束标记
+
+如发现 plan 阶段的 AC 本身有问题（措辞模糊、验证方法不可执行），回退到 plan-feature 阶段修订，不要在 validate 阶段绕过。
+
+### 完成后校验
+
+本阶段结束前**必须**运行：
+
+```bash
+uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>
+```
+
+- 退出码 `0` → 所有 blocking AC 均 passed 或 not_applicable（且 evidence/notes 非空）→ 可进入 delivery-report
+- 退出码 `1` → 有 blocking AC 未过，按输出清单补齐
+- 退出码 `2` → 文件缺失或 YAML 格式错误，修文件后重跑
 
 ---
 

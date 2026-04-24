@@ -1,0 +1,37 @@
+# 特性级 AC（Acceptance Criteria）：本次 PRD 的具体验收判据
+# 参考业界实践：Gherkin BDD Given-When-Then / DO-178C RTM
+#
+# 字段约定:
+#   id:                  AC-NNN 唯一标识
+#   given/when/then:     Gherkin 三段描述（人可读）
+#   verification_method: 可执行的验证命令 或 具体人工动作描述
+#   evidence:            validate 阶段填：测试路径+行号 / 命令输出片段 / 截图路径
+#   status:              空字符串(初始) / passed / failed / not_applicable
+#   blocking:            true = 未 passed 将阻塞 delivery-report
+#   notes:               not_applicable 理由 / warning 补充 / 其他上下文
+#
+# plan-feature 阶段填: id, given, when, then, verification_method, blocking
+# validate 阶段填:     evidence, status, (必要时) notes
+# delivery-report 阶段: 只读不改
+prd: prd-<feature-name>
+version: 1
+criteria:
+  - id: AC-001
+    given: "<前置条件>"
+    when: "<动作或事件>"
+    then: "<期望结果（可测）>"
+    verification_method: "<shell 命令 或 pytest 节点 或 人工步骤描述>"
+    evidence: ""
+    status: ""
+    blocking: true
+    notes: ""
+
+  - id: AC-002
+    given: "..."
+    when: "..."
+    then: "..."
+    verification_method: "..."
+    evidence: ""
+    status: ""
+    blocking: true
+    notes: ""

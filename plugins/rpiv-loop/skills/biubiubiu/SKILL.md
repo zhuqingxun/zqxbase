@@ -3,13 +3,23 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage, Skill
-version: 2.1.5
+version: 2.1.6
 ---
 
 # Biubiubiu: 全自主 RPIV 团队执行
 
 > **`{RPIV_SKILLS}` 路径约定**：指 rpiv-loop 插件的 `skills/` 目录。首次引用时通过
-> `Glob("**/plugins/rpiv-loop/skills/biubiubiu/SKILL.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
+> `Glob("**/plugins/rpiv-loop/skills/biubiubiu/SKILL.md")` 定位,多结果时优先非 `marketplaces/` 路径（私有开发版）。
+
+## 前置初始化
+
+首次执行前调用（幂等，已存在则静默跳过）：
+
+```bash
+uv run D:/CODE/plugins/rpiv-loop/tools/ensure_project_dod.py
+```
+
+该脚本确保项目根目录存在 `rpiv/dod.yaml`（项目级 DoD 通用门），后续 AC gate 校验以此为上下文。
 
 从对话上下文中提取需求，启动 agent 团队自主完成完整 RPIV 开发流程（PRD → Plan → Execute → Validate），全程无需用户介入。
 
@@ -205,13 +215,47 @@ Architect 完成 create-plan 后：
 
 这确保了早期任务的错误不会传播到后续任务，同时不阻塞 Dev 的工作节奏。
 
-#### 门禁 3：实现完成
+#### 门禁 3：实现完成 + AC gate 循环
 
-所有子任务的快速检查通过后：
-- QA 运行完整测试套件 + 全面代码审查
-- Architect 做计划对齐审查
-- 有 critical/high 问题 → SendMessage 要求 Dev 修复 → 重新测试（最多 3 轮）
-- 全部通过 → 进入交付
+所有子任务的快速检查通过后，进入 **AC gate 循环**（参考 runbook：`D:/CODE/plugins/rpiv-loop/tools/run_acceptance_fix_loop.py`）：
+
+**循环入口**（一次性工作）：
+1. QA 运行完整测试套件 + 全面代码审查
+2. Architect 做计划对齐审查
+3. QA 按 `validate` SKILL 的「AC 逐条证据采集」章节，逐条翻 `rpiv/validation/<feature>/acceptance.yaml` 的 `status` 与 `evidence`
+
+**循环体**（每一轮按序执行）：
+
+```
+while round < 10:
+  1. 运行 check_acceptance.py <feature>
+  2. 退出码 0 → break（全部 passed，进入步骤 6 交付）
+  3. 退出码 1/2 → 收集 failing AC 清单（AC-id + 失败原因）
+  4. SendMessage 分配给 Dev-X：精确指出哪条 AC / 哪个文件 / 期望行为
+  5. Dev 修复实现代码
+  6. QA 重跑该 AC 对应的 verification_method → 更新 evidence/status
+  7. round += 1
+```
+
+**护栏规则**：
+- **同一 AC 连续 2 轮同一 failure**（错误消息或 failing 行号完全相同）→ 提前 escalate 到 AskUserQuestion，不等满 10 轮
+- **10 轮上限**：第 11 轮强制触发 AskUserQuestion，三选项如下：
+
+```
+AskUserQuestion:
+  question: "AC gate 10 轮修复未通过，如何继续？"
+  options:
+    - label: "继续 10 轮"
+      description: "延长一次循环配额，Leader 继续分配修复任务"
+    - label: "查看失败清单"
+      description: "中断循环，输出当前所有 failing AC 的详细清单与根因假设"
+    - label: "放弃交付"
+      description: "中止本次 biubiubiu，输出部分完成报告，未通过的 AC 记入 rpiv/todo/"
+```
+
+**有 critical/high 代码审查问题**（与 AC 无关的代码质量问题）→ SendMessage 要求 Dev 修复（最多 3 轮），与 AC gate 循环并行处理。
+
+**全部通过**（check_acceptance 退出码 0 且 code-review 无 critical/high）→ 进入交付。
 
 #### 决策原则
 
@@ -280,8 +324,12 @@ related_files:
      - `rpiv/validation/test-specs-{feature-name}.md`
      - `rpiv/validation/code-review-{feature-name}.md`
      - `rpiv/validation/delivery-report-{feature-name}.md`
+   - **新增**：归档 `rpiv/validation/{feature-name}/` 整个子目录（含 `acceptance.yaml` 及该特性下所有同目录文件）
+     - 目标路径：`rpiv/archive/validation/{feature-name}/`（保持子目录结构完整，不扁平化）
+     - 子目录内每个 YAML/MD 文件仍需补 `archived_at`（如文件本身有 frontmatter）
    - 对每个文件：Edit frontmatter 将 `status` 改为 `archived`，添加 `archived_at` 时间戳，更新 `updated_at`
    - 移动文件到 `rpiv/archive/`（如有同名文件则加时间戳后缀）
+   - **兼容扫描**：同时扫描扁平旧文件名（如 `rpiv/validation/acceptance-{feature-name}.yaml`），一并归档以覆盖历史版本
    - 输出归档清单
 4. **向用户报告**：输出交付物清单和关键信息摘要
 

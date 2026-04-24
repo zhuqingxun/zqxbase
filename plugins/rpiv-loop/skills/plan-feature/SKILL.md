@@ -2,7 +2,7 @@
 name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.1.5
+version: 2.1.6
 ---
 
 # 规划新任务
@@ -395,6 +395,77 @@ version: 2.1.5
 
 <额外的上下文、设计决策、权衡>
 ```
+
+### 阶段 5.6：产出 acceptance.yaml（AC 对账的权威数据源）
+
+**目的**：与 plan 文件同步生成结构化的 Gherkin 风格验收判据（AC），作为 `validate` 填写证据、`delivery-report` 门禁校验的唯一真实源。
+
+**文件路径**：`rpiv/validation/<feature>/acceptance.yaml`（若目录不存在需一并创建）。
+
+**plan 阶段职责**（本 SKILL 只写以下字段）：
+- `id`：全文件唯一，格式 `AC-NNN`（三位数字），**禁止重复**
+- `given` / `when` / `then`：严格按 Gherkin 三段式书写
+- `verification_method`：具体到命令 / 测试文件路径 / 脚本名，禁止"人工检查"这种泛词
+- `blocking`：`true` 表示强约束项，交付前必须 passed 或 not_applicable；`false` 为软性目标
+- `notes`（可选）：额外上下文
+
+**validate 阶段后续职责**（不要在 plan 阶段预填）：
+- `evidence`：执行 verification_method 后的具体证据（路径:行号 / 日志片段 / 截图文件名）
+- `status`：`passed` / `failed` / `not_applicable`（初始留空，由 QA 翻状态）
+
+**delivery-report 阶段职责**：只读 `acceptance.yaml`，**禁止修改任何字段**。`check_acceptance.py` 通过 `uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>` 校验后以退出码决定能否出具交付报告。
+
+**质量门（plan 阶段自检清单）**：
+- [ ] `acceptance.yaml` 条目数 ≥ 3
+- [ ] 所有 `id` 唯一且连号
+- [ ] 所有 `verification_method` 非空且具体
+- [ ] 每个 `blocking: true` 项都配了可执行的 `verification_method`
+- [ ] `given/when/then` 用祈使句描述系统行为，禁止"用户应该感觉良好"这种无法验证的措辞
+
+**YAML 示例**（最小可用模板，复制后替换内容）：
+
+```yaml
+# rpiv/validation/<feature>/acceptance.yaml
+# 由 plan-feature 阶段产出骨架；validate 阶段填 evidence/status；delivery-report 只读不改
+feature: <feature-name>
+prd: prd-<feature-name>
+plan: plan-<feature-name>
+acceptance_criteria:
+  - id: AC-001
+    given: 用户已配置 dod.yaml 且首次进入 rpiv-loop 工作流
+    when: 执行 /rpiv-loop:prime 命令
+    then: ensure_project_dod.py 被调用，rpiv/dod.yaml 已存在则静默跳过
+    verification_method: uv run pytest tests/test_ensure_project_dod.py::test_idempotent_on_second_run
+    blocking: true
+    evidence: ""
+    status: ""
+    notes: ""
+  - id: AC-002
+    given: acceptance.yaml 存在一条 blocking AC 且 status 为空
+    when: 触发 Write delivery-report-<feature>.md
+    then: PostToolUse hook 退出码 2，stderr 提示 "DoD gate 未通过"
+    verification_method: bash tests/integration/test_hook_blocks_unverified.sh
+    blocking: true
+    evidence: ""
+    status: ""
+    notes: ""
+  - id: AC-003
+    given: 8 条 AC 全部 passed 且 evidence 非空
+    when: 运行 uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>
+    then: 退出码 0，stdout 含 "ALL PASS"
+    verification_method: uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>
+    blocking: true
+    evidence: ""
+    status: ""
+    notes: ""
+```
+
+**产出约束**：
+- 本章节要求 `acceptance.yaml` 与 plan.md **同一会话内产出**，缺一不可
+- plan.md 的「验收标准」章节可保留对 plan 自身的 checklist，但强约束 AC 的**唯一权威源**是 `acceptance.yaml`
+- 与 delivery-report 的 `check_acceptance.py` 构成闭环：plan 写骨架 → validate 翻状态 → delivery-report 校验通过才放行
+
+---
 
 ## 输出格式
 

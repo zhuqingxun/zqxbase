@@ -2,7 +2,7 @@
 name: rpiv-loop:archive
 description: 归档已完成的过程文件
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-version: 2.1.5
+version: 2.1.6
 ---
 
 # Archive: 归档过程文件

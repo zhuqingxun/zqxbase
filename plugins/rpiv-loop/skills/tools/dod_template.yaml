@@ -1,0 +1,28 @@
+# 项目级 DoD（Definition of Done）：适用于本项目所有 PRD 的通用质量门
+# 参考业界实践：Scrum DoD / SonarQube Quality Gates
+# 用户应根据项目实际情况修订，删除不适用条目，添加项目特有条目
+version: 1
+applies_to: all_prds
+gates:
+  - id: DOD-LINT
+    description: 静态检查全部通过
+    verification_method: "uv run ruff check ."
+    blocking: true
+  - id: DOD-TEST
+    description: 单元测试全部通过
+    verification_method: "uv run pytest"
+    blocking: true
+  - id: DOD-COVERAGE
+    description: 单元测试覆盖率 >= 80%
+    verification_method: "uv run pytest --cov --cov-fail-under=80"
+    blocking: false
+    notes: "新项目初期可暂不 blocking，稳定后翻 true"
+  - id: DOD-SECRET
+    description: 无密钥/敏感词泄露
+    verification_method: "python scripts/audit_secrets.py"
+    blocking: true
+    notes: "若项目无此脚本，请删除本条或替换为 trufflehog/gitleaks 命令"
+  - id: DOD-DOC
+    description: README / CLAUDE.md 随功能同步更新
+    verification_method: manual_review
+    blocking: false

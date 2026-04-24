@@ -2,7 +2,7 @@
 name: rpiv-loop:flow-status
 description: 查看过程文件的状态
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 # Status: 查看文件状态

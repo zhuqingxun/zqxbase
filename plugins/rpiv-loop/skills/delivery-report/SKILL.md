@@ -3,7 +3,7 @@ name: rpiv-loop:delivery-report
 description: >-
   生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.1.5
+version: 2.1.6
 ---
 
 # Delivery Report: 交付报告
@@ -21,6 +21,33 @@ version: 2.1.5
 ```bash
 /rpiv-loop:delivery-report feature-name
 ```
+
+## 第 0 步：AC gate 硬校验（必须最先执行）
+
+**第一步必须调用** AC 对账脚本，未通过则立即中断，不得进入后续任何步骤：
+
+```bash
+uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>
+```
+
+（消费项目上下文中若插件根在 PATH 变量里，也可写为 `uv run <插件根>/tools/check_acceptance.py <feature>`。）
+
+**退出码语义**：
+
+| 退出码 | 含义 | 本 SKILL 动作 |
+|--------|------|--------------|
+| `0`    | 全部 blocking AC 均 passed 或 not_applicable，evidence 非空 | 继续进入步骤 1 |
+| `1`    | 有 blocking AC 未通过（status 为空 / failed / evidence 缺失） | **立即 raise**，输出 failing AC 清单，**禁止生成交付报告** |
+| `2`    | `acceptance.yaml` 缺失或 YAML 解析失败 | 要求先跑 plan-feature 补齐 acceptance.yaml，**禁止生成交付报告** |
+
+**重要约束（流程纪律）**：
+- 本 SKILL **只读** `rpiv/validation/<feature>/acceptance.yaml`
+- **禁止在 delivery-report 阶段修改 acceptance.yaml 的任何字段**（包括 evidence / status），违反视为流程违规
+- 如需修正 AC，回退到 `plan-feature`（修结构）或 `validate`（翻 status / 填 evidence），完成后再回到本 SKILL
+
+**hook 兜底**：即使本 SKILL 文字被忽略，`hooks/block_unverified_delivery.py` 会在 Write `rpiv/validation/delivery-report-*.md` 时再跑一次 `check_acceptance.py`，退出码非 0 则 exit 2 + stderr 阻止 Claude Code 保存。3 层保险确保"美化式绕过"不可能发生。
+
+---
 
 ## 前置条件
 

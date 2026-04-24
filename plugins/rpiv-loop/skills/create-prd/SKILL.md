@@ -2,10 +2,20 @@
 name: rpiv-loop:create-prd
 description: 基于对话上下文创建产品需求文档
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 # Create PRD: 生成产品需求文档
+
+## 前置初始化
+
+首次执行前调用（幂等，已存在则静默跳过）：
+
+```bash
+uv run D:/CODE/plugins/rpiv-loop/tools/ensure_project_dod.py
+```
+
+该脚本若发现 `rpiv/dod.yaml` 缺失则从 `tools/dod_template.yaml` 拷贝初始化；已存在则静默跳过。确保项目级 DoD 通用门在后续 RPIV 各阶段可用。
 
 ## 概述
 
