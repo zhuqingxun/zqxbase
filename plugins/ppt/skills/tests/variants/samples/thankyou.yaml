@@ -1,0 +1,23 @@
+meta:
+  title: "thankyou sample"
+  theme: huawei
+narrative:
+  thesis: "致谢页最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: closing
+    visual_type: thankyou
+    content:
+      title: "Thank you."
+      subtitle: "期待合作，欢迎交流。"
+      contacts:
+        - label: "邮箱"
+          value: "contact@example.com"
+        - label: "官网"
+          value: "example.com"
+        - label: "电话"
+          value: "400-000-0000"
+        - label: "地址"
+          value: "深圳市南山区"

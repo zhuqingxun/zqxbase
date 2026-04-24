@@ -1,0 +1,27 @@
+meta:
+  title: "cards-6 sample"
+  theme: huawei
+narrative:
+  thesis: "六宫格最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: cards-6
+    content:
+      title: "六大核心能力"
+      description: "支撑业务的底层能力集"
+      key_points:
+        - heading: "平台"
+          body: "统一技术中台。"
+        - heading: "数据"
+          body: "闭环采集与治理。"
+        - heading: "算法"
+          body: "场景化模型沉淀。"
+        - heading: "产品"
+          body: "模块化可组装。"
+        - heading: "服务"
+          body: "全旅程运营保障。"
+        - heading: "生态"
+          body: "伙伴协同扩展。"

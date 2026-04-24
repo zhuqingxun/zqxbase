@@ -1,0 +1,16 @@
+meta:
+  title: "section-divider-dark sample"
+  theme: huawei
+narrative:
+  thesis: "章节分隔页最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: section
+    visual_type: section-divider-dark
+    content:
+      title: "战略定位与核心能力"
+      description: "锚定增长曲线，明确取舍优先级。"
+      number: "01"
+      eyebrow: "Chapter One"

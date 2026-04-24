@@ -1,0 +1,31 @@
+meta:
+  title: "risk-list sample"
+  theme: huawei
+narrative:
+  thesis: "风险清单最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: risk-list
+    content:
+      title: "关键风险清单"
+      description: "按严重度排序"
+      risks:
+        - title: "核心人员流失"
+          desc: "关键岗位无备份，交接成本高。"
+          mitigation: "建立 AB 角与接班人机制。"
+          severity: "HIGH"
+        - title: "供应链单点"
+          desc: "上游厂商高度集中，议价弱。"
+          mitigation: "引入第二供应源。"
+          severity: "MED"
+        - title: "合规变动"
+          desc: "数据合规法规可能收紧。"
+          mitigation: "提前梳理审计链路。"
+          severity: "LOW"
+        - title: "客户集中度"
+          desc: "TOP3 客户营收占比偏高。"
+          mitigation: "拓展中腰部客户。"
+          severity: "MED"

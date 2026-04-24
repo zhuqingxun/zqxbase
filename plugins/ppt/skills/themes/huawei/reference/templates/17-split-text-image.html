@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>17 · 图文对半</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .si{flex:1;margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:stretch}
+  .si .img{background:repeating-linear-gradient(135deg,var(--c-rule-soft) 0 14px,transparent 14px 28px),var(--c-paper-2);border:1px solid var(--c-rule);display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);color:var(--c-ink-mute);font-size:18px;letter-spacing:.1em;position:relative}
+  .si .img::after{content:'IMAGE PLACEHOLDER · 16:10';position:absolute;bottom:20px;left:20px;padding:6px 12px;background:#fff;border:1px solid var(--c-rule)}
+  .si .copy{display:flex;flex-direction:column;gap:24px;justify-content:center;padding:10px 0}
+  .si .lead{font-size:28px;color:var(--c-ink);line-height:1.45;font-weight:400;text-wrap:pretty}
+  .si ul.feat{list-style:none;padding:0;margin:0;border-top:1px solid var(--c-rule)}
+  .si ul.feat li{padding:20px 0;border-bottom:1px solid var(--c-rule);display:grid;grid-template-columns:52px 1fr;gap:18px;align-items:baseline}
+  .si ul.feat .n{font-family:var(--f-mono);color:var(--c-primary);font-size:18px}
+  .si ul.feat b{display:block;font-size:22px;font-weight:600;color:var(--c-ink);margin-bottom:4px}
+  .si ul.feat span{color:var(--c-ink-soft);font-size:18px;line-height:1.5}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div><p class="eyebrow">章节 · 单点展开</p>
+  <h2 class="title">{图文并排的一句话 action title}</h2>
+  <div class="si"><div class="img"></div>
+  <div class="copy"><p class="lead">{40-80 字的核心陈述，支撑图像内容，给读者一个完整理解路径。}</p>
+  <ul class="feat"><li><span class="n">01</span><span><b>{要点一}</b>{20-40 字说明}</span></li>
+  <li><span class="n">02</span><span><b>{要点二}</b>{20-40 字说明}</span></li>
+  <li><span class="n">03</span><span><b>{要点三}</b>{20-40 字说明}</span></li></ul></div></div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>17 / 25</span></div></div></body></html>

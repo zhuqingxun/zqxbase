@@ -1,0 +1,30 @@
+meta:
+  title: "matrix-2x2 sample"
+  theme: huawei
+narrative:
+  thesis: "2x2 矩阵最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: matrix-2x2
+    content:
+      title: "业务组合矩阵"
+      description: "按增长性与盈利性分象限"
+      x_axis: "盈利性（弱 → 强）"
+      y_axis: "增长性（低 → 高）"
+      quadrants:
+        - heading: "明星业务"
+          desc: "高增长高盈利，持续加码。"
+          tag: "Q1"
+          highlight: true
+        - heading: "问题业务"
+          desc: "高增长低盈利，评估留转。"
+          tag: "Q2"
+        - heading: "瘦狗业务"
+          desc: "低增长低盈利，退出或整合。"
+          tag: "Q3"
+        - heading: "现金牛"
+          desc: "低增长高盈利，收割资源。"
+          tag: "Q4"

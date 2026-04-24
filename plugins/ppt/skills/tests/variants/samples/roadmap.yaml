@@ -1,0 +1,50 @@
+meta:
+  title: "roadmap sample"
+  theme: huawei
+narrative:
+  thesis: "路线图最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: roadmap
+    content:
+      title: "三年路线图"
+      description: "按产品/数据/运营三条主线"
+      phases: ["2026", "2027", "2028"]
+      lanes:
+        - name: "产品"
+          bars:
+            - start: 0
+              span: 1
+              emphasis: "primary"
+              label: "核心稳定"
+            - start: 1
+              span: 1
+              emphasis: "default"
+              label: "横向扩展"
+            - start: 2
+              span: 1
+              emphasis: "accent"
+              label: "平台化"
+        - name: "数据"
+          bars:
+            - start: 0
+              span: 2
+              emphasis: "primary"
+              label: "闭环与指标"
+            - start: 2
+              span: 1
+              emphasis: "default"
+              label: "产品化"
+        - name: "运营"
+          bars:
+            - start: 0
+              span: 1
+              emphasis: "default"
+              label: "试点"
+            - start: 1
+              span: 2
+              emphasis: "accent"
+              label: "复制 + 沉淀"

@@ -1,0 +1,23 @@
+meta:
+  title: "process-flow-huawei sample"
+  theme: huawei
+narrative:
+  thesis: "流程图最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: process-flow-huawei
+    content:
+      title: "端到端交付流程"
+      description: "四步打通售前到运维"
+      steps:
+        - title: "需求澄清"
+          desc: "访谈与需求分级。"
+        - title: "方案设计"
+          desc: "架构与里程碑对齐。"
+        - title: "交付实施"
+          desc: "分阶段灰度上线。"
+        - title: "持续运维"
+          desc: "SLA 监控与迭代。"

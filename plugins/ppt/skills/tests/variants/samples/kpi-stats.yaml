@@ -1,0 +1,38 @@
+meta:
+  title: "kpi-stats sample"
+  theme: huawei
+narrative:
+  thesis: "KPI 统计最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: data
+    visual_type: kpi-stats
+    content:
+      title: "核心经营指标"
+      description: "2026 Q1 快照"
+      kpis:
+        - label: "营收"
+          value: "128"
+          unit: "亿元"
+          desc: "同比持续增长"
+          trend: "up"
+          trend_text: "YoY +12%"
+        - label: "毛利率"
+          value: "38.4"
+          unit: "%"
+          desc: "结构优化带来改善"
+          trend: "up"
+          trend_text: "+2.1pp"
+        - label: "客户数"
+          value: "2,340"
+          desc: "新签保持稳健"
+          trend: "flat"
+          trend_text: "持平"
+        - label: "获客成本"
+          value: "4,120"
+          unit: "元"
+          desc: "精准投放收效"
+          trend: "down"
+          trend_text: "-8%"

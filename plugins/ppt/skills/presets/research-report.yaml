@@ -1,0 +1,32 @@
+name: research-report
+description: "研究报告预设。深度分析、数据驱动、Action Titles、多维度对比"
+
+structure:
+  required_sections:
+    - role: title
+    - role: executive_summary
+    - role: content
+    - role: recommendations
+    - role: closing
+  optional_sections:
+    - role: appendix
+
+content_rules:
+  title_style: action_title
+  max_bullets_per_page: 5
+  prefer_data_visualization: true
+  evidence_requirement: "每个核心论点须有数据或引用支撑"
+
+visual_type_preferences:
+  cards-3: 0.8
+  cards-4: 0.7
+  comparison-2: 0.9
+  comparison-3: 0.7
+  data-contrast: 0.9
+  table: 0.6
+  process-3-phase: 0.7
+  process-4-phase: 0.6
+  hero-statement: 0.5
+  quote-hero: 0.4
+  timeline-horizontal: 0.6
+  bullets: 0.3

@@ -1,0 +1,25 @@
+meta:
+  title: "rings sample"
+  theme: huawei
+narrative:
+  thesis: "同心环最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: rings
+    content:
+      title: "同心能力圈"
+      description: "由外向内逐层聚焦"
+      rings:
+        - label: "生态"
+        - label: "能力"
+        - label: "内核"
+      steps:
+        - title: "定位内核"
+          desc: "明确不可替代的能力。"
+        - title: "放大能力"
+          desc: "将内核产品化、服务化。"
+        - title: "构建生态"
+          desc: "联合伙伴放大网络效应。"

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>10 · SWOT 四象限</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .swot{flex:1;margin-top:30px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:var(--c-rule);position:relative}
+  .swot::before,.swot::after{content:'';position:absolute;background:var(--c-primary);z-index:2}
+  .swot::before{left:50%;top:0;bottom:0;width:2px;transform:translateX(-1px)}
+  .swot::after{top:50%;left:0;right:0;height:2px;transform:translateY(-1px)}
+  .q{background:#fff;padding:36px 40px;display:flex;flex-direction:column}
+  .q .tag{font-family:var(--f-mono);font-size:14px;letter-spacing:.14em;color:var(--c-ink-mute);text-transform:uppercase;margin-bottom:6px}
+  .q h4{font-size:30px;font-weight:600;margin:0 0 20px;color:var(--c-ink);display:flex;align-items:baseline;gap:14px}
+  .q h4 .m{font-family:var(--f-mono);font-size:56px;color:var(--c-primary);font-weight:400;line-height:1}
+  .q ul{margin:0;padding:0;list-style:none;font-size:19px;color:var(--c-ink-soft);line-height:1.55}
+  .q li{padding:8px 0 8px 22px;position:relative;border-top:1px dashed var(--c-rule-soft)}
+  .q li:first-child{border-top:none}
+  .q li::before{content:'';position:absolute;left:0;top:18px;width:8px;height:1px;background:var(--c-primary)}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 自我评估</p>
+  <h2 class="title">{一句话概括当前态势 — SWOT 主结论}</h2>
+  <div class="swot">
+  
+  <div class="q"><div class="tag">Strengths</div><h4><span class="m">S</span>内部 · 优势</h4>
+  <ul><li>{要点一 · 一句话}</li><li>{要点二 · 一句话}</li><li>{要点三 · 一句话}</li><li>{要点四 · 一句话}</li></ul></div>
+  <div class="q"><div class="tag">Opportunities</div><h4><span class="m">O</span>外部 · 机会</h4>
+  <ul><li>{要点一 · 一句话}</li><li>{要点二 · 一句话}</li><li>{要点三 · 一句话}</li><li>{要点四 · 一句话}</li></ul></div>
+  <div class="q"><div class="tag">Weaknesses</div><h4><span class="m">W</span>内部 · 劣势</h4>
+  <ul><li>{要点一 · 一句话}</li><li>{要点二 · 一句话}</li><li>{要点三 · 一句话}</li><li>{要点四 · 一句话}</li></ul></div>
+  <div class="q"><div class="tag">Threats</div><h4><span class="m">T</span>外部 · 威胁</h4>
+  <ul><li>{要点一 · 一句话}</li><li>{要点二 · 一句话}</li><li>{要点三 · 一句话}</li><li>{要点四 · 一句话}</li></ul></div>
+  </div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>10 / 25</span></div></div></body></html>

@@ -1,0 +1,28 @@
+name: academic-talk
+description: "学术演讲预设。Action Titles、单一论证线、图表驱动、严格限制装饰"
+
+structure:
+  required_sections:
+    - role: title
+    - role: content
+    - role: closing
+  optional_sections:
+    - role: appendix
+
+content_rules:
+  title_style: action_title
+  max_bullets_per_page: 4
+  prefer_data_visualization: true
+  evidence_requirement: "每个结论必须有对应数据/图表支撑，每个借用图表必须有引用"
+
+visual_type_preferences:
+  comparison-2: 0.8
+  data-contrast: 0.8
+  table: 0.7
+  cards-3: 0.5
+  process-3-phase: 0.6
+  hero-statement: 0.6
+  quote-hero: 0.3
+  timeline-horizontal: 0.4
+  bullets: 0.5
+  cards-4: 0.3

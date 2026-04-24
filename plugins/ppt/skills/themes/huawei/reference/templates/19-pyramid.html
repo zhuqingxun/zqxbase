@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>19 · 金字塔</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .py{flex:1;margin-top:40px;display:grid;grid-template-columns:1fr 1.3fr;gap:80px;align-items:center}
+  .pyr{display:flex;flex-direction:column;gap:6px;align-items:center}
+  .pyr .lv{display:flex;align-items:center;justify-content:center;padding:22px 30px;color:#fff;font-weight:600;font-size:22px;text-align:center;position:relative}
+  .pyr .lv .tag{position:absolute;right:-180px;top:50%;transform:translateY(-50%);color:var(--c-ink-soft);font-family:var(--f-mono);font-size:14px;letter-spacing:.08em;width:160px;text-align:left}
+  .pyr .l1{width:280px;background:var(--c-primary)}
+  .pyr .l2{width:440px;background:#8A0008}
+  .pyr .l3{width:600px;background:#4B4B4B}
+  .pyr .l4{width:760px;background:var(--c-ink-dark)}
+  .py-desc{display:flex;flex-direction:column;gap:20px}
+  .py-item{display:grid;grid-template-columns:52px 1fr;gap:18px;padding:18px 0;border-bottom:1px solid var(--c-rule)}
+  .py-item:last-child{border-bottom:none}
+  .py-item .n{font-family:var(--f-mono);font-size:30px;color:var(--c-primary);font-weight:300;line-height:1}
+  .py-item b{display:block;font-size:24px;color:var(--c-ink);margin-bottom:6px}
+  .py-item p{margin:0;color:var(--c-ink-soft);font-size:18px;line-height:1.45}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 层级模型</p>
+  <h2 class="title">{金字塔模型的一句话统领}</h2>
+  <div class="py">
+  <div class="pyr">
+  <div class="lv l1">{顶层}<span class="tag">愿景 · 最少</span></div>
+  <div class="lv l2">{二层}<span class="tag">战略 · 关键</span></div>
+  <div class="lv l3">{三层}<span class="tag">能力 · 支撑</span></div>
+  <div class="lv l4">{四层}<span class="tag">基础 · 最多</span></div>
+  </div>
+  <div class="py-desc">
+  <div class="py-item"><span class="n">01</span><div><b>{层级 1 · 名称}</b><p>{30-60 字说明该层级的定义、典型要素与在整个体系中的作用。}</p></div></div><div class="py-item"><span class="n">02</span><div><b>{层级 2 · 名称}</b><p>{30-60 字说明该层级的定义、典型要素与在整个体系中的作用。}</p></div></div><div class="py-item"><span class="n">03</span><div><b>{层级 3 · 名称}</b><p>{30-60 字说明该层级的定义、典型要素与在整个体系中的作用。}</p></div></div><div class="py-item"><span class="n">04</span><div><b>{层级 4 · 名称}</b><p>{30-60 字说明该层级的定义、典型要素与在整个体系中的作用。}</p></div></div>
+  </div></div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>19 / 25</span></div></div></body></html>

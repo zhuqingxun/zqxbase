@@ -1,0 +1,27 @@
+meta:
+  title: "timeline-huawei sample"
+  theme: huawei
+narrative:
+  thesis: "时间线最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: timeline-huawei
+    content:
+      title: "发展历程"
+      description: "关键阶段速览"
+      phases:
+        - year: "2021"
+          title: "起步期"
+          desc: "完成初始产品定型，首批种子客户。"
+        - year: "2023"
+          title: "扩张期"
+          desc: "进入三大核心行业，营收破亿。"
+        - year: "2025"
+          title: "规模期"
+          desc: "建立区域分中心，产品矩阵成形。"
+        - year: "2026"
+          title: "整合期"
+          desc: "平台化能力输出。"

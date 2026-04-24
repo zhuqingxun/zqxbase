@@ -1,0 +1,23 @@
+meta:
+  title: "pyramid sample"
+  theme: huawei
+narrative:
+  thesis: "金字塔最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: pyramid
+    content:
+      title: "能力金字塔"
+      description: "自下而上构建"
+      levels:
+        - title: "愿景"
+          desc: "三年做到行业前三。"
+        - title: "战略"
+          desc: "聚焦头部行业，放弃长尾。"
+        - title: "能力"
+          desc: "产品+服务+数据三叉戟。"
+        - title: "基础"
+          desc: "云原生底座与合规体系。"

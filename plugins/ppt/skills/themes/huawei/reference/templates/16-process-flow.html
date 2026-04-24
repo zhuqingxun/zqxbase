@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>16 · 流程图</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .pf{flex:1;margin-top:60px;display:flex;align-items:center;gap:0;justify-content:space-between}
+  .pf-step{flex:1;background:#fff;border:1px solid var(--c-rule);padding:28px 24px;min-height:280px;display:flex;flex-direction:column;gap:10px;position:relative}
+  .pf-step.hl{background:var(--c-primary);color:#fff;border-color:var(--c-primary)}
+  .pf-step .n{font-family:var(--f-mono);font-size:14px;letter-spacing:.14em;color:var(--c-ink-mute);text-transform:uppercase}
+  .pf-step.hl .n{color:rgba(255,255,255,.7)}
+  .pf-step h4{font-size:24px;margin:0;font-weight:600}
+  .pf-step p{font-size:16px;color:var(--c-ink-soft);margin:0;line-height:1.45}
+  .pf-step.hl p{color:rgba(255,255,255,.85)}
+  .pf-step ul{margin:auto 0 0;padding:0;list-style:none;font-size:14px;color:var(--c-ink-mute);border-top:1px dashed var(--c-rule);padding-top:12px}
+  .pf-step.hl ul{color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.3)}
+  .pf-step ul li{padding:3px 0}
+  .arrow{flex-shrink:0;width:60px;height:28px;background:var(--c-primary);clip-path:polygon(0 40%,70% 40%,70% 0,100% 50%,70% 100%,70% 60%,0 60%);margin:0 -4px;z-index:2}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 工作流程</p>
+  <h2 class="title">{端到端流程的一句话结论}</h2>
+  <div class="pf">
+  
+  <div class="pf-step "><div class="n">STEP 01</div><h4>洞察</h4><p>{15-30字说明}</p><ul><li>· 需求 · 调研</li><li>· 产出：{交付物}</li></ul></div>
+  <div class="arrow"></div>
+  
+  <div class="pf-step hl"><div class="n">STEP 02</div><h4>设计</h4><p>{15-30字说明}</p><ul><li>· 架构 · 方案</li><li>· 产出：{交付物}</li></ul></div>
+  <div class="arrow"></div>
+  
+  <div class="pf-step "><div class="n">STEP 03</div><h4>构建</h4><p>{15-30字说明}</p><ul><li>· 开发 · 集成</li><li>· 产出：{交付物}</li></ul></div>
+  <div class="arrow"></div>
+  
+  <div class="pf-step "><div class="n">STEP 04</div><h4>验证</h4><p>{15-30字说明}</p><ul><li>· 测试 · 灰度</li><li>· 产出：{交付物}</li></ul></div>
+  <div class="arrow"></div>
+  
+  <div class="pf-step "><div class="n">STEP 05</div><h4>运营</h4><p>{15-30字说明}</p><ul><li>· 监控 · 迭代</li><li>· 产出：{交付物}</li></ul></div>
+  
+  
+  </div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>16 / 25</span></div></div></body></html>

@@ -1,0 +1,25 @@
+meta:
+  title: "swot sample"
+  theme: huawei
+narrative:
+  thesis: "SWOT 最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: swot
+    content:
+      title: "SWOT 分析"
+      strengths:
+        - "技术壁垒深"
+        - "团队稳定"
+      weaknesses:
+        - "渠道薄弱"
+        - "品牌识别度低"
+      opportunities:
+        - "行业数字化加速"
+        - "政策红利窗口"
+      threats:
+        - "头部厂商下探"
+        - "同质化竞争"

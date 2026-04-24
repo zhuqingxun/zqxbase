@@ -1,0 +1,26 @@
+meta:
+  title: "governance sample"
+  theme: huawei
+narrative:
+  thesis: "治理架构最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: governance
+    content:
+      title: "治理与组织"
+      description: "顶层决策 + 四大专委会"
+      top_box:
+        title: "战略决策委员会"
+        desc: "Chair 主持，季度例会。"
+      units:
+        - title: "战略专委会"
+          desc: "长期路径、优先级。"
+        - title: "组织专委会"
+          desc: "编制、激励。"
+        - title: "数据专委会"
+          desc: "指标体系、合规。"
+        - title: "技术专委会"
+          desc: "架构评审、技术选型。"

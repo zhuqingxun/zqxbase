@@ -1,0 +1,38 @@
+meta:
+  title: "architecture-layered sample"
+  theme: huawei
+narrative:
+  thesis: "分层架构最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: architecture-layered
+    content:
+      title: "系统分层架构"
+      description: "自上而下端到端视图"
+      layers:
+        - name: "接入层"
+          label: "L1"
+          cells:
+            - title: "门户"
+              desc: "统一入口"
+            - title: "网关"
+              desc: "鉴权路由"
+            - title: "API"
+              desc: "对外接口"
+        - name: "服务层"
+          label: "L2"
+          cells:
+            - title: "业务服务"
+              desc: "核心域逻辑"
+              highlight: true
+            - title: "支撑服务"
+              desc: "通用能力"
+        - name: "数据层"
+          label: "L3"
+          cells:
+            - title: "关系库"
+            - title: "缓存"
+            - title: "对象存储"

@@ -1,0 +1,82 @@
+# ============================================================
+# 华为主题 tokens
+# 双结构兼容：
+#   - 新 renderer 读：colors / fonts / type_scale_px
+#   - 旧 25 renderer 读：colors + typography / spacing / visual_preferences / visual_elements
+# 详见 Plan §O7 兼容层决策
+# ============================================================
+
+colors:
+  # 主色板（snake_case，新旧通用）
+  primary: "#C7000B"          # 主红
+  primary_dark: "#8A0008"     # 深红
+  primary_soft: "#FDECEE"     # 浅红
+  ink: "#1F1F1F"              # 正文黑
+  ink_soft: "#4B4B4B"         # 次级灰
+  ink_mute: "#9A9A9A"         # 辅助灰
+  ink_dark: "#2A2A2A"         # 章节页深底
+  rule: "#D9D9D9"             # 分割线
+  rule_soft: "#ECECEC"        # 柔和线
+  paper: "#FFFFFF"            # 页底白
+  paper_2: "#F4F4F4"          # 浅底灰
+  paper_3: "#EAEAEA"          # 表格头灰
+  accent: "#D97706"           # 强调橙
+  ok: "#1E7B3A"
+  warn: "#C7000B"
+  # 旧 renderer 兼容别名（与上方主色同值）
+  background: "#FFFFFF"
+  text_primary: "#1F1F1F"
+  text_secondary: "#4B4B4B"
+  accent_color: "#C7000B"
+
+fonts:                         # 新 renderer 专用
+  sans:
+    - "Inter"
+    - "Noto Sans SC"
+    - "Microsoft YaHei"
+  mono:
+    - "JetBrains Mono"
+
+type_scale_px:                 # 新 renderer 专用 @ 1920x1080
+  cover: 108
+  section: 84
+  title: 54
+  subtitle: 36
+  h4: 28
+  body: 24
+  small: 20
+  micro: 16
+  nano: 14
+
+# ============================================================
+# 旧 25 renderer 兼容层（§O7）
+# ============================================================
+
+typography:                    # 旧 renderer 读 theme.typography.*_size_pt
+  title_font: "Inter"
+  body_font: "Noto Sans SC"
+  title_size_pt: 32
+  subtitle_size_pt: 20
+  body_size_pt: 14
+  caption_size_pt: 11
+  footnote_size_pt: 10
+
+spacing:                       # render.py 默认值 + 旧 renderer 间距
+  slide_margin_inches: 0.5
+  element_gap_inches: 0.25
+  card_padding_inches: 0.2
+  line_spacing: 1.25
+
+visual_preferences:            # 旧 renderer 读 theme.visual_preferences.*
+  corner_radius_inches: 0.1
+  rounded_corners: true
+  show_footer: true
+  show_page_number: true
+  divider_weight_pt: 1.0
+
+visual_elements:               # 旧 renderer 读 theme.visual_elements.*
+  card_fill: "#F4F4F4"
+  card_stroke: "#D9D9D9"
+  divider_color: "#D9D9D9"
+  bullet_marker: "●"
+  emphasis_bar_color: "#C7000B"

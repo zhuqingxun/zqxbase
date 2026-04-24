@@ -1,0 +1,31 @@
+name: business-briefing
+description: "商务汇报预设。进展总结、指标展示、行动计划、简洁高效"
+
+structure:
+  required_sections:
+    - role: title
+    - role: executive_summary
+    - role: content
+    - role: closing
+  optional_sections:
+    - role: recommendations
+    - role: appendix
+
+content_rules:
+  title_style: action_title
+  max_bullets_per_page: 4
+  prefer_data_visualization: true
+  evidence_requirement: null
+
+visual_type_preferences:
+  data-contrast: 0.9
+  cards-3: 0.8
+  cards-4: 0.6
+  comparison-2: 0.7
+  process-3-phase: 0.8
+  process-4-phase: 0.5
+  table: 0.5
+  hero-statement: 0.7
+  timeline-horizontal: 0.8
+  quote-hero: 0.3
+  bullets: 0.4

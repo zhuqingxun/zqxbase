@@ -1,0 +1,28 @@
+meta:
+  title: "heatmap-matrix sample"
+  theme: huawei
+narrative:
+  thesis: "热力矩阵最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: data
+    visual_type: heatmap-matrix
+    content:
+      title: "能力评估热力图"
+      description: "五维评分（0-5）"
+      columns: ["技术", "产品", "运营", "销售"]
+      rows:
+        - label: "团队 A"
+          scores: [5, 4, 3, 2]
+          total: "14"
+        - label: "团队 B"
+          scores: [3, 5, 4, 4]
+          total: "16"
+        - label: "团队 C"
+          scores: [2, 3, 5, 3]
+          total: "13"
+        - label: "团队 D"
+          scores: [4, 2, 2, 5]
+          total: "13"

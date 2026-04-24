@@ -1,0 +1,131 @@
+canvas:
+  width_px: 1920
+  height_px: 1080
+  padding_top_px: 88
+  padding_left_px: 96
+  padding_right_px: 96
+  padding_bottom_px: 76
+
+# ===== P0 八版式（§O6 权威字号表）=====
+
+cover_left_bar:
+  bar_width_px: 16
+  title_size_px: 108
+  subtitle_size_px: 34          # 专属，非 tokens subtitle=36
+  eyebrow_size_px: 18           # 专属，非 tokens micro=16
+  meta_size_px: 16
+
+toc:
+  number_column_px: 160
+  item_gap_px: 24
+  giant_title_size_px: 300      # 专属巨字，不在 tokens 内
+  chapter_size_px: 22
+  page_size_px: 20
+  eyebrow_size_px: 36
+
+section_divider_dark:
+  big_number_size_px: 360
+  big_number_weight: 200
+  title_size_px: 88             # 专属，非 tokens section=84
+  description_size_px: 30
+  eyebrow_size_px: 22
+  grid_left_column_px: 380
+  grid_gap_px: 80
+  background_token: ink_dark
+
+kpi_stats:
+  columns: 4
+  value_size_px: 108            # 修正：HTML 实测 108（原 96）
+  unit_size_px: 32
+  label_size_px: 18             # 修正：HTML 实测 18（原 20）
+  desc_size_px: 16
+  trend_size_px: 14             # 修正：HTML 实测 14（原 16）
+  column_separator_width_px: 2
+
+matrix_2x2:
+  axis_y_column_px: 140
+  axis_x_row_px: 140
+  grid_gap_px: 20
+  border_width_px: 2
+  border_token: ink
+  quadrant_heading_size_px: 22
+  y_axis_label_size_px: 20
+  small_label_size_px: 14
+  desc_size_px: 16
+
+architecture_layered:
+  header_column_px: 260
+  cell_columns: 6
+  layer_gap_px: 14
+  header_background_token: paper_3
+  header_name_size_px: 24
+  header_label_size_px: 14
+  cell_title_size_px: 16
+  cell_desc_size_px: 14
+
+timeline_huawei:
+  phase_column_px: 180
+  year_size_px: 48              # 大纪元数字
+  title_size_px: 22
+  desc_size_px: 16
+
+process_flow_huawei:
+  step_min_width_px: 240
+  arrow_gap_px: 40
+  step_title_size_px: 24
+  step_desc_size_px: 16
+  step_number_size_px: 14
+
+# ===== P1 五版式 =====
+
+swot:
+  cross_line_width_px: 2
+  cross_line_token: primary
+
+roadmap:
+  lane_column_px: 180
+  phase_bar_height_px: 56
+
+pyramid:
+  levels_default: 4
+  top_width_ratio: 0.35
+
+heatmap_matrix:
+  row_label_column_px: 220
+  total_column_px: 220
+  score_chars: "█████"          # 研究报告推荐 Unicode 方案 A
+
+thankyou:
+  title_size_px: 360
+  background_token: primary
+  contact_columns: 4
+
+# ===== P2 四版式 =====
+
+cards_6:
+  columns: 3
+  rows: 2
+
+rings:
+  ring_count_max: 3
+  right_list_gap_px: 28
+
+personas:
+  columns_max: 4
+  quote_accent_bar_px: 3
+
+# ===== top_tabs 通用 =====
+
+top_tabs:
+  tab_count: 4
+  gap_px: 12
+
+# ===== risk-list / governance 专属 =====
+
+risk_list:
+  columns_max: 2
+  severity_bar_width_px: 4
+
+governance:
+  top_box_height_px: 120
+  unit_columns_max: 4

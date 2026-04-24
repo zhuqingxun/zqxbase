@@ -1,0 +1,20 @@
+meta:
+  title: "cover-left-bar sample"
+  theme: huawei
+narrative:
+  thesis: "华为主题封面最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: title
+    visual_type: cover-left-bar
+    content:
+      title: "业务战略汇报"
+      subtitle: "面向未来三年的路线与节奏"
+      eyebrow: "2026 年度"
+      meta:
+        - label: "汇报人"
+          value: "战略规划部"
+        - label: "日期"
+          value: "2026-04-24"

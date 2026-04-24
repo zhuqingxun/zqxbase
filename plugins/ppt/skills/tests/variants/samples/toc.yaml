@@ -1,0 +1,23 @@
+meta:
+  title: "toc sample"
+  theme: huawei
+narrative:
+  thesis: "目录最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: toc
+    content:
+      title: "目录"
+      giant_label: "目录"
+      items:
+        - title: "背景与共识"
+          page: "03"
+        - title: "战略定位"
+          page: "09"
+        - title: "能力体系"
+          page: "17"
+        - title: "执行路径"
+          page: "25"

@@ -1,0 +1,35 @@
+meta:
+  title: "personas sample"
+  theme: huawei
+narrative:
+  thesis: "角色卡最小样例"
+  arc: "smoke"
+  total_slides: 1
+slides:
+  - id: 1
+    role: content
+    visual_type: personas
+    content:
+      title: "目标用户画像"
+      description: "三类典型使用者"
+      personas:
+        - role: "决策者"
+          name: "李总"
+          attrs:
+            - label: "关注"
+              value: "ROI 与风险"
+            - label: "决策点"
+              value: "季度复盘"
+          quote: "我要看到可量化的增长路径。"
+        - role: "使用者"
+          name: "王工"
+          attrs:
+            - label: "关注"
+              value: "效率与稳定性"
+          quote: "日常流程越少越好。"
+        - role: "采购者"
+          name: "张经理"
+          attrs:
+            - label: "关注"
+              value: "合规与成本"
+          quote: "合同条款必须清晰。"
