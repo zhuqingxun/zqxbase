@@ -83,6 +83,19 @@
         "analysis",
         "brainstorm"
       ]
+    },
+    {
+      "name": "ppt",
+      "source": "./plugins/ppt",
+      "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, manage visual themes",
+      "version": "3.0.0",
+      "keywords": [
+        "ppt",
+        "presentation",
+        "pptx",
+        "slides",
+        "theme"
+      ]
     }
   ]
 }
