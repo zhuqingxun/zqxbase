@@ -4,8 +4,9 @@ description: >-
   MINT (Meeting Intelligence) 一键流水线——从音频到结构化智能输出。
   默认执行全部四个阶段：Transcribe -> Refine -> Polish -> Extract，阶段间设门禁供用户审阅。
   当用户提到"处理录音""从头跑一遍""mint""完整处理"时触发。
+argument-hint: "<音频文件路径> [会议名]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill
-version: 2.1.5
+version: 2.1.6
 ---
 
 # MINT 一键流水线编排器

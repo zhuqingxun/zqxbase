@@ -2,8 +2,9 @@
 name: rpiv-loop:code-audit
 description: >-
   对指定目录/模块进行全量代码审计（不依赖 git diff）。支持 5 个维度的并行审查，置信度评分过滤误报，高严重度问题自动评估爆炸半径。
+argument-hint: "<目标目录> [logic|security|performance|architecture|integration]"
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write
-version: 2.1.6
+version: 2.1.7
 ---
 
 对指定目录进行全量代码审计。

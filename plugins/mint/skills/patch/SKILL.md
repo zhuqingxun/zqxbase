@@ -5,8 +5,9 @@ description: >-
   当用户发现转录或校对结果中有同音错字需要修正时使用。
   触发场景："加到词表""刷新稿件""纠错""这个词错了应该是XX""补丁""更新词表"，
   或在阅读任意稿件时指出某个词识别错误（如"XX应该是YY"）。
+argument-hint: "<纠错指令> [<工作目录>] [--from 校对稿|编辑稿|分析稿]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 

@@ -6,7 +6,7 @@ description: >-
   当用户说"初始化工作区""init""新建 mint 工作区""/mint:init"时触发。
   这是所有 mint 流水线使用的前置步骤：未 init 的目录运行 /mint 或 /mint:next 会报错。
 allowed-tools: Read, Write, Bash, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 # mint:init — 工作区初始化

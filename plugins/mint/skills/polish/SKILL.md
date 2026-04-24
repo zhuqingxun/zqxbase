@@ -3,7 +3,7 @@ name: mint:polish
 description: >-
   MINT 流水线 Stage 3: 编辑稿生成——将清洁逐字稿转化为高可读性的编辑稿，产出三种文档：书面化文稿、观点+原声对照、精华语录集。包含独立 Reviewer 阶段做七维审查：观点覆盖完整性（核心）、话题/数据漏检扫描、结构化质量、原声质量、观点准确性、脱敏安全、格式可读性。适用于需要将访谈/会议记录转化为可交付文档的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 

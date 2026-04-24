@@ -4,8 +4,9 @@ description: >-
   对已有 PPT 进行自然语言追加调整。支持有/无 slide-plan.yaml 两种情况。
   当用户提到"调整 PPT""修改 PPT""ppt:refine""PPT 微调"时触发。
   也适用于: 用户指定了 .pptx 文件并描述了修改需求的场景。
+argument-hint: "<pptx 路径> <调整指令>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.1
+version: 3.0.2
 ---
 
 # PPT:Refine — 自然语言追加调整

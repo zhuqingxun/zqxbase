@@ -4,8 +4,9 @@ description: >-
   从目录或文件一键生成最高质量 PPT。支持 Markdown 输入和图片资产。
   当用户提到"生成 PPT""做 PPT""创建演示文稿""ppt:create"时触发。
   也适用于: 用户提供了 markdown 文件或目录并要求转化为 PPT 的场景。
+argument-hint: "<输入路径> [--preset <name>] [--theme <name>] [--output <path>]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.1
+version: 3.0.2
 ---
 
 # PPT:Create — 一键生成最高质量 PPT
@@ -25,7 +26,7 @@ version: 3.0.1
 从 `$ARGUMENTS` 中解析：
 - **输入路径**（必需）：目录路径或文件路径
 - `--preset <name>`：内容组织预设（默认 `research-report`），可选值见 `<plugin-root>/presets/`
-- `--theme <name>`：视觉主题（默认 `clean-light`），可选值见 `<plugin-root>/themes/`
+- `--theme <name>`：视觉主题（默认 `huawei`，v3.0.x 当前唯一内置主题），可选值见 `<plugin-root>/themes/` 下的子目录。未传此参数时自动 fallback 到 `huawei`。旧主题名（`clean-light` / `academic` / `dark-business`）已删除，显式传入会抛 `ValueError`
 - `--output <path>`：输出路径（默认 `./output/<input-name>.pptx`）
 
 ## 执行流程

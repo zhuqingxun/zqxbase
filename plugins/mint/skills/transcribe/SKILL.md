@@ -2,8 +2,9 @@
 name: mint:transcribe
 description: >-
   MINT 流水线 Stage 1: 语音转文本——调用阿里云百炼平台将录音文件转为带时间戳和说话人标记的原始口水稿。当用户提到"语音转文字""录音转文本""转录""transcribe""把录音转成文字""ASR"时使用。支持 mp3/m4a/wav/flac/ogg 等常见音频格式，自动启用说话人分离。
+argument-hint: "<音频文件路径> <人名或会议名>"
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.5
+version: 2.1.6
 ---
 
 

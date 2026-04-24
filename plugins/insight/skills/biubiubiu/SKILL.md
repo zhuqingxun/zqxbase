@@ -5,7 +5,7 @@ description: >-
   当用户提到'自动研究'、'全自主研究'、'research biubiubiu'、'启动研究团队'、'深度调研'时触发。
   也适用于用户说'帮我研究一下 XXX'且研究范围足够大（需要多源调研+写作+部署）的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch, Skill, TeamCreate, SendMessage, TeamDelete, TaskCreate, TaskUpdate, TaskGet, TaskList
-version: 1.1.2
+version: 1.1.3
 ---
 
 # Biubiubiu Research: 全自主研究团队执行

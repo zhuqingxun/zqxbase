@@ -3,8 +3,9 @@ name: mint:status
 description: >-
   MINT 状态查看——读取 meta.yaml 展示处理进度、质量评分、修订历史和阻塞项，支持单会议聚焦与工作区全景两个视野，以及中表/详表两个详细度。
   当用户说"看看进度""处理到哪了""status""状态""工作区全景""详细状态"时触发。
+argument-hint: "[<工作目录>] [--detail] [--workspace]"
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 

@@ -3,7 +3,7 @@ name: rpiv-loop:validate
 description: >-
   根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
 allowed-tools: Read, Bash, Edit, Grep, Glob
-version: 2.1.6
+version: 2.1.7
 ---
 
 # 运行项目的全面验证

@@ -3,7 +3,7 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage, Skill
-version: 2.1.6
+version: 2.1.7
 ---
 
 # Biubiubiu: 全自主 RPIV 团队执行

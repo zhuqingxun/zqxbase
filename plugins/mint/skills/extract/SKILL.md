@@ -2,8 +2,9 @@
 name: mint:extract
 description: >-
   MINT 流水线 Stage 4: 结构化信息提取——从逐字稿中提取要点摘要、发言人分析（含深度意图分析）、行动项、关键决策等结构化产出物。支持选择输入源（clean 或 polished 稿）和指定产出物子集。
+argument-hint: "<工作目录> [--source clean|polished] [--artifacts summary,speakers,actions,decisions]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 

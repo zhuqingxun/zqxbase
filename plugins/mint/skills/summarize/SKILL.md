@@ -5,8 +5,9 @@ description: >-
   默认增量模式保留人工编辑, `--full` 触发全量重建.
   当用户说"汇总全部访谈""生成综合洞察""summarize""跨会议汇总"时触发.
   仅 interview 场景可用, 要求工作区已完成 types/templates 登记且至少一个会议 polish=completed.
+argument-hint: "[--full]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Agent, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 

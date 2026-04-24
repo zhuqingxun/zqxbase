@@ -5,8 +5,9 @@ description: >-
   包含架构师（全局分析）、双路校对员（交叉验证）、审查员（质量把关）、人工澄清环节（消除歧义）。
   支持两种模式：保守（仅修错字和口水词）、适度（句子级优化，默认）。
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
+argument-hint: "<工作目录> [保守|适度] [--脱敏]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage
-version: 2.1.5
+version: 2.1.6
 ---
 
 # mint:refine — 校对清洁

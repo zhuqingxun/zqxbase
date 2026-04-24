@@ -5,8 +5,9 @@ description: >-
   支持 add / list / remove 三子命令。
   当用户说"添加提纲""登记模板""templates add""查看提纲""删除提纲""/mint:templates"时触发。
   仅 interview 场景可用；polish 通过 resolve-template 自动选出本表中的条目。
+argument-hint: "[add|list|remove] [<id>] [<name>] [<file>] [<applies_to>] [--set-default]"
 allowed-tools: Read, Bash, Glob, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 # mint:templates — 访谈提纲注册表管理

@@ -4,8 +4,9 @@ description: >-
   MINT 智能引导——基于元数据和当前位置，推荐最优下一步动作。支持单会议聚焦 / 工作区全景 / 强制全景三种模式。
   当用户提到"下一步""接下来做什么""next""引导""我该做啥""接什么"时触发。
   也适用于：用户跑完某个阶段想确认下一动作、多会议并行时想看全景推荐、卡在某处想看其他路径。
+argument-hint: "[meeting_name] [--all]"
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.5
+version: 2.1.6
 ---
 
 # mint:next — 智能引导

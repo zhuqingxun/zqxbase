@@ -3,8 +3,9 @@ name: insight:brainstorm
 description: >-
   通过访谈对话澄清研究需求。当用户提到"研究需求访谈""头脑风暴""brainstorm""我想研究""帮我梳理研究方向"时触发。
   输出结构化的研究需求摘要，可直接作为 insight:biubiubiu 的输入。
+argument-hint: "[研究主题]"
 allowed-tools: Read, Write, AskUserQuestion, Skill
-version: 1.1.2
+version: 1.1.3
 ---
 
 # Brainstorm: 研究需求访谈

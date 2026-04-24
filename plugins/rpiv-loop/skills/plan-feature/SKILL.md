@@ -1,8 +1,9 @@
 ---
 name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
+argument-hint: "<功能描述或 PRD 路径>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.1.6
+version: 2.1.7
 ---
 
 # 规划新任务

@@ -5,8 +5,9 @@ description: >-
   支持 add / list / remove 三子命令。
   当用户说"添加类型""登记受访者""types add""查看类型""删除类型""/mint:types"时触发。
   仅 interview 场景可用；polish 通过受访者类型选择对应提纲。
+argument-hint: "[add|list|remove] [<id>] [<name>] [--default-template <tpl-id>]"
 allowed-tools: Read, Bash, Glob, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 # mint:types — 受访者类型注册表管理

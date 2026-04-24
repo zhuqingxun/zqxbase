@@ -6,7 +6,7 @@ description: >-
   触发场景："同步到下游""我改了校对稿，帮我更新后面的""sync""手动改了，传播一下""把我的修改同步过去"。
   与 revise 的区别：revise 是用户描述要改什么，AI 执行；sync 是用户已经改好了，AI 检测差异并传播。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.5
+version: 2.1.6
 ---
 
 

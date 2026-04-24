@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.1.6",
+      "version": "2.1.7",
       "keywords": [
         "rpiv",
         "workflow",
@@ -25,7 +25,7 @@
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.1.5",
+      "version": "2.1.6",
       "keywords": [
         "meeting",
         "transcription",
@@ -50,7 +50,7 @@
       "name": "challenge",
       "source": "./plugins/challenge",
       "description": "Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "keywords": [
         "challenge",
         "adversarial",
@@ -75,7 +75,7 @@
       "name": "insight",
       "source": "./plugins/insight",
       "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "keywords": [
         "research",
         "insight",
@@ -88,7 +88,7 @@
       "name": "ppt",
       "source": "./plugins/ppt",
       "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, manage visual themes",
-      "version": "3.0.1",
+      "version": "3.0.2",
       "keywords": [
         "ppt",
         "presentation",

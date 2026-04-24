@@ -1,10 +1,16 @@
 {
   "name": "challenge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions",
   "author": {
     "name": "zhuqingxun"
   },
   "repository": "https://github.com/zhuqingxun/zqxbase",
-  "keywords": ["challenge", "adversarial", "red-team", "blue-team", "review"]
+  "keywords": [
+    "challenge",
+    "adversarial",
+    "red-team",
+    "blue-team",
+    "review"
+  ]
 }
