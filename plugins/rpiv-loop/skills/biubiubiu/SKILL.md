@@ -3,7 +3,7 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage, Skill
-version: 2.1.7
+version: 2.1.8
 ---
 
 # Biubiubiu: 全自主 RPIV 团队执行
@@ -256,6 +256,31 @@ AskUserQuestion:
 **有 critical/high 代码审查问题**（与 AC 无关的代码质量问题）→ SendMessage 要求 Dev 修复（最多 3 轮），与 AC gate 循环并行处理。
 
 **全部通过**（check_acceptance 退出码 0 且 code-review 无 critical/high）→ 进入交付。
+
+#### 硬规则：架构声明必须 Grep 验证
+
+Leader 在派工 / 仲裁 / 任务依赖判定中，**禁止仅凭 SendMessage 信息**对以下"架构性声明"做出决策：
+
+| 声明类型 | 示例 |
+|---|---|
+| **字段增删** | Pydantic / dataclass / TypedDict 字段的增加、删除、重命名 |
+| **接口改动** | 函数签名、CLI 参数、API 路径、事件名变化 |
+| **数据流变** | 数据来源切换、模块拆分合并、依赖关系反转 |
+| **配置 schema 变化** | YAML/TOML/JSON 配置字段语义变化 |
+
+**强制动作**：收到上述任一类型的 agent 汇报后，Leader **必须** Read 或 Grep 实际代码（类定义文件 / 函数签名 / 配置文件）至少 1 次，确认与汇报一致后才能基于此派工或进入下一阶段。
+
+**反例（禁止）**：
+- ✗ Dev-1 汇报"SlideSpec 已加 variant 字段"，Leader 直接 SendMessage Dev-2 按新字段实现 layouts.yaml 适配
+- ✗ QA 汇报"test_xxx.py 第 127 行断言已更新"，Leader 直接进入交付门禁
+
+**正例（要求）**：
+- ✓ Dev-1 汇报后，Leader Read `core/spec.py` 或 `Grep "class SlideSpec"` 验证 variant 字段确实存在 + 类型符合预期 → 再 SendMessage Dev-2
+- ✓ QA 汇报后，Leader Read `tests/test_xxx.py:120-135` 范围确认断言改动 → 再判断是否进入交付
+
+**为什么**：2026-04 huawei-theme-complete 复盘暴露 SlideSpec.variant 字段 add → remove → 双路兼容三轮反转，Leader 多次基于 Dev 不完整汇报错误派工，至少 2 次 Dev 主动质疑才纠正。SendMessage 是异步队列，agent 汇报常因消息间撤销 / 反转产生信息损耗。Read/Grep 单次约 1-2 秒，相对错误派工导致的 2+ 轮 Dev 来回成本可忽略。
+
+**与门禁 1/2 的 frontmatter grep 区别**：那两处 grep 是校验 RPIV 文档元数据（status 字段），本节是校验 agent 汇报的实际代码状态。两者协同覆盖"流程纪律"与"内容纪律"。
 
 #### 决策原则
 

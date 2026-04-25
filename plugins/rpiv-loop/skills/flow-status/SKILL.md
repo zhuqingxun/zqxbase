@@ -2,7 +2,7 @@
 name: rpiv-loop:flow-status
 description: 查看过程文件的状态
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.7
+version: 2.1.8
 ---
 
 # Status: 查看文件状态
@@ -37,9 +37,10 @@ version: 2.1.7
 4. 扫描 `rpiv/archive/` 统计已归档文件数
 5. **Status 值合法性校验**（参见 `{RPIV_REF}/frontmatter-spec.md`）：
    - 流程文件允许：`pending` / `in-progress` / `completed` / `superseded` / `archived`
-   - Todo 文件允许：`open` / `in-progress` / `completed`
-   - 辅助文件允许：`pending` / `completed`
+   - Todo 文件允许：`open` / `in-progress` / `completed` / `superseded` / `archived`
+   - 辅助文件允许：`pending` / `completed` / `archived`
    - 不合法的值（如 `in_progress`、`delivered`、空值）标记为异常
+   - `superseded` 状态额外要求：必须配 `superseded_by: {新文件路径}` 字段，否则视为不完整（异常）
 
 ### 模式 0: 精简摘要（无参数,默认）
 

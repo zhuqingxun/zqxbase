@@ -2,7 +2,7 @@
 name: rpiv-loop:prime
 description: 使用代码库理解项目，加载项目上下文
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.7
+version: 2.1.8
 ---
 
 # Prime: 加载项目上下文

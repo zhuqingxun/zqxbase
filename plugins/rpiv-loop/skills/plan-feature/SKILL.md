@@ -3,7 +3,7 @@ name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
 argument-hint: "<功能描述或 PRD 路径>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.1.7
+version: 2.1.8
 ---
 
 # 规划新任务
@@ -35,9 +35,10 @@ version: 2.1.7
      - `superseded` → 警告用户此 PRD 已被取代，询问是否仍要基于它创建 Plan
    - 记录 PRD 文件路径，用于后续 related_files
 3. 如果没有 frontmatter（旧文件），跳过状态更新
-4. **版本替代检查**：检查是否存在同名特性的旧版本文件（如当前要创建 `plan-{name}-v2.md`，而 `plan-{name}.md` 已存在）。如果存在旧版本且状态不是 `superseded` 或 `archived`：
+4. **版本替代检查**：检查是否存在同名特性的旧版本文件（如当前要创建 `plan-{name}-v2.md`，而 `plan-{name}.md` 已存在；或新建的 `feature-{name}-complete.md` 取代旧 todo `todo-{name}-refine.md`）。**适用范围**：流程文件（PRD/Plan/validation 各类）、todo 文件——任何因范围扩大、合并、重立而被替代的旧条目。如果存在旧版本且状态不是 `superseded` 或 `archived`：
    - 使用 AskUserQuestion 询问用户是否将旧版本标记为 `superseded`
    - 如果确认，更新旧文件 frontmatter：`status: superseded`，追加 `superseded_by: {新文件路径}`，更新 `updated_at`
+   - 同时建议在新文件 frontmatter 反向加 `supersedes: {旧文件路径}` 形成双向闭环
 
 ### 阶段 1：功能理解
 

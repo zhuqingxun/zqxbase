@@ -2,7 +2,7 @@
 name: rpiv-loop:archive
 description: 归档已完成的过程文件
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
-version: 2.1.7
+version: 2.1.8
 ---
 
 # Archive: 归档过程文件
@@ -58,6 +58,7 @@ version: 2.1.7
 2. 检查是否有 frontmatter
 3. 检查 status,按以下规则处理:
    - `completed` → 正常归档
+   - `superseded` → 正常归档（被取代是合规终态前置；建议保留 `superseded_by` 字段作为追溯元数据）
    - `open` / `pending` → **直接拒绝**,输出: `⛔ 无法归档: {文件名} 状态为 {status}，未完成的条目不能归档。请先完成处理并将状态更新为 completed，再执行归档。`
    - `in-progress` → 询问用户是否强制归档（可能是已废弃的任务）
 4. 执行归档操作(见下方)
