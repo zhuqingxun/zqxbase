@@ -143,6 +143,33 @@ class ValidationReport:
     def ok(self) -> bool:
         return self.failed == 0
 
+    @property
+    def huawei_variant_count(self) -> int:
+        """已选 huawei 18 版式的 slide 数（来自 VARIANT_EXEMPT_TYPES）."""
+        return sum(1 for r in self.results if r.visual_type in VARIANT_EXEMPT_TYPES)
+
+    @property
+    def huawei_variant_ratio(self) -> float:
+        """huawei 18 版式占比 = huawei_variant_count / total_slides."""
+        if self.total_slides == 0:
+            return 0.0
+        return self.huawei_variant_count / self.total_slides
+
+    def theme_application_status(
+        self, warn_below: float = 0.60, fail_below: float = 0.30
+    ) -> str:
+        """根据占比分级: < fail_below=FAIL, < warn_below=WARN, 否则 PASS.
+
+        阈值由 themes/<name>/preferences.yaml 的 application_thresholds 提供,
+        默认 60/30 (Q5 决议)。
+        """
+        r = self.huawei_variant_ratio
+        if r < fail_below:
+            return "FAIL"
+        if r < warn_below:
+            return "WARN"
+        return "PASS"
+
     def to_dict(self) -> dict:
         return {
             "plan_path": self.plan_path,
@@ -151,6 +178,8 @@ class ValidationReport:
             "failed": self.failed,
             "skipped": self.skipped,
             "ok": self.ok,
+            "huawei_variant_count": self.huawei_variant_count,
+            "huawei_variant_ratio": round(self.huawei_variant_ratio, 4),
             "slides": [r.to_dict() for r in self.results],
         }
 
@@ -469,12 +498,42 @@ def format_text_report(report: ValidationReport, slide_warnings: dict[int, list[
 # CLI
 # ---------------------------------------------------------------------------
 
+def _load_theme_thresholds(theme_name: str) -> tuple[float, float]:
+    """读 themes/<theme>/preferences.yaml 的 application_thresholds.
+
+    优先用 engine.theme_loader (P2 引入的单一来源), 不可用时回退 engine.render.load_theme.
+    任一加载失败均退回硬编码默认 60/30 (Q5 决议)。
+    """
+    warn_below, fail_below = 0.60, 0.30
+    theme: dict | None = None
+    try:
+        from engine.theme_loader import load_theme as _load  # noqa: PLC0415
+        theme = _load(theme_name)
+    except Exception:
+        try:
+            from engine.render import load_theme as _load  # noqa: PLC0415
+            theme = _load(theme_name)
+        except Exception:
+            theme = None
+    if isinstance(theme, dict):
+        thresholds = theme.get("preferences", {}).get("application_thresholds", {})
+        if isinstance(thresholds, dict):
+            warn_below = float(thresholds.get("warn_below", warn_below))
+            fail_below = float(thresholds.get("fail_below", fail_below))
+    return warn_below, fail_below
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="校验 slide-plan.yaml 内容量是否达标"
     )
     parser.add_argument("slide_plan", help="slide-plan.yaml 路径")
     parser.add_argument("--json", action="store_true", help="输出 JSON 格式")
+    parser.add_argument(
+        "--theme",
+        default=None,
+        help="主题名称 (启用 theme 应用率门禁, 目前仅 huawei 主题有阈值)",
+    )
     args = parser.parse_args()
 
     report = validate_plan(args.slide_plan)
@@ -491,17 +550,60 @@ def main() -> None:
             slide_warnings[sid] = ws
     ap_warnings = validate_anti_patterns(slides)
 
+    # huawei 应用率门禁 (仅当 --theme=huawei)
+    application_status: str | None = None
+    application_thresholds: tuple[float, float] | None = None
+    if args.theme == "huawei":
+        warn_below, fail_below = _load_theme_thresholds(args.theme)
+        application_thresholds = (warn_below, fail_below)
+        application_status = report.theme_application_status(warn_below, fail_below)
+
     if args.json:
         out = report.to_dict()
         if slide_warnings:
             out["slide_warnings"] = slide_warnings
         if ap_warnings:
             out["anti_pattern_warnings"] = ap_warnings
+        if application_status:
+            warn_below, fail_below = application_thresholds
+            out["theme_application"] = {
+                "theme": args.theme,
+                "status": application_status,
+                "ratio": round(report.huawei_variant_ratio, 4),
+                "huawei_count": report.huawei_variant_count,
+                "total_slides": report.total_slides,
+                "warn_below": warn_below,
+                "fail_below": fail_below,
+            }
         print(json.dumps(out, ensure_ascii=False, indent=2))
     else:
         print(format_text_report(report, slide_warnings, ap_warnings))
+        if application_status:
+            warn_below, fail_below = application_thresholds
+            print()
+            print(
+                f"Theme Application: {args.theme} 18 variants in "
+                f"{report.huawei_variant_count}/{report.total_slides} slides "
+                f"({report.huawei_variant_ratio*100:.1f}%)"
+            )
+            print(
+                f"  Status: {application_status} "
+                f"(warn<{warn_below*100:.0f}% / fail<{fail_below*100:.0f}%)"
+            )
 
-    sys.exit(0 if report.ok else 1)
+    # exit code: 内容量 fail 退 1, 应用率 FAIL 退 2 (区分 PRD §7 二级门禁)
+    if not report.ok:
+        sys.exit(1)
+    if application_status == "FAIL":
+        warn_below, fail_below = application_thresholds
+        print(
+            f"\nACTION REQUIRED: {args.theme} 应用率 "
+            f"{report.huawei_variant_ratio*100:.1f}% 低于 "
+            f"{fail_below*100:.0f}% 门禁。Stage 3 LLM 应改选更多主题专属版式 "
+            f"(参考 .theme-prompt.md), 或用户接受当前版本。"
+        )
+        sys.exit(2)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

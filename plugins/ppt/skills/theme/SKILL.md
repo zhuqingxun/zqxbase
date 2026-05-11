@@ -5,7 +5,7 @@ description: >-
   当用户提到"PPT 主题""ppt:theme""列出主题""提取主题""应用主题""创建主题"时触发。
 argument-hint: "[list|extract|apply|create] [<template.pptx>|<theme>] [--name <name>]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 3.0.2
+version: 3.0.3
 ---
 
 # PPT:Theme — 主题管理

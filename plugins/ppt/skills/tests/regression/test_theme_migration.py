@@ -23,6 +23,10 @@ import pytest
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 THEMES_DIR = PLUGIN_ROOT / "themes"
 RENDER_PY = PLUGIN_ROOT / "engine" / "render.py"
+# P2 起 load_theme 真实实现已迁移到 engine/theme_loader.py (单一来源).
+# render.py 仅保留薄封装委托与常量再导出, 因此 SPEC-TL-12/13 等源码字符串断言
+# 必须对 theme_loader.py 做, render.py 仍由 SPEC-RG-9 (no clean-light 默认值) 保护.
+THEME_LOADER_PY = PLUGIN_ROOT / "engine" / "theme_loader.py"
 SLIDE_PLAN_PY = PLUGIN_ROOT / "schemas" / "slide_plan.py"
 
 
@@ -93,8 +97,18 @@ def test_plan_meta_removed_theme_not_rejected_here():
 
 
 # ============================================================
-# render.py 源码断言（SPEC-RG-9 / SPEC-TL-12 / SPEC-TL-13）
+# theme_loader.py 源码断言（SPEC-RG-9 / SPEC-TL-12 / SPEC-TL-13）
+#
+# P2: load_theme 实现迁移到 engine/theme_loader.py 后, 这些 SPEC 断言改对
+# theme_loader.py 源码做; render.py 上的薄封装委托由独立的导入测试覆盖.
 # ============================================================
+
+@pytest.fixture(scope="module")
+def theme_loader_source() -> str:
+    if not THEME_LOADER_PY.exists():
+        pytest.skip(f"{THEME_LOADER_PY} 不存在 (P2 前)")
+    return THEME_LOADER_PY.read_text(encoding="utf-8")
+
 
 @pytest.fixture(scope="module")
 def render_source() -> str:
@@ -103,19 +117,18 @@ def render_source() -> str:
     return RENDER_PY.read_text(encoding="utf-8")
 
 
-def test_removed_themes_constant_defined(render_source):
-    """SPEC-TL-12：render.py 定义 `_REMOVED_THEMES` 常量并精确含三个已删除主题名。"""
-    assert "_REMOVED_THEMES" in render_source, "render.py 缺少 _REMOVED_THEMES 常量"
+def test_removed_themes_constant_defined(theme_loader_source):
+    """SPEC-TL-12：theme_loader.py 定义 `_REMOVED_THEMES` 常量并精确含三个已删除主题名。"""
+    assert "_REMOVED_THEMES" in theme_loader_source, "theme_loader.py 缺少 _REMOVED_THEMES 常量"
     for removed in ("clean-light", "academic", "dark-business"):
-        assert removed in render_source, f"_REMOVED_THEMES 未包含 {removed!r}"
+        assert removed in theme_loader_source, f"_REMOVED_THEMES 未包含 {removed!r}"
 
 
-def test_default_theme_constant_is_huawei(render_source):
-    """Plan T1：render.py 的 _DEFAULT_THEME == "huawei"。"""
-    assert "_DEFAULT_THEME" in render_source
-    # 简单断言：'_DEFAULT_THEME' 附近出现 '"huawei"' 或 "'huawei'"
+def test_default_theme_constant_is_huawei(theme_loader_source):
+    """Plan T1：theme_loader.py 的 _DEFAULT_THEME == "huawei"。"""
+    assert "_DEFAULT_THEME" in theme_loader_source
     import re
-    m = re.search(r"_DEFAULT_THEME\s*[:=]\s*[^\n]*huawei", render_source)
+    m = re.search(r"_DEFAULT_THEME\s*[:=]\s*[^\n]*huawei", theme_loader_source)
     assert m, "_DEFAULT_THEME 定义未指向 'huawei'"
 
 
@@ -137,20 +150,20 @@ def test_no_clean_light_as_default_value(render_source):
         assert not m, f"render.py 含禁止的 default 模式 {pat!r}（SPEC-RG-9 违规）: {m.group(0) if m else ''}"
 
 
-def test_load_theme_order_removed_before_dir_check(render_source):
+def test_load_theme_order_removed_before_dir_check(theme_loader_source):
     """SPEC-TL-13：load_theme 必须先检查 _REMOVED_THEMES，再检查目录存在。
 
-    启发式：在 load_theme 函数体内，`_REMOVED_THEMES` 出现位置 < `is_dir(` 或 `FileNotFoundError` 首次出现位置。
+    P2 起断言对象迁移到 engine/theme_loader.py (单一来源).
+    启发式：在 load_theme 函数体内, `_REMOVED_THEMES` 出现位置 < `is_dir(` 或 `FileNotFoundError` 首次出现位置.
     """
     # 定位 load_theme 函数开头
-    idx = render_source.find("def load_theme(")
-    assert idx >= 0, "render.py 无 load_theme 函数定义"
+    idx = theme_loader_source.find("def load_theme(")
+    assert idx >= 0, "theme_loader.py 无 load_theme 函数定义"
     # 截取函数体（下一个 def 之前）
-    next_def = render_source.find("\ndef ", idx + 1)
-    body = render_source[idx: next_def if next_def > 0 else len(render_source)]
+    next_def = theme_loader_source.find("\ndef ", idx + 1)
+    body = theme_loader_source[idx: next_def if next_def > 0 else len(theme_loader_source)]
 
     # 跳过 docstring（docstring 可能引用 FileNotFoundError / _REMOVED_THEMES 作为行为说明）
-    # 寻找第一个 if 语句作为函数体起点
     first_if = body.find("\n    if ")
     if first_if < 0:
         pytest.skip("load_theme 函数体无 if 语句，无法断言顺序")

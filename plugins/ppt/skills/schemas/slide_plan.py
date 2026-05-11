@@ -96,15 +96,20 @@ class SlideContent(BaseModel):
 
 
 class SlideDesign(BaseModel):
-    """单页设计参数。"""
+    """单页设计参数。
+
+    所有颜色字段默认 None, 表示使用主题 token。renderer 拿到 None 时
+    fallback 到 theme.colors.{ink/ink_soft/primary} 等 huawei token。
+    历史默认蓝色码 (品牌蓝 / 深蓝灰 / 灰蓝) 在 huawei 主题下视觉错位, 已废弃。
+    """
     model_config = ConfigDict(extra="allow")
     background: str = "#FFFFFF"
     layout_variant: str | None = None
-    title_color: str = "#1A1A2E"
+    title_color: str | None = None
     title_size_pt: int = 28
-    body_color: str = "#4A4A68"
+    body_color: str | None = None
     body_size_pt: int = 16
-    accent_color: str = "#2563EB"
+    accent_color: str | None = None
     font_family: str = "Microsoft YaHei"
     card_colors: list[str] | None = None
     image_position: ImagePosition | None = None

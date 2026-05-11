@@ -6,7 +6,7 @@ description: >-
   也适用于: 用户指定了 .pptx 文件并描述了修改需求的场景。
 argument-hint: "<pptx 路径> <调整指令>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.2
+version: 3.0.3
 ---
 
 # PPT:Refine — 自然语言追加调整
@@ -48,6 +48,20 @@ version: 3.0.2
 
 ### Step 2: 局部重规划
 
+**前置：装载主题决策框架**（与 ppt:create Stage 3 一致，theme.preferences 回归保护）
+
+如修改涉及 visual_type 变更或新加 slide，**先**装载主题决策框架：
+
+```bash
+uv run --script <plugin-root>/engine/prompt_assembler.py \
+    --theme <theme-from-plan-meta> \
+    --output <workdir>/.theme-prompt.md
+```
+
+然后用 Read 工具加载 `<workdir>/.theme-prompt.md`——其内容（6 类硬约束 + 12 类软引导 + 18 版式字段速查 + path X 字段填法）是当前主题的视觉决策权威来源。**确保 refine 选 visual_type 时遵循同样的硬约束**，避免破坏已有 huawei 应用率门禁。
+
+**仅文字/数据/字号微调**（不改 visual_type、不加 slide）时可跳过此步。
+
 1. 修改 slide-plan.yaml 中受影响的 slides
 2. **作为审查 Agent-V** 检查修改后一致性（维度和阈值同 ppt:create Stage 3）
 3. 产出 updated slide-plan.yaml
@@ -60,11 +74,12 @@ uv run python <plugin-root>/engine/render.py <workdir>/slide-plan.yaml \
     --theme <theme> --output <output-path> \
     --base-pptx <original-pptx> --only-slides <changed-slide-ids>
 ```
-2. 运行渲染后校验：
+2. 运行渲染后校验（**必须带 `--theme`**，与 ppt:create 一致，让应用率门禁不退化）：
 ```bash
-uv run --script <plugin-root>/engine/validate_plan.py <workdir>/slide-plan.yaml --json
+uv run --script <plugin-root>/engine/validate_plan.py <workdir>/slide-plan.yaml --theme <theme> --json
 ```
-   检查受影响 slides 的 FAIL 和 WARN（包括反模式警告，如修改是否导致连续相同 visual_type）
+   检查受影响 slides 的 FAIL 和 WARN（包括反模式警告，如修改是否导致连续相同 visual_type），并核对 `theme_application.status` 不退化为 FAIL（exit code 2）。如退化，回到 Step 2 按 `.theme-prompt.md` 软引导改回 huawei 专属版式。
+
 3. **作为审查 Agent-R** 质检（维度和阈值同 ppt:create Stage 4 的 QA 验证循环）
 4. 产出 refined .pptx
 

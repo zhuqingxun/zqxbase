@@ -39,12 +39,13 @@ from schemas.slide_plan import SlidePlan
 
 
 def load_theme(name: str) -> dict:
-    """Load theme YAML by name."""
-    theme_path = THEMES_DIR / f"{name}.yaml"
-    if not theme_path.exists():
-        print(f"ERROR: Theme not found: {theme_path}", file=sys.stderr)
-        sys.exit(1)
-    return yaml.safe_load(theme_path.read_text(encoding="utf-8"))
+    """Delegate to engine.theme_loader.load_theme (单一来源).
+
+    历史上 plan.py 走单文件 themes/<name>.yaml 路径, 当 huawei 主题升级为目录后已永远 ENOENT.
+    现在统一到 theme_loader.load_theme 实现, 同时处理 _REMOVED_THEMES 守卫与 preferences。
+    """
+    from engine.theme_loader import load_theme as _tl_load_theme
+    return _tl_load_theme(name)
 
 
 def load_architecture(path: str) -> dict:

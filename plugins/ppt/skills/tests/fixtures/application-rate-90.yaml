@@ -1,0 +1,130 @@
+# Fixture: huawei 应用率 90% (PASS) — 9/10 huawei + 1 cards-3
+# 用于 AC-009 / test_validate_plan_application_rate.py::test_90_percent_pass
+
+meta:
+  title: "Huawei 90% Application Rate"
+  preset: business-briefing
+  theme: huawei
+  source_files: []
+
+narrative:
+  thesis: "9/10 huawei 版式占比测试样本"
+  arc: "intro -> body -> conclusion"
+  total_slides: 10
+
+slides:
+  - id: 1
+    role: title
+    visual_type: cover-left-bar
+    content:
+      title: "封面"
+      subtitle: "副标题"
+    variant:
+      visual_type: cover-left-bar
+      eyebrow: "出品"
+      meta: []
+
+  - id: 2
+    role: content
+    visual_type: toc
+    content:
+      title: "目录"
+    variant:
+      visual_type: toc
+      chapters:
+        - { number: "01", title: "章一" }
+        - { number: "02", title: "章二" }
+
+  - id: 3
+    role: section
+    visual_type: section-divider-dark
+    content:
+      title: "第一章 概览"
+    variant:
+      visual_type: section-divider-dark
+      number: "01"
+      chapter_title: "概览"
+
+  - id: 4
+    role: data
+    visual_type: kpi-stats
+    content:
+      title: "关键指标"
+    variant:
+      visual_type: kpi-stats
+      kpis:
+        - { label: "营收", value: "100M" }
+        - { label: "利润", value: "20M" }
+        - { label: "毛利率", value: "20%" }
+
+  - id: 5
+    role: content
+    visual_type: architecture-layered
+    content:
+      title: "技术架构"
+    variant:
+      visual_type: architecture-layered
+      layers:
+        - header: { code: "L1", name: "接入层" }
+          cells: [{ title: "网关" }]
+        - header: { code: "L2", name: "服务层" }
+          cells: [{ title: "API" }]
+
+  - id: 6
+    role: content
+    visual_type: process-flow-huawei
+    content:
+      title: "流程"
+    variant:
+      visual_type: process-flow-huawei
+      steps:
+        - { number: "01", title: "步骤一" }
+        - { number: "02", title: "步骤二" }
+        - { number: "03", title: "步骤三" }
+
+  - id: 7
+    role: content
+    visual_type: timeline-huawei
+    content:
+      title: "时间线"
+    variant:
+      visual_type: timeline-huawei
+      phases:
+        - { year: "2024", label: "起步", items: ["a"] }
+        - { year: "2025", label: "扩展", items: ["b"] }
+        - { year: "2026", label: "成熟", items: ["c"] }
+
+  - id: 8
+    role: content
+    visual_type: matrix-2x2
+    content:
+      title: "矩阵"
+    variant:
+      visual_type: matrix-2x2
+      axes:
+        x: { label: "成本" }
+        y: { label: "价值" }
+      quadrants:
+        - { position: "Q1", heading: "高价值低成本" }
+        - { position: "Q2", heading: "高价值高成本" }
+        - { position: "Q3", heading: "低价值低成本" }
+        - { position: "Q4", heading: "低价值高成本" }
+
+  - id: 9
+    role: content
+    visual_type: cards-3
+    content:
+      title: "通用三栏 (此页是唯一非 huawei 版式)"
+      key_points:
+        - { heading: "A", body: "通用版式 cards-3 内容 A,字数补足填充让校验过关 80 字"}
+        - { heading: "B", body: "通用版式 cards-3 内容 B,字数补足填充让校验过关 80 字"}
+        - { heading: "C", body: "通用版式 cards-3 内容 C,字数补足填充让校验过关 80 字"}
+
+  - id: 10
+    role: closing
+    visual_type: thankyou
+    content:
+      title: "致谢"
+    variant:
+      visual_type: thankyou
+      message: "Thank you"

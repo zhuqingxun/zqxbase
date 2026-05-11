@@ -7,7 +7,7 @@ description: >-
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
 argument-hint: "<工作目录> [保守|适度] [--脱敏]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage
-version: 2.1.6
+version: 2.1.7
 ---
 
 # mint:refine — 校对清洁

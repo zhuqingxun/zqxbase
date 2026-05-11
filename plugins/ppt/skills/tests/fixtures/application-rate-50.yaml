@@ -1,0 +1,105 @@
+# Fixture: huawei 应用率 50% (WARN) — 5/10 huawei + 5 通用
+# 用于 AC-010 / test_validate_plan_application_rate.py::test_50_percent_warn
+
+meta:
+  title: "Huawei 50% WARN"
+  preset: business-briefing
+  theme: huawei
+
+narrative:
+  thesis: "WARN 区间样本"
+  arc: "linear"
+  total_slides: 10
+
+slides:
+  - id: 1
+    role: title
+    visual_type: cover-left-bar
+    content: { title: "封面" }
+    variant: { visual_type: cover-left-bar, eyebrow: "X", meta: [] }
+
+  - id: 2
+    role: content
+    visual_type: toc
+    content: { title: "目录" }
+    variant:
+      visual_type: toc
+      chapters: [{ number: "01", title: "一" }]
+
+  - id: 3
+    role: data
+    visual_type: kpi-stats
+    content: { title: "指标" }
+    variant:
+      visual_type: kpi-stats
+      kpis:
+        - { label: "A", value: "1" }
+        - { label: "B", value: "2" }
+        - { label: "C", value: "3" }
+
+  - id: 4
+    role: content
+    visual_type: architecture-layered
+    content: { title: "架构" }
+    variant:
+      visual_type: architecture-layered
+      layers:
+        - header: { code: "L1", name: "接入" }
+          cells: [{ title: "GW" }]
+
+  - id: 5
+    role: closing
+    visual_type: thankyou
+    content: { title: "致谢" }
+    variant: { visual_type: thankyou, message: "Thanks" }
+
+  - id: 6
+    role: content
+    visual_type: cards-3
+    content:
+      title: "通用一"
+      key_points:
+        - { heading: "A", body: "通用 cards-3 内容 A 字数填充 80 字阈值通过验证测试"}
+        - { heading: "B", body: "通用 cards-3 内容 B 字数填充 80 字阈值通过验证测试"}
+        - { heading: "C", body: "通用 cards-3 内容 C 字数填充 80 字阈值通过验证测试"}
+
+  - id: 7
+    role: content
+    visual_type: cards-4
+    content:
+      title: "通用二"
+      key_points:
+        - { heading: "A", body: "cards-4 内容 A 字数补 80 阈值通过测试 padding 文本"}
+        - { heading: "B", body: "cards-4 内容 B 字数补 80 阈值通过测试 padding 文本"}
+        - { heading: "C", body: "cards-4 内容 C 字数补 80 阈值通过测试 padding 文本"}
+        - { heading: "D", body: "cards-4 内容 D 字数补 80 阈值通过测试 padding 文本"}
+
+  - id: 8
+    role: content
+    visual_type: bullets
+    content:
+      title: "通用三"
+      key_points:
+        - { heading: "X1", body: "bullets 第一条字数补全到 200 总字数门禁通过验证测试"}
+        - { heading: "X2", body: "bullets 第二条字数补全到 200 总字数门禁通过验证测试"}
+        - { heading: "X3", body: "bullets 第三条字数补全到 200 总字数门禁通过验证测试"}
+
+  - id: 9
+    role: content
+    visual_type: data-contrast
+    content:
+      title: "数据对比"
+      key_points:
+        - { heading: "对比一", body: "对比 A 数据 40 字数补全测试", metric_value: "100", metric_label: "次"}
+        - { heading: "对比二", body: "对比 B 数据 40 字数补全测试", metric_value: "200", metric_label: "次"}
+
+  - id: 10
+    role: content
+    visual_type: table
+    content:
+      title: "表格"
+      table_data:
+        headers: ["列一", "列二"]
+        rows:
+          - ["a", "1"]
+          - ["b", "2"]

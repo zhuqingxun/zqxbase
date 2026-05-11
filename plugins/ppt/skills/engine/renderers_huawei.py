@@ -62,8 +62,33 @@ def _layout(theme: dict, visual_type_key: str) -> dict:
     return _layouts(theme).get(visual_type_key, {})
 
 
-def _extra(content, field: str, default=None):
-    """读 SlideContent 的 extra 字段（Pydantic V2 extra='allow')。"""
+def _extra(source, field: str, default=None):
+    """读 extra 字段 (path X 双查兼容).
+
+    优先级:
+    1. 若 source 有 .variant 属性 (即 SlideSpec, path X 推荐): 先查 variant 直属字段, 再查 variant.__pydantic_extra__
+    2. 回退到 content (SlideSpec.content 或 source 自身, path Y 兜底): 查直属, 再查 __pydantic_extra__
+
+    既支持新写法 _extra(spec, 'kpis')(优先 spec.variant.kpis, 回退 spec.content.kpis),
+    也兼容旧写法 _extra(spec, 'kpis')(直接走 path Y)。
+
+    Args:
+        source: SlideSpec 实例 (推荐) 或 SlideContent 实例 (兼容)
+        field: 字段名
+        default: 兜底值
+
+    Returns:
+        字段值, 缺失时返回 default
+    """
+    variant = getattr(source, "variant", None)
+    if variant is not None:
+        v = getattr(variant, field, None)
+        if v is not None:
+            return v
+        vextras = getattr(variant, "__pydantic_extra__", None) or {}
+        if field in vextras:
+            return vextras[field]
+    content = getattr(source, "content", source)
     val = getattr(content, field, None)
     if val is not None:
         return val
@@ -155,7 +180,7 @@ def render_cover_left_bar(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
     text_left = left_pad
 
     # eyebrow（小标签，可选）
-    eyebrow = _extra(spec.content, "eyebrow", spec.chapter or "")
+    eyebrow = _extra(spec, "eyebrow", spec.chapter or "")
     cur_y = top_pad
     if eyebrow:
         eb_h = _px_pt(eyebrow_px) / 72 + 0.1
@@ -187,7 +212,7 @@ def render_cover_left_bar(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
         )
 
     # 底部 meta 栏（4 列横排）
-    meta = _extra(spec.content, "meta", None) or _extra(spec.content, "meta_items", None) or []
+    meta = _extra(spec, "meta", None) or _extra(spec, "meta_items", None) or []
     if meta:
         meta_y = sh - bottom_pad - _px_pt(meta_px) / 72 * 1.3 - 0.1
         col_w = (sw - text_left - right_pad) / max(len(meta), 1)
@@ -221,7 +246,7 @@ def render_toc(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides
     # 左侧大字（两栏布局中的左栏约 40% 宽）
     left_col_w = sw * 0.40 - left_pad
     giant_pt = _px_pt(giant_px)
-    giant_text = _extra(spec.content, "giant_label", None) or spec.content.title or "目录"
+    giant_text = _extra(spec, "giant_label", None) or spec.content.title or "目录"
     # 超大字号需高度容纳，关闭 word_wrap
     gtb = slide.shapes.add_textbox(
         Inches(left_pad), Inches(top_pad),
@@ -237,7 +262,7 @@ def render_toc(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides
     gp.font.color.rgb = hex_to_rgb(_color(theme, "primary", "#C7000B"))
 
     # 右侧章节列表
-    items = _extra(spec.content, "items", None) or _extra(spec.content, "chapters", None) or []
+    items = _extra(spec, "items", None) or _extra(spec, "chapters", None) or []
     if not items:
         # 退化：用 key_points
         for p in get_points(spec):
@@ -317,7 +342,7 @@ def render_section_divider_dark(slide, spec: SlideSpec, theme: dict, safe: SafeA
     # 左侧大数字
     big_pt = _px_pt(big_px)
     left_col_in = _px_in(left_col_px)
-    number_text = _extra(spec.content, "number", None) or str(spec.id).zfill(2)
+    number_text = _extra(spec, "number", None) or str(spec.id).zfill(2)
     nbx = slide.shapes.add_textbox(
         Inches(left_pad), Inches(top_pad),
         Inches(max(left_col_in, 3.4)),
@@ -337,7 +362,7 @@ def render_section_divider_dark(slide, spec: SlideSpec, theme: dict, safe: SafeA
     right_w = sw - right_x - right_pad
     cur_y = top_pad + 1.2  # 视觉上与数字中部对齐
 
-    eyebrow = _extra(spec.content, "eyebrow", None) or spec.chapter
+    eyebrow = _extra(spec, "eyebrow", None) or spec.chapter
     if eyebrow:
         eb_pt = _px_pt(eyebrow_px)
         eb_h = eb_pt / 72 * 1.4 + 0.1
@@ -388,7 +413,7 @@ def render_kpi_stats(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_
     top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
     font = _font_family(spec, theme)
 
-    kpis = _extra(spec.content, "kpis", None) or []
+    kpis = _extra(spec, "kpis", None) or []
     if not kpis:
         # 退化：从 key_points 构造
         for p in get_points(spec):
@@ -524,7 +549,7 @@ def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
     paper_2 = _color(theme, "paper_2", "#F4F4F4")
 
     # Y 轴（左侧，垂直文字）
-    y_axis = _extra(spec.content, "y_axis", None) or _extra(spec.content, "axis_y", "")
+    y_axis = _extra(spec, "y_axis", None) or _extra(spec, "axis_y", "")
     if y_axis:
         # 旋转前 width=0.5, height=grid_h；旋转 270 后视觉上 w=grid_h, h=0.5
         rot_w = 0.5
@@ -545,7 +570,7 @@ def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
         rp.font.color.rgb = hex_to_rgb(ink_soft)
 
     # X 轴（底部）
-    x_axis = _extra(spec.content, "x_axis", None) or _extra(spec.content, "axis_x", "")
+    x_axis = _extra(spec, "x_axis", None) or _extra(spec, "axis_x", "")
     if x_axis:
         add_textbox(
             slide, grid_left, grid_top + grid_h + 0.15, grid_w, x_row_in - 0.2,
@@ -554,7 +579,7 @@ def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
         )
 
     # 4 象限（quadrants）
-    quadrants = _extra(spec.content, "quadrants", None) or []
+    quadrants = _extra(spec, "quadrants", None) or []
     if not quadrants:
         pts = get_points(spec)
         for p in pts[:4]:
@@ -633,7 +658,7 @@ def render_architecture_layered(slide, spec: SlideSpec, theme: dict, safe: SafeA
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    layers = _extra(spec.content, "layers", None) or []
+    layers = _extra(spec, "layers", None) or []
     if not layers:
         for p in get_points(spec):
             layers.append({
@@ -738,7 +763,7 @@ def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, 
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    phases = _extra(spec.content, "phases", None) or _extra(spec.content, "timeline", None) or []
+    phases = _extra(spec, "phases", None) or _extra(spec, "timeline", None) or []
     if not phases:
         for p in get_points(spec):
             phases.append({
@@ -832,7 +857,7 @@ def render_process_flow_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeAr
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    steps = _extra(spec.content, "steps", None) or _extra(spec.content, "process", None) or []
+    steps = _extra(spec, "steps", None) or _extra(spec, "process", None) or []
     if not steps:
         for p in get_points(spec):
             steps.append({"title": p.heading or "", "desc": p.body or ""})
@@ -957,7 +982,7 @@ def render_swot(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slide
             label, font, heading_pt,
             ink, bold=True,
         )
-        items = _extra(spec.content, key, None) or []
+        items = _extra(spec, key, None) or []
         if isinstance(items, str):
             items = [items]
         text = "\n".join(f"• {str(it)}" for it in items[:5]) if items else ""
@@ -1013,8 +1038,8 @@ def render_roadmap(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
     body_pt = _px_pt(_type_px(theme, "body", 24))
     small_pt = _px_pt(_type_px(theme, "small", 20))
 
-    lanes = _extra(spec.content, "lanes", None) or []
-    phases = _extra(spec.content, "phases", None) or ["Q1", "Q2", "Q3", "Q4"]
+    lanes = _extra(spec, "lanes", None) or []
+    phases = _extra(spec, "phases", None) or ["Q1", "Q2", "Q3", "Q4"]
     n_phases = max(len(phases), 1)
     right_x = area_left + lane_w + 0.15
     right_w = area_w - lane_w - 0.15
@@ -1105,7 +1130,7 @@ def render_pyramid(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    levels = _extra(spec.content, "levels", None) or []
+    levels = _extra(spec, "levels", None) or []
     if not levels:
         for p in get_points(spec):
             levels.append({"title": p.heading or "", "desc": p.body or ""})
@@ -1216,8 +1241,8 @@ def render_heatmap_matrix(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    rows_data = _extra(spec.content, "rows", None) or []
-    columns = _extra(spec.content, "columns", None) or []
+    rows_data = _extra(spec, "rows", None) or []
+    columns = _extra(spec, "columns", None) or []
     if not rows_data:
         for p in get_points(spec):
             rows_data.append({
@@ -1360,7 +1385,7 @@ def render_thankyou(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_s
         )
 
     # 底部联系方式
-    contacts = _extra(spec.content, "contacts", None) or []
+    contacts = _extra(spec, "contacts", None) or []
     if contacts:
         small_pt = _px_pt(_type_px(theme, "small", 20))
         n_cols = min(len(contacts), contact_cols)
@@ -1408,8 +1433,8 @@ def render_rings(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slid
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    rings = _extra(spec.content, "rings", None) or []
-    steps = _extra(spec.content, "steps", None) or []
+    rings = _extra(spec, "rings", None) or []
+    steps = _extra(spec, "steps", None) or []
     if not rings:
         # 退化：用 points 前 ring_max 条
         for p in get_points(spec)[:ring_max]:
@@ -1530,7 +1555,7 @@ def render_personas(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_s
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    personas = _extra(spec.content, "personas", None) or []
+    personas = _extra(spec, "personas", None) or []
     if not personas:
         for p in get_points(spec):
             personas.append({
@@ -1633,7 +1658,7 @@ def render_risk_list(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    risks = _extra(spec.content, "risks", None) or []
+    risks = _extra(spec, "risks", None) or []
     if not risks:
         for p in get_points(spec):
             risks.append({
@@ -1751,8 +1776,8 @@ def render_governance(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
     area_w = sw - area_left - right_pad
     area_h = sh - area_top - bottom_pad - 0.5
 
-    top_box = _extra(spec.content, "top_box", None) or {}
-    units = _extra(spec.content, "units", None) or []
+    top_box = _extra(spec, "top_box", None) or {}
+    units = _extra(spec, "units", None) or []
     if not units:
         for p in get_points(spec):
             units.append({"title": p.heading or "", "desc": p.body or ""})

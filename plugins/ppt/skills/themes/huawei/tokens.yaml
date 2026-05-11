@@ -23,6 +23,19 @@ colors:
   accent: "#D97706"           # 强调橙
   ok: "#1E7B3A"
   warn: "#C7000B"
+  # 卡片渲染器(cards-N / comparison-N)消费,缺则 fallback 到 SlideDesign 默认蓝
+  card_left_bar_colors:
+    - "#C7000B"
+    - "#C7000B"
+    - "#C7000B"
+    - "#C7000B"
+    - "#C7000B"
+  card_fills:
+    - "#F4F4F4"
+    - "#F4F4F4"
+    - "#F4F4F4"
+    - "#F4F4F4"
+    - "#F4F4F4"
   # 旧 renderer 兼容别名（与上方主色同值）
   background: "#FFFFFF"
   text_primary: "#1F1F1F"

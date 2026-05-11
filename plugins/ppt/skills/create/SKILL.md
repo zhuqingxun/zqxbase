@@ -6,7 +6,7 @@ description: >-
   也适用于: 用户提供了 markdown 文件或目录并要求转化为 PPT 的场景。
 argument-hint: "<输入路径> [--preset <name>] [--theme <name>] [--output <path>]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.2
+version: 3.0.3
 ---
 
 # PPT:Create — 一键生成最高质量 PPT
@@ -150,19 +150,49 @@ excluded_content:
 
 读取 `content-architecture.yaml`、主题 YAML、预设 YAML、`<plugin-root>/design-guide.md`。
 
+**前置步骤：装载主题决策框架**
+
+执行（生成 `.theme-prompt.md`，包含主题级硬约束 + 软引导 + 18 版式字段速查 + 退回链）：
+
+```bash
+uv run --script <plugin-root>/engine/prompt_assembler.py \
+    --theme <theme> \
+    --output <workdir>/.theme-prompt.md
+```
+
+然后**用 Read 工具加载 `<workdir>/.theme-prompt.md`**——它由 `engine/prompt_assembler.py` 在运行时从 `themes/<theme>/preferences.yaml` + `schemas/variants.py` 自动派生，是当前主题的视觉决策权威来源，包含：
+
+- **6 类硬约束**（必须遵守的 role 映射 / 内容触发 / 禁用版式）
+- **12 类软引导**（visual_type 偏好权重，内容歧义时按权重排序）
+- **18 版式字段速查 cookbook**（字段名/类型/约束/嵌套子模型，派生自 Pydantic schema）
+- **退回链**（schema 校验失败时的 fallback 顺序）
+- **path X 字段填法**（变体专属字段放 `slide.variant`，公共字段放 `slide.content`）
+
+**所有视觉规划决策必须严格遵循 `.theme-prompt.md` 的硬约束、软引导与字段说明**。
+
 **你作为 AI 视觉规划师**，为每页做视觉设计决策：
 
 对每一页 slide：
-1. 根据内容类型选择 visual type（使用下方决策框架）
-2. 参考预设的 `visual_type_preferences` 权重
-3. 指定设计参数（来自主题 YAML）
-4. 确保全局视觉一致性
-5. **key_points 必须使用结构化对象格式**（heading + body，data-contrast 加 metric_value + metric_label）
-6. **每页必须有 description**（豁免类型除外）
-7. **有数据的页面必须有 footnote**
-8. **连续 2 页不得使用相同 visual_type**（布局多样性约束）
+1. 根据内容类型选择 visual type（**优先**遵循 `.theme-prompt.md` 的硬约束 + 软引导；通用 fallback 决策树见下方）
+2. 指定设计参数（来自主题 YAML）
+3. 确保全局视觉一致性
+4. **key_points 必须使用结构化对象格式**（heading + body，data-contrast 加 metric_value + metric_label）
+5. **每页必须有 description**（豁免类型除外）
+6. **有数据的页面必须有 footnote**
+7. **连续 2 页不得使用相同 visual_type**（布局多样性约束）
 
-**Visual Type 决策框架**（按顺序匹配）：
+**huawei 专属版式的字段填法**（与 `.theme-prompt.md` path X 段一致）：
+
+- 当 visual_type 选 huawei 18 版式之一（kpi-stats / cover-left-bar / architecture-layered / ...）时：
+  - 公共字段（title / subtitle / description）放在 `slide.content` 下
+  - 专属字段（kpis / chapters / layers / steps / phases / quadrants / personas / risks / units / ...）放在 `slide.variant` 下
+  - **不要**把专属字段平铺到 slide.content 顶层（虽然向后兼容兜底仍可工作，但 schema 严格化将失败）
+- 通用版式（cards-N / bullets / data-contrast / ...）继续用 slide.content.key_points
+
+具体每版式的字段名/类型/约束见 `.theme-prompt.md` 的"18 版式字段速查"段。
+
+**通用 Visual Type 决策框架**（仅当 `.theme-prompt.md` 加载失败时使用，按顺序匹配）：
+
 1. 有序列/流程？ → `process-N-phase`（N=2-5）
 2. 有对比？ → `comparison-N`（N=2-5）
 3. 有并列但非序列的条目？ → `cards-N`（N=2-5）
@@ -172,33 +202,50 @@ excluded_content:
 7. 单句核心陈述？ → `hero-statement`
 8. 默认 → `bullets`
 
-**禁止**：
+**通用禁止**（即使 `.theme-prompt.md` 未加载也必须遵守）：
 - hero-statement 不得用于 3+ 条目的内容
 - table 不得用于流程/方法论
 - bullets 不得用于并列对比
 
 产出 `<workdir>/slide-plan.yaml`（schema 由 `schemas/slide_plan.py` 定义）。
 
-**内容量门禁**（强制，不可跳过）：
+**内容量门禁 + 主题应用率门禁**（强制，不可跳过）：
 
-slide-plan.yaml 写入后，立即运行校验脚本：
+slide-plan.yaml 写入后，立即运行校验脚本（**必须带 `--theme`**）：
 ```bash
-uv run --script <plugin-root>/engine/validate_plan.py <workdir>/slide-plan.yaml --json
+uv run --script <plugin-root>/engine/validate_plan.py <workdir>/slide-plan.yaml --theme <theme> --json
 ```
 
-校验规则（按 visual type）：
-- `cards-N` / `process-N-phase` / `framework*` / `timeline*`：每 key_point ≥ 80 字
-- `comparison-N`：每 key_point ≥ 100 字
-- `bullets`：key_points 总计 ≥ 200 字
-- `data-contrast`：内容区总计 ≥ 80 字
-- `table`：rows ≥ 2 且 headers 非空
-- `hero-statement` / `quote-hero` / `story-card`：豁免
+校验规则：
+
+1. **内容量**（按 visual type）：
+   - `cards-N` / `process-N-phase` / `framework*` / `timeline*`：每 key_point ≥ 80 字
+   - `comparison-N`：每 key_point ≥ 100 字
+   - `bullets`：key_points 总计 ≥ 200 字
+   - `data-contrast`：内容区总计 ≥ 80 字
+   - `table`：rows ≥ 2 且 headers 非空
+   - `hero-statement` / `quote-hero` / `story-card`：豁免
+
+2. **主题应用率**（仅 `--theme=huawei` 触发）：huawei 18 版式占比阈值由 `themes/huawei/preferences.yaml` 的 `application_thresholds` 定义（默认 ≥60% PASS / 30~60% WARN / <30% FAIL）。
+
+**Exit code 语义**：
+- `0`：内容量 + 应用率均通过
+- `1`：内容量 fail（`status: FAIL` slides）
+- `2`：内容量通过但应用率 FAIL（`theme_application.status == "FAIL"`）
 
 **校验不通过时**：
+
+A. **内容量 fail（exit 1）**：
 1. 读取 JSON 输出中 `status: "FAIL"` 的 slides 清单
 2. 对每个 FAIL slide，根据 `point_issues` 或 `total_issue` 补充内容——从 `content-architecture.yaml` 的 source_refs 回溯源材料，提取具体数据、案例或论证细节
 3. 更新 slide-plan.yaml 后重新运行校验
 4. 连续 3 轮无法全部通过 → 将 FAIL 清单交给用户决策（AskUserQuestion：接受当前版本 / 手动补充内容 / 降低该 slide 的 visual type 复杂度）
+
+B. **应用率 FAIL（exit 2）**：
+1. 读取 JSON 输出中 `theme_application` 段的 `ratio` 与 `huawei_count` / `total_slides`
+2. 根据 `.theme-prompt.md` 的硬约束 + 软引导**重新审视通用版式选择**：哪些 cards-N / bullets / process-N-phase 应改为对应 huawei 版式（cards-6 / kpi-stats / process-flow-huawei / architecture-layered 等）
+3. 更新 slide-plan.yaml 后重新校验
+4. 连续 2 轮无法达到 30% 阈值 → AskUserQuestion：接受当前版本 / 重新规划 huawei 适配版式 / 改用其他主题
 
 产出后，**你切换为审查 Agent-V** 审查：
 

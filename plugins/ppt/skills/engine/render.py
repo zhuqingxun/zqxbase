@@ -45,50 +45,23 @@ from lib.content_fitter import suggest_font_size, estimate_text_overflow
 from schemas.slide_plan import SlidePlan, SlideSpec, SlideRole, StructuredPoint
 
 # ===========================================================================
-# THEME LOADING
+# THEME LOADING (delegated to engine.theme_loader, single source of truth)
 # ===========================================================================
 
-_REMOVED_THEMES: set[str] = {"clean-light", "academic", "dark-business"}
-_DEFAULT_THEME: str = "huawei"
+from engine.theme_loader import (
+    load_theme as _tl_load_theme,
+    _REMOVED_THEMES as _TL_REMOVED,
+    _DEFAULT_THEME as _TL_DEFAULT,
+)
+
+# 保留模块级常量供外部 test 直接 import (tests/variants/test_theme_loader.py:19 已用)
+_REMOVED_THEMES: set[str] = _TL_REMOVED
+_DEFAULT_THEME: str = _TL_DEFAULT
 
 
 def load_theme(name: str | None) -> dict:
-    """加载主题目录下的 tokens.yaml + layouts.yaml 合并字典。
-
-    行为契约（PRD §7.3.1）：
-    - name=None → 使用默认主题 huawei（INFO 日志）
-    - name 在已删除清单（clean-light / academic / dark-business） → ValueError 硬报错
-    - name 目录不存在 → FileNotFoundError 硬报错
-    - 有效主题 → 读 tokens.yaml + layouts.yaml 浅合并
-
-    返回 dict 结构：tokens 顶层键扁平（colors / fonts / type_scale_px 挂顶层，
-    让旧 25 renderer 零改造），同时保留 `tokens` / `_layouts` 作为一级 key
-    （新 renderer 显式读取）。
-
-    顺序契约（SPEC-TL-13）：先判 removed 再检目录，顺序反了 FileNotFoundError
-    会盖掉 removed 消息。
-    """
-    if name is None:
-        logger.info("theme not specified, defaulting to '%s'", _DEFAULT_THEME)
-        name = _DEFAULT_THEME
-    if name in _REMOVED_THEMES:
-        raise ValueError(
-            f"theme '{name}' was removed in huawei-theme-complete release. "
-            f"Use 'huawei' (the only supported theme). See release notes."
-        )
-    theme_dir = SKILLS_DIR / "themes" / name
-    if not theme_dir.is_dir():
-        themes_root = SKILLS_DIR / "themes"
-        if themes_root.is_dir():
-            available = sorted(p.name for p in themes_root.iterdir() if p.is_dir())
-        else:
-            available = []
-        raise FileNotFoundError(
-            f"theme '{name}' not found under themes/. Available: {available}"
-        )
-    tokens = yaml.safe_load((theme_dir / "tokens.yaml").read_text(encoding="utf-8")) or {}
-    layouts = yaml.safe_load((theme_dir / "layouts.yaml").read_text(encoding="utf-8")) or {}
-    return {"tokens": tokens, "layouts": layouts, **tokens, "_layouts": layouts}
+    """已迁移到 engine.theme_loader.load_theme。本函数仅为向后兼容保留。"""
+    return _tl_load_theme(name)
 
 # ===========================================================================
 # RENDERER REGISTRY
@@ -106,6 +79,44 @@ def register_renderer(visual_type: str):
 # ===========================================================================
 # THEME HELPERS
 # ===========================================================================
+
+def _resolve_accent(spec: SlideSpec, theme: dict, idx: int = 0) -> str:
+    """解析 accent 色: 优先 spec.design.accent_color, None 时用 theme.colors.primary,
+    最终兜底 huawei 主红 (避免 theme 损坏时整体崩)。idx 给将来卡片轮转色预留。
+    """
+    if spec.design.accent_color:
+        return spec.design.accent_color
+    primary = theme.get("colors", {}).get("primary")
+    if primary:
+        return primary
+    return "#C7000B"
+
+
+def _resolve_title_color(spec: SlideSpec, theme: dict) -> str:
+    """解析主标题色: 优先 spec.design.title_color, None 时用 theme.colors.ink, 兜底深灰。
+
+    P3b/P5 收尾: 配套 P4 SlideDesign 默认色 None, 让 renderer 公共组件不传 None 给 hex_to_rgb。
+    """
+    if spec.design.title_color:
+        return spec.design.title_color
+    ink = theme.get("colors", {}).get("ink")
+    if ink:
+        return ink
+    return "#1F1F1F"
+
+
+def _resolve_body_color(spec: SlideSpec, theme: dict) -> str:
+    """解析正文色: 优先 spec.design.body_color, None 时用 theme.colors.ink_soft, 兜底中灰。
+
+    P3b/P5 收尾: 配套 P4 SlideDesign 默认色 None, 让 renderer 公共组件不传 None 给 hex_to_rgb。
+    """
+    if spec.design.body_color:
+        return spec.design.body_color
+    ink_soft = theme.get("colors", {}).get("ink_soft")
+    if ink_soft:
+        return ink_soft
+    return "#4B4B4B"
+
 
 def _ve(theme: dict) -> dict:
     """Get visual_elements from theme with defaults."""
@@ -268,7 +279,7 @@ def render_title_zone(slide, spec: SlideSpec, theme: dict, safe: SafeArea) -> fl
     add_textbox(
         slide, safe.left, y, safe.width, 0.6,
         spec.content.title, spec.design.font_family,
-        spec.design.title_size_pt, spec.design.title_color,
+        spec.design.title_size_pt, _resolve_title_color(spec, theme),
         bold=True,
     )
     y += 0.6
@@ -276,7 +287,7 @@ def render_title_zone(slide, spec: SlideSpec, theme: dict, safe: SafeArea) -> fl
     # Description (if present)
     desc = spec.content.description
     if desc:
-        desc_color = ve["description_color"] or theme.get("colors", {}).get("text_secondary", spec.design.body_color)
+        desc_color = ve["description_color"] or theme.get("colors", {}).get("text_secondary", _resolve_body_color(spec, theme))
         desc_size = ve["description_size_pt"]
         desc_h = estimate_content_height(desc, safe.width, desc_size, padding=0.15)
         desc_h = min(desc_h, 0.8)  # cap description height
@@ -311,7 +322,7 @@ def render_footer(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sli
     footer_h = ve["footer_height_inches"]
     footer_top = safe.bottom - footer_h
     colors = theme.get("colors", {})
-    footer_color = colors.get("text_secondary", spec.design.body_color)
+    footer_color = colors.get("text_secondary", _resolve_body_color(spec, theme))
     caption_size = theme.get("typography", {}).get("caption_size_pt", 10)
 
     # Footnote (left)
@@ -348,13 +359,15 @@ def get_content_zone(safe: SafeArea, title_h: float, footer_h: float) -> tuple[f
 # ===========================================================================
 
 def _get_card_accent(theme: dict, spec: SlideSpec, index: int | None) -> str:
-    """Pick accent color for a card: theme.colors.card_left_bar_colors[i] if available, else design.accent_color."""
+    """Pick accent color for a card: theme.colors.card_left_bar_colors[i] if available,
+    else spec.design.accent_color, else theme.colors.primary (P5: 走 token).
+    """
     if index is None:
-        return spec.design.accent_color
+        return _resolve_accent(spec, theme)
     bars = theme.get("colors", {}).get("card_left_bar_colors")
     if bars:
         return bars[index % len(bars)]
-    return spec.design.accent_color
+    return _resolve_accent(spec, theme)
 
 
 def render_card_header(slide, x, y, width, heading: str, theme: dict, spec: SlideSpec, index: int | None = None) -> float:
@@ -394,7 +407,7 @@ def render_card_header(slide, x, y, width, heading: str, theme: dict, spec: Slid
         add_textbox(
             slide, x + bar_w + 0.1, y + 0.05, width - bar_w - 0.2, header_h - 0.1,
             heading, spec.design.font_family,
-            spec.design.body_size_pt + 1, spec.design.title_color,
+            spec.design.body_size_pt + 1, _resolve_title_color(spec, theme),
             bold=True,
         )
         return header_h
@@ -403,7 +416,7 @@ def render_card_header(slide, x, y, width, heading: str, theme: dict, spec: Slid
         add_textbox(
             slide, x + 0.15, y + 0.05, width - 0.3, header_h - 0.1,
             heading, spec.design.font_family,
-            spec.design.body_size_pt, spec.design.title_color,
+            spec.design.body_size_pt, _resolve_title_color(spec, theme),
             bold=True,
         )
         return header_h
@@ -455,7 +468,7 @@ def render_hero_statement(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
         slide, safe.left, safe.top + safe.height * 0.3,
         safe.width, safe.height * 0.3,
         spec.content.title, spec.design.font_family,
-        spec.design.title_size_pt + 4, spec.design.title_color,
+        spec.design.title_size_pt + 4, _resolve_title_color(spec, theme),
         alignment=PP_ALIGN.CENTER, bold=True,
     )
     if spec.content.subtitle:
@@ -463,7 +476,7 @@ def render_hero_statement(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
             slide, safe.left, safe.top + safe.height * 0.6,
             safe.width, 0.5,
             spec.content.subtitle, spec.design.font_family,
-            spec.design.body_size_pt, spec.design.body_color,
+            spec.design.body_size_pt, _resolve_body_color(spec, theme),
             alignment=PP_ALIGN.CENTER,
         )
 
@@ -475,7 +488,7 @@ def render_quote_hero(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
         slide, safe.left + 1, safe.top + safe.height * 0.25,
         safe.width - 2, safe.height * 0.35,
         f'\u201c{spec.content.title}\u201d', spec.design.font_family,
-        spec.design.title_size_pt, spec.design.accent_color,
+        spec.design.title_size_pt, _resolve_accent(spec, theme),
         alignment=PP_ALIGN.CENTER, bold=False,
     )
     if spec.content.subtitle:
@@ -483,7 +496,7 @@ def render_quote_hero(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
             slide, safe.left + 1, safe.top + safe.height * 0.65,
             safe.width - 2, 0.5,
             f"-- {spec.content.subtitle}", spec.design.font_family,
-            spec.design.body_size_pt, spec.design.body_color,
+            spec.design.body_size_pt, _resolve_body_color(spec, theme),
             alignment=PP_ALIGN.CENTER,
         )
 
@@ -513,15 +526,15 @@ def render_bullets(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
             Inches(marker_size), Inches(marker_size),
         )
         shape.fill.solid()
-        shape.fill.fore_color.rgb = hex_to_rgb(spec.design.accent_color)
+        shape.fill.fore_color.rgb = hex_to_rgb(_get_card_accent(theme, spec, 0))
         shape.line.fill.background()
 
         # Text
         if pt.heading:
             text = f"{pt.heading}\n{pt.body}"
             parts = [
-                {"text": pt.heading, "size_pt": spec.design.body_size_pt, "color": spec.design.title_color, "bold": True},
-                {"text": f"\n{pt.body}", "size_pt": spec.design.body_size_pt, "color": spec.design.body_color, "bold": False},
+                {"text": pt.heading, "size_pt": spec.design.body_size_pt, "color": _resolve_title_color(spec, theme), "bold": True},
+                {"text": f"\n{pt.body}", "size_pt": spec.design.body_size_pt, "color": _resolve_body_color(spec, theme), "bold": False},
             ]
             h = estimate_content_height(text, bullet_w, spec.design.body_size_pt)
             add_textbox_rich(slide, safe.left + 0.5, y, bullet_w, h, parts, spec.design.font_family)
@@ -530,7 +543,7 @@ def render_bullets(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
             add_textbox(
                 slide, safe.left + 0.5, y, bullet_w, h,
                 pt.body, spec.design.font_family,
-                spec.design.body_size_pt, spec.design.body_color,
+                spec.design.body_size_pt, _resolve_body_color(spec, theme),
             )
         y += h + gap
         if y > content_top + content_h:
@@ -546,7 +559,7 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
     content_top, content_h = get_content_zone(safe, title_h, footer_h)
 
     ve = _ve(theme)
-    colors = theme.get("colors", {}).get("card_fills", ["#F0F4FF"] * 5)
+    colors = theme.get("colors", {}).get("card_fills", ["#F4F4F4"] * 5)
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
     card_width = (safe.width - gap * (n_cards - 1)) / n_cards
     corner_r = theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1)
@@ -606,7 +619,7 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
             slide, x + 0.2, body_top,
             card_width - 0.4, body_avail,
             text, spec.design.font_family,
-            spec.design.body_size_pt, spec.design.body_color,
+            spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
 
 for n in range(2, 6):
@@ -620,7 +633,7 @@ def _render_comparison(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_co
     footer_h = render_footer(slide, spec, theme, safe, total_slides)
     content_top, content_h = get_content_zone(safe, title_h, footer_h)
 
-    colors = theme.get("colors", {}).get("card_fills", ["#F0F4FF"] * 5)
+    colors = theme.get("colors", {}).get("card_fills", ["#F4F4F4"] * 5)
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
     col_width = (safe.width - gap * (n_cols - 1)) / n_cols
     corner_r = theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1)
@@ -644,7 +657,7 @@ def _render_comparison(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_co
 
         # Header bar
         header_text = pt.heading or f"Option {i+1}"
-        add_rounded_rect(slide, x, header_top, col_width, header_height, spec.design.accent_color, corner_r)
+        add_rounded_rect(slide, x, header_top, col_width, header_height, _get_card_accent(theme, spec, i), corner_r)
         add_textbox(
             slide, x + 0.1, header_top + 0.05,
             col_width - 0.2, header_height - 0.1,
@@ -659,7 +672,7 @@ def _render_comparison(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_co
             slide, x + 0.15, body_top + 0.15,
             col_width - 0.3, body_height - 0.3,
             body_text, spec.design.font_family,
-            spec.design.body_size_pt, spec.design.body_color,
+            spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
 
 for n in range(2, 6):
@@ -673,7 +686,7 @@ def _render_process(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_phase
     footer_h = render_footer(slide, spec, theme, safe, total_slides)
     content_top, content_h = get_content_zone(safe, title_h, footer_h)
 
-    colors = theme.get("colors", {}).get("card_fills", ["#F0F4FF"] * 5)
+    colors = theme.get("colors", {}).get("card_fills", ["#F4F4F4"] * 5)
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
     arrow_width = 0.3
     total_arrow_space = arrow_width * (n_phases - 1)
@@ -705,7 +718,7 @@ def _render_process(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_phase
             slide, x + 0.15, phase_top + 0.1,
             phase_width - 0.3, 0.4,
             heading, spec.design.font_family,
-            spec.design.body_size_pt + 2, spec.design.accent_color,
+            spec.design.body_size_pt + 2, _resolve_accent(spec, theme),
             bold=True,
         )
         # Phase body
@@ -716,7 +729,7 @@ def _render_process(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_phase
             slide, x + 0.15, body_start,
             phase_width - 0.3, body_avail,
             text, spec.design.font_family,
-            spec.design.body_size_pt, spec.design.body_color,
+            spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
         # Arrow connector (except after last phase)
         if i < n_phases - 1:
@@ -727,7 +740,7 @@ def _render_process(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_phase
                 Inches(arrow_width), Inches(0.4),
             )
             shape.fill.solid()
-            shape.fill.fore_color.rgb = hex_to_rgb(spec.design.accent_color)
+            shape.fill.fore_color.rgb = hex_to_rgb(_resolve_accent(spec, theme))
             shape.line.fill.background()
 
 for n in range(2, 6):
@@ -742,7 +755,7 @@ def render_data_contrast(slide, spec: SlideSpec, theme: dict, safe: SafeArea, to
     content_top, content_h = get_content_zone(safe, title_h, footer_h)
 
     ve = _ve(theme)
-    colors = theme.get("colors", {}).get("card_fills", ["#F0F4FF"] * 5)
+    colors = theme.get("colors", {}).get("card_fills", ["#F4F4F4"] * 5)
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
     corner_r = theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1)
 
@@ -779,7 +792,7 @@ def render_data_contrast(slide, spec: SlideSpec, theme: dict, safe: SafeArea, to
             add_textbox(
                 slide, x, content_top + 0.3, half_w, 1.0,
                 pt.metric_value, spec.design.font_family,
-                metric_size, spec.design.accent_color,
+                metric_size, _resolve_accent(spec, theme),
                 alignment=PP_ALIGN.CENTER, bold=True,
             )
             # Metric label (small, centered, below value)
@@ -788,7 +801,7 @@ def render_data_contrast(slide, spec: SlideSpec, theme: dict, safe: SafeArea, to
                 add_textbox(
                     slide, x + 0.1, content_top + 1.3, half_w - 0.2, 0.6,
                     label, spec.design.font_family,
-                    label_size, spec.design.body_color,
+                    label_size, _resolve_body_color(spec, theme),
                     alignment=PP_ALIGN.CENTER,
                 )
             # Body text below container
@@ -799,21 +812,21 @@ def render_data_contrast(slide, spec: SlideSpec, theme: dict, safe: SafeArea, to
                     add_textbox(
                         slide, x + 0.1, body_top, half_w - 0.2, body_h,
                         pt.body, spec.design.font_family,
-                        spec.design.body_size_pt, spec.design.body_color,
+                        spec.design.body_size_pt, _resolve_body_color(spec, theme),
                     )
         else:
             # Fallback: large text (backwards compat with plain strings)
             add_textbox(
                 slide, x, content_top + 0.5, half_w, 2.0,
                 pt.metric_value or pt.body, spec.design.font_family,
-                metric_size, spec.design.accent_color,
+                metric_size, _resolve_accent(spec, theme),
                 alignment=PP_ALIGN.CENTER, bold=True,
             )
             if pt.body and pt.metric_value:
                 add_textbox(
                     slide, x + 0.1, content_top + 2.8, half_w - 0.2, content_h - 3.0,
                     pt.body, spec.design.font_family,
-                    spec.design.body_size_pt, spec.design.body_color,
+                    spec.design.body_size_pt, _resolve_body_color(spec, theme),
                 )
 
 @register_renderer("table")
@@ -860,7 +873,7 @@ def render_comparison_tables(slide, spec: SlideSpec, theme: dict, safe: SafeArea
                 slide, safe.left + 0.3, y,
                 safe.width - 0.3, 0.4,
                 f"  {text}", spec.design.font_family,
-                spec.design.body_size_pt, spec.design.body_color,
+                spec.design.body_size_pt, _resolve_body_color(spec, theme),
             )
             y += 0.5
 
@@ -882,14 +895,14 @@ def render_timeline(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_s
             MSO_SHAPE.OVAL, Inches(x), Inches(node_y), Inches(0.6), Inches(0.6),
         )
         shape.fill.solid()
-        shape.fill.fore_color.rgb = hex_to_rgb(spec.design.accent_color)
+        shape.fill.fore_color.rgb = hex_to_rgb(_resolve_accent(spec, theme))
         shape.line.fill.background()
         # Label
         label = pt.heading or pt.body
         add_textbox(
             slide, x - 0.5, node_y + 0.8, 1.6, 0.8,
             label, spec.design.font_family,
-            spec.design.body_size_pt - 2, spec.design.body_color,
+            spec.design.body_size_pt - 2, _resolve_body_color(spec, theme),
             alignment=PP_ALIGN.CENTER,
         )
 
@@ -929,7 +942,7 @@ def _render_framework(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_col
     content_top, content_h = get_content_zone(safe, title_h, footer_h)
 
     ve = _ve(theme)
-    colors = theme.get("colors", {}).get("card_fills", ["#F0F4FF"] * 5)
+    colors = theme.get("colors", {}).get("card_fills", ["#F4F4F4"] * 5)
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
     col_width = (safe.width - gap * (n_cols - 1)) / n_cols
     corner_r = theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1)
@@ -958,7 +971,7 @@ def _render_framework(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_col
             slide, x + 0.2, col_top + h_used + 0.1,
             col_width - 0.4, col_height - h_used - 0.2,
             pt.body, spec.design.font_family,
-            spec.design.body_size_pt, spec.design.body_color,
+            spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
 
 _RENDERERS["framework"] = lambda s, sp, t, sa, ts: _render_framework(s, sp, t, sa, 1, ts)

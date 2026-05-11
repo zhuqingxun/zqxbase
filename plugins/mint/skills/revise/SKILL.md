@@ -6,7 +6,7 @@ description: >-
   当用户说"把XX改成YY""删掉关于XX的部分""这段话换个说法""这里需要脱敏""修订一下稿件"时触发。
 argument-hint: "<修订指令> [<工作目录>] [--from 校对稿|编辑稿|分析稿]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.6
+version: 2.1.7
 ---
 
 
