@@ -51,15 +51,11 @@ TOTAL_MIN: dict[str, int] = {
 # 豁免类型（标题型页面，内容量不适用）
 EXEMPT_TYPES = {"hero-statement", "quote-hero", "story-card"}
 
-# 华为主题 18 个 variant 视觉类型（走 Pydantic variant 校验，不用字数阈值）
-VARIANT_EXEMPT_TYPES: set[str] = {
-    "cover-left-bar", "toc", "section-divider-dark",
-    "kpi-stats", "matrix-2x2", "architecture-layered",
-    "timeline-huawei", "process-flow-huawei",
-    "swot", "roadmap", "pyramid", "heatmap-matrix", "thankyou",
-    "cards-6", "rings", "personas",
-    "risk-list", "governance",
-}
+# 华为主题 variant 视觉类型 — 单一来源, 从 schemas.variants import 防 drift.
+# 2026-05-19 audit (P2-A) 前: 此处写死 18 字面列表与 schemas/variants.VARIANT_TYPES 重复, 加新 variant
+# 时容易只改 schemas 忘改这里 → 新 variant 走 "整页总量 min_total=150" 而非 variant Pydantic 校验
+# → 错误内容被放行渲染崩.
+from schemas.variants import VARIANT_TYPES as VARIANT_EXEMPT_TYPES
 
 # table 最小行数
 TABLE_MIN_ROWS = 2
@@ -431,12 +427,15 @@ def validate_anti_patterns(slides: list[dict]) -> list[str]:
 
 def validate_plan(plan_path: str) -> ValidationReport:
     """校验整份 slide-plan.yaml。"""
-    path = Path(plan_path)
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    slides = data.get("slides", [])
+    return validate_plan_from_data(yaml.safe_load(Path(plan_path).read_text(encoding="utf-8")), plan_path)
+
+
+def validate_plan_from_data(data: dict, plan_path: str = "") -> ValidationReport:
+    """从已 load 的 data dict 校验. 用于 main 复用同一份 yaml.safe_load 结果, 避免大 plan 双解析."""
+    slides = data.get("slides", []) if isinstance(data, dict) else []
     results = [validate_slide(s) for s in slides]
     return ValidationReport(
-        plan_path=str(path),
+        plan_path=plan_path,
         total_slides=len(slides),
         results=results,
     )
@@ -536,11 +535,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    report = validate_plan(args.slide_plan)
-
-    # Collect warnings
+    # 2026-05-19 audit fix: yaml.safe_load 单次提到顶部, validate_plan + warnings 复用同一份 data
+    # (原版 validate_plan 内一次, main 内又 load 一次, 大 plan 50-200ms × 2).
     path = Path(args.slide_plan)
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    report = validate_plan_from_data(data, str(path))
+
+    # Collect warnings
     slides = data.get("slides", [])
     slide_warnings: dict[int, list[str]] = {}
     for s in slides:

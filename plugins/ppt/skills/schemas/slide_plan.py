@@ -51,9 +51,11 @@ class StructuredPoint(BaseModel):
     """结构化内容要点——支持卡片标题、指标值等分层信息。
 
     向后兼容：key_points 接受 str | StructuredPoint 混合列表。
+    2026-05-19 audit fix: body 默认 "" (原 required), 避免 LLM 输出 `{heading: "x"}` 缺 body
+    时 Union[str, StructuredPoint] fallback 失败 plan 校验 abort.
     """
     heading: str | None = None      # 卡片/列/阶段标题
-    body: str                       # 主体文本
+    body: str = ""                  # 主体文本 (默认空允许 dict 缺 body, renderer 容错)
     metric_value: str | None = None # 大号指标值（如 "40%", "1:0.84"）
     metric_label: str | None = None # 指标标签（如 "效率提升"）
 

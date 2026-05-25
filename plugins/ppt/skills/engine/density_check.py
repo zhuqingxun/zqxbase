@@ -4,10 +4,15 @@
 # ///
 """density_check.py: 渲染后密度预警 — 分析 PPTX 每页 shape 面积占比。
 
-仅预警，不阻断管线。hero-statement / quote-hero / story-card 类型豁免。
+仅预警，不阻断管线。shape 数量 <= EXEMPT_MAX_SHAPES (默认 2) 的标题型页面豁免。
 
-计算方式: 所有 shape 的包围盒面积之和 / slide 面积（去重叠）。
-阈值: 内容面积 < 20% 时 WARN。
+计算方式: 所有 shape 的包围盒面积**累加和** / slide 面积. 不做重叠去重 — 因为 huawei renderer 大量
+用"卡片背景 + 文本框叠加"模式 (cards-N 中 textbox 与 add_rounded_rect 重叠), 累加和往往 > 100%.
+**这是设计限制不是 bug** (2026-05-19 audit 更新 docstring 与实现一致): 真正去重叠需要 shapely
+依赖, 项目阶段不引入. 该预警实际只对极简页面 (shape 数 ≤ 2 已被豁免, 故几乎不触发) 有意义,
+留作"未来引入 shapely 时再激活" 的占位机制.
+
+阈值: 内容面积 < 20% 时 WARN.
 
 Usage:
     uv run --script engine/density_check.py <output.pptx>
@@ -97,27 +102,31 @@ class DensityReport:
 # 分析逻辑
 # ---------------------------------------------------------------------------
 
-def _get_slide_title(slide) -> str:
-    """从 slide 提取标题（第一个 textbox 的文本）。"""
-    for shape in slide.shapes:
-        if shape.has_text_frame and shape.text_frame.text.strip():
-            return shape.text_frame.text.strip()[:60]
-    return "(no title)"
+def _analyze_slide_shapes(
+    slide, slide_width_emu: int, slide_height_emu: int
+) -> tuple[str, int, float]:
+    """单次遍历 slide.shapes 同时取 title + shape_count + 累计面积占比.
 
-
-def _compute_content_area_pct(slide, slide_width_emu: int, slide_height_emu: int) -> float:
-    """计算 shape 面积占 slide 面积的百分比（简单包围盒，不去重叠）。"""
-    slide_area = slide_width_emu * slide_height_emu
-    if slide_area == 0:
-        return 0.0
-
+    2026-05-19 audit fix: 原版 _get_slide_title 和 _compute_content_area_pct 各遍历一次
+    (50 页 × 25 shapes = 5000 → 10000 shape 访问), 合并为单次.
+    """
+    title = "(no title)"
+    title_taken = False
     total_shape_area = 0
+    shape_count = 0
     for shape in slide.shapes:
+        shape_count += 1
+        if not title_taken and shape.has_text_frame:
+            txt = shape.text_frame.text.strip()
+            if txt:
+                title = txt[:60]
+                title_taken = True
         w = shape.width if shape.width else 0
         h = shape.height if shape.height else 0
         total_shape_area += w * h
-
-    return (total_shape_area / slide_area) * 100
+    slide_area = slide_width_emu * slide_height_emu
+    pct = (total_shape_area / slide_area * 100) if slide_area else 0.0
+    return title, shape_count, pct
 
 
 def analyze_density(pptx_path: str, threshold_pct: float = DEFAULT_THRESHOLD_PCT) -> DensityReport:
@@ -126,8 +135,9 @@ def analyze_density(pptx_path: str, threshold_pct: float = DEFAULT_THRESHOLD_PCT
     report = DensityReport(pptx_path=pptx_path, threshold_pct=threshold_pct)
 
     for i, slide in enumerate(prs.slides):
-        title = _get_slide_title(slide)
-        shape_count = len(slide.shapes)
+        title, shape_count, pct = _analyze_slide_shapes(
+            slide, prs.slide_width, prs.slide_height
+        )
 
         # 标题型页面豁免（shape 数量 <= 2）
         if shape_count <= EXEMPT_MAX_SHAPES:
@@ -140,7 +150,6 @@ def analyze_density(pptx_path: str, threshold_pct: float = DEFAULT_THRESHOLD_PCT
             ))
             continue
 
-        pct = _compute_content_area_pct(slide, prs.slide_width, prs.slide_height)
         status = "WARN" if pct < threshold_pct else "OK"
         report.slides.append(SlideMetrics(
             index=i + 1,

@@ -20,6 +20,8 @@
 from __future__ import annotations
 
 import logging
+import re
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
@@ -31,6 +33,33 @@ THEMES_DIR = Path(__file__).resolve().parent.parent / "themes"
 # 与 engine/render.py 保持一致的常量
 _REMOVED_THEMES: set[str] = {"clean-light", "academic", "dark-business"}
 _DEFAULT_THEME: str = "huawei"
+
+# 防 path traversal: theme name 必须是简单标识符
+_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+@lru_cache(maxsize=8)
+def _load_theme_yaml(name: str) -> dict:
+    """实际读 3 个 yaml + 组装合并字典. @lru_cache 避免重复 IO.
+
+    Caller load_theme 已做完 name 校验 (safe-name + removed + dir-exists), 此处假定 name 合法.
+    单次 CLI 通常调 1-2 次, 但 plan/validate_plan/prompt_assembler 各处调时缓存命中.
+    dev 编辑 yaml 后需重启 Python process 才生效 (lru_cache 标准 trade-off).
+    """
+    theme_dir = THEMES_DIR / name
+    tokens = yaml.safe_load((theme_dir / "tokens.yaml").read_text(encoding="utf-8")) or {}
+    layouts = yaml.safe_load((theme_dir / "layouts.yaml").read_text(encoding="utf-8")) or {}
+    prefs_path = theme_dir / "preferences.yaml"
+    preferences: dict = {}
+    if prefs_path.exists():
+        preferences = yaml.safe_load(prefs_path.read_text(encoding="utf-8")) or {}
+    return {
+        "tokens": tokens,
+        "layouts": layouts,
+        "preferences": preferences,
+        **tokens,
+        "_layouts": layouts,
+    }
 
 
 def load_theme(name: str | None) -> dict:
@@ -49,6 +78,11 @@ def load_theme(name: str | None) -> dict:
     if name is None:
         logger.info("theme not specified, defaulting to '%s'", _DEFAULT_THEME)
         name = _DEFAULT_THEME
+    if not _SAFE_NAME_RE.match(name):
+        # 防 path traversal: 拒绝 ".." / 绝对路径 / 引号 / 任何非简单标识符的 name
+        raise ValueError(
+            f"Invalid theme name: {name!r}. Must match {_SAFE_NAME_RE.pattern}."
+        )
     if name in _REMOVED_THEMES:
         raise ValueError(
             f"theme '{name}' was removed in huawei-theme-complete release. "
@@ -63,16 +97,4 @@ def load_theme(name: str | None) -> dict:
         raise FileNotFoundError(
             f"theme '{name}' not found under themes/. Available: {available}"
         )
-    tokens = yaml.safe_load((theme_dir / "tokens.yaml").read_text(encoding="utf-8")) or {}
-    layouts = yaml.safe_load((theme_dir / "layouts.yaml").read_text(encoding="utf-8")) or {}
-    prefs_path = theme_dir / "preferences.yaml"
-    preferences: dict = {}
-    if prefs_path.exists():
-        preferences = yaml.safe_load(prefs_path.read_text(encoding="utf-8")) or {}
-    return {
-        "tokens": tokens,
-        "layouts": layouts,
-        "preferences": preferences,
-        **tokens,
-        "_layouts": layouts,
-    }
+    return _load_theme_yaml(name)

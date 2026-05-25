@@ -18,6 +18,7 @@ Usage:
 import argparse
 import logging
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 import yaml
@@ -42,6 +43,12 @@ from lib.pptx_compat import (
 from lib.font_fallback import resolve_font_for_pptx
 from lib.margins import get_safe_area, enforce_margins, SafeArea
 from lib.content_fitter import suggest_font_size, estimate_text_overflow
+
+# 模块级 qn() 常量, 避免热路径 (add_rounded_rect 等) 每次重做 namespace lookup.
+# 50 页 deck 含 risks/cards/rings 类页面累积 1500+ 次 qn 调用, 改常量后 0 次.
+_QN_PRSTGEOM = qn("a:prstGeom")
+_QN_AVLST = qn("a:avLst")
+_QN_GD = qn("a:gd")
 from schemas.slide_plan import SlidePlan, SlideSpec, SlideRole, StructuredPoint
 
 # ===========================================================================
@@ -67,11 +74,28 @@ def load_theme(name: str | None) -> dict:
 # RENDERER REGISTRY
 # ===========================================================================
 
+# PEP 723 双 module 实例陷阱修复: uv run --script engine/render.py 时本模块以 __main__ 加载,
+# 后续 `from engine import renderers_huawei` 触发 huawei 模块加载, 它内部
+# `from engine.render import register_renderer` 又会重新加载 engine.render, 形成两份 _RENDERERS dict.
+# huawei 18 个装饰器全部写到 engine.render._RENDERERS, 但 dispatch 用 __main__._RENDERERS, 全部 silent fallback.
+# 把当前模块 setdefault 注册成 engine.render 别名, 让后续 from engine.render import 拿到同一个 module.
+sys.modules.setdefault("engine.render", sys.modules[__name__])
+
 _RENDERERS: dict[str, callable] = {}
 
 def register_renderer(visual_type: str):
-    """Decorator to register a visual type renderer."""
+    """Decorator to register a visual type renderer.
+
+    重复注册时输出 INFO 而不静默覆盖, 避免 huawei renderer 与 legacy lambda 冲突静默合并
+    (历史 cards-6 collision bug: range(2,7) lambda 与 huawei @register_renderer("cards-6")
+    双注册, 净 dispatch 正确但完全靠 import 顺序, 任何顺序调整都让 cards-6 fallback 单行 6 列挤压).
+    """
     def wrapper(fn):
+        if visual_type in _RENDERERS:
+            print(
+                f"[render] renderer override: {visual_type} → {fn.__module__}.{fn.__name__}",
+                file=sys.stderr,
+            )
         _RENDERERS[visual_type] = fn
         return fn
     return wrapper
@@ -145,8 +169,13 @@ def _ve(theme: dict) -> dict:
 # HELPER FUNCTIONS
 # ===========================================================================
 
+@lru_cache(maxsize=128)
 def hex_to_rgb(hex_color: str) -> RGBColor:
-    """Convert '#RRGGBB' to RGBColor."""
+    """Convert '#RRGGBB' to RGBColor.
+
+    @lru_cache: 50 页 deck × 多个 shape 共用同一色值 (huawei 主题 token 颜色 < 20 unique),
+    单次 cache miss 后剩余调用 O(1).
+    """
     h = hex_color.lstrip("#")
     return RGBColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16))
 
@@ -195,14 +224,21 @@ def add_rounded_rect(slide, left, top, width, height, fill_color, corner_radius=
     shape.fill.solid()
     shape.fill.fore_color.rgb = hex_to_rgb(fill_color)
     shape.line.fill.background()  # no border
-    # Set corner radius via XML
+    # Set corner radius via XML.
+    # 2026-05-19 audit fix: MSO_SHAPE.ROUNDED_RECTANGLE 默认 avLst 已含 `<a:gd name="adj"/>`,
+    # 直接 SubElement 又加一个会让 PowerPoint 取第一个 (默认 16.67% 圆角) → token 指定的 corner_radius 失效.
+    # 必须先 remove 已有的 same-name gd 再 SubElement.
     sp = shape._element
-    prstGeom = sp.find(qn("a:prstGeom"))
+    prstGeom = sp.find(_QN_PRSTGEOM)
     if prstGeom is not None:
-        avLst = prstGeom.find(qn("a:avLst"))
+        avLst = prstGeom.find(_QN_AVLST)
         if avLst is None:
-            avLst = etree.SubElement(prstGeom, qn("a:avLst"))
-        gd = etree.SubElement(avLst, qn("a:gd"))
+            avLst = etree.SubElement(prstGeom, _QN_AVLST)
+        # 清空已有的 gd 子元素 (避免重复 name="adj")
+        for old_gd in list(avLst):
+            if old_gd.tag == _QN_GD:
+                avLst.remove(old_gd)
+        gd = etree.SubElement(avLst, _QN_GD)
         radius_val = int(corner_radius / min(width, height) * 50000)
         gd.set("name", "adj")
         gd.set("fmla", f"val {radius_val}")
@@ -210,17 +246,19 @@ def add_rounded_rect(slide, left, top, width, height, fill_color, corner_radius=
 
 def estimate_content_height(text: str, width_inches: float, font_size_pt: int,
                             line_spacing: float = 1.15, padding: float = 0.4) -> float:
-    """Estimate the height needed to display text in a given width."""
-    chars_per_inch = 72 / font_size_pt * 1.0  # CJK full-width
-    chars_per_line = max(1, int(width_inches * chars_per_inch))
-    line_height = font_size_pt / 72 * line_spacing
-    lines = 0
-    for para in text.split("\n"):
-        if not para.strip():
-            lines += 1
-            continue
-        lines += max(1, -(-len(para) // chars_per_line))
-    return lines * line_height + padding
+    """Estimate the height needed to display text in a given width.
+
+    2026-05-19 audit fix (ARCH-007): 委托给 lib/text_metrics.py 单一来源 (中英文加权).
+    padding 在此函数语义是上下总 padding (不像 text_metrics padding_inches 是单边), 折半传入.
+    """
+    from lib.text_metrics import estimate_text_height_inches
+    return estimate_text_height_inches(
+        text=text,
+        width_inches=width_inches,
+        font_size_pt=font_size_pt,
+        line_spacing=line_spacing,
+        padding_inches=padding / 2,
+    )
 
 
 def compute_card_height(points: list[str], card_width: float, font_size_pt: int,
@@ -370,10 +408,59 @@ def _get_card_accent(theme: dict, spec: SlideSpec, index: int | None) -> str:
     return _resolve_accent(spec, theme)
 
 
+def _truncate_for_single_line(text: str, max_width_in: float, font_size_pt: float) -> str:
+    """L-5 fix: 强制单行, 超长 truncate + ellipsis. 区分中英文等价字宽.
+
+    避免 add_textbox 的 word_wrap=True 让长 heading 在 header 区外溢出造成"幻影"白色文字.
+    使用保守 buffer: 实际可用宽度 -= 0.15", 防止 PowerPoint 渲染时仍判定超宽自动扩 textbox.
+    """
+    if not text:
+        return ""
+    text_str = str(text)
+    safe_width_in = max(0.3, max_width_in - 0.15)  # 留 0.15" buffer 防 PowerPoint auto-grow
+    chars_per_in = 72.0 / max(font_size_pt, 1.0)
+    max_chars = max(2, int(safe_width_in * chars_per_in))
+
+    def weighted(s: str) -> float:
+        # 英文字符按 0.6 (略保守, 加宽以防 LibreOffice/PowerPoint 字号渲染稍宽)
+        return sum(1.0 if "一" <= ch <= "鿿" else 0.6 for ch in s)
+
+    if weighted(text_str) <= max_chars:
+        return text_str
+    # 二分 truncate (text_str[:mid] + "…")
+    lo, hi = 1, len(text_str)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if weighted(text_str[:mid] + "…") <= max_chars:
+            lo = mid
+        else:
+            hi = mid - 1
+    return text_str[:lo].rstrip() + "…"
+
+
+def _add_textbox_no_wrap(slide, left, top, width, height, text, font_name, font_size_pt, font_color, bold=False, alignment=None):
+    """L-5 helper: 强制 word_wrap=False 的 textbox, 用于 card header 单行场景."""
+    if alignment is None:
+        alignment = PP_ALIGN.LEFT
+    txBox = slide.shapes.add_textbox(Inches(left), Inches(top), Inches(width), Inches(height))
+    tf = txBox.text_frame
+    tf.word_wrap = False
+    p = tf.paragraphs[0]
+    p.text = text
+    p.font.name = resolve_font_for_pptx(font_name)
+    p.font.size = Pt(font_size_pt)
+    p.font.color.rgb = hex_to_rgb(font_color)
+    p.font.bold = bold
+    p.alignment = alignment
+    return txBox
+
+
 def render_card_header(slide, x, y, width, heading: str, theme: dict, spec: SlideSpec, index: int | None = None) -> float:
     """Render card header based on theme style. Returns header height (0 if no heading).
 
     Index enables per-card accent color from theme.colors.card_left_bar_colors.
+
+    L-5 fix: heading 强制单行 + 超长 truncate, 防止 wrap 后白色文字溢出 header 在浅色 body 上形成幻影.
     """
     if not heading:
         return 0.0
@@ -386,9 +473,11 @@ def render_card_header(slide, x, y, width, heading: str, theme: dict, spec: Slid
         # Full-width color bar with white text
         add_rounded_rect(slide, x, y, width, header_h, accent,
                          corner_radius=theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1))
-        add_textbox(
-            slide, x + 0.1, y + 0.05, width - 0.2, header_h - 0.1,
-            heading, spec.design.font_family,
+        text_w = width - 0.2
+        truncated = _truncate_for_single_line(heading, text_w, spec.design.body_size_pt)
+        _add_textbox_no_wrap(
+            slide, x + 0.1, y + 0.05, text_w, header_h - 0.1,
+            truncated, spec.design.font_family,
             spec.design.body_size_pt, "#FFFFFF",
             bold=True,
         )
@@ -404,18 +493,23 @@ def render_card_header(slide, x, y, width, heading: str, theme: dict, spec: Slid
         shape.fill.solid()
         shape.fill.fore_color.rgb = hex_to_rgb(accent)
         shape.line.fill.background()
-        add_textbox(
-            slide, x + bar_w + 0.1, y + 0.05, width - bar_w - 0.2, header_h - 0.1,
-            heading, spec.design.font_family,
-            spec.design.body_size_pt + 1, _resolve_title_color(spec, theme),
+        text_w = width - bar_w - 0.2
+        font_pt = spec.design.body_size_pt + 1
+        truncated = _truncate_for_single_line(heading, text_w, font_pt)
+        _add_textbox_no_wrap(
+            slide, x + bar_w + 0.1, y + 0.05, text_w, header_h - 0.1,
+            truncated, spec.design.font_family,
+            font_pt, _resolve_title_color(spec, theme),
             bold=True,
         )
         return header_h
 
     else:  # "none" — bold text only
-        add_textbox(
-            slide, x + 0.15, y + 0.05, width - 0.3, header_h - 0.1,
-            heading, spec.design.font_family,
+        text_w = width - 0.3
+        truncated = _truncate_for_single_line(heading, text_w, spec.design.body_size_pt)
+        _add_textbox_no_wrap(
+            slide, x + 0.15, y + 0.05, text_w, header_h - 0.1,
+            truncated, spec.design.font_family,
             spec.design.body_size_pt, _resolve_title_color(spec, theme),
             bold=True,
         )
@@ -550,9 +644,14 @@ def render_bullets(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
             break
 
 
-# Cards renderer (cards-2 through cards-5)
+# Cards renderer (cards-2 through cards-6)
 def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: int, total_slides: int):
-    """N-column card layout with optional card headers."""
+    """N-card layout with optional card headers.
+
+    Layout 选择:
+    - n_cards in {2, 3, 4, 5}: 单行 N 列 (传统横排)
+    - n_cards == 6: **3 列 x 2 行** 网格 (符合 Cards6Content 文档"六宫格 (3 列 x 2 行)" 规范, 不再单行 6 列挤压)
+    """
     set_slide_background(slide, spec.design.background)
     title_h = render_title_zone(slide, spec, theme, safe)
     footer_h = render_footer(slide, spec, theme, safe, total_slides)
@@ -561,29 +660,39 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
     ve = _ve(theme)
     colors = theme.get("colors", {}).get("card_fills", ["#F4F4F4"] * 5)
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
-    card_width = (safe.width - gap * (n_cards - 1)) / n_cards
     corner_r = theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1)
+
+    # 6 卡走 3x2; 其他 (2/3/4/5) 单行
+    if n_cards == 6:
+        n_cols, n_rows = 3, 2
+    else:
+        n_cols, n_rows = n_cards, 1
+    card_width = (safe.width - gap * (n_cols - 1)) / n_cols
+    card_height_grid = (content_h - gap * (n_rows - 1)) / n_rows  # 网格分配的最大单卡高度
 
     points = get_points(spec)
     bodies = get_point_bodies(points)
     has_headers = any(p.heading for p in points)
     header_h = ve["card_header_height_inches"] if has_headers else 0.0
 
-    # Content-aware card height
-    max_card_height = content_h
+    # Content-aware card height: 单行场景按 content_h 算; 多行场景按 card_height_grid 算
+    max_card_height = card_height_grid
     body_height = compute_card_height(
         bodies, card_width, spec.design.body_size_pt, max_card_height - header_h,
     ) if bodies else 2.0
     card_height = min(body_height + header_h, max_card_height)
 
-    # Top-aligned cards (no vertical centering)
-    card_top = content_top
-    if ve["card_content_alignment"] == "center":
-        card_top = content_top + max(0, (content_h - card_height) / 2)
+    # Top-aligned cards (no vertical centering, 多行场景 center 不适用)
+    grid_top = content_top
+    if n_rows == 1 and ve["card_content_alignment"] == "center":
+        grid_top = content_top + max(0, (content_h - card_height) / 2)
 
     show_number = ve["card_show_number"]
     for i in range(n_cards):
-        x = safe.left + i * (card_width + gap)
+        r = i // n_cols
+        c = i % n_cols
+        x = safe.left + c * (card_width + gap)
+        card_top = grid_top + r * (card_height + gap)
         fill = colors[i % len(colors)]
         use_rounded = theme.get("visual_preferences", {}).get("rounded_corners", True)
 
@@ -622,6 +731,7 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
             spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
 
+# 注册 cards-2 到 cards-5 (单行布局); cards-6 由 renderers_huawei.@register_renderer("cards-6") 提供 3x2 huawei 实现
 for n in range(2, 6):
     _RENDERERS[f"cards-{n}"] = lambda s, sp, t, sa, ts, _n=n: _render_cards(s, sp, t, sa, _n, ts)
 
@@ -995,19 +1105,33 @@ def _get_blank_layout(prs: Presentation):
     return prs.slide_layouts[len(prs.slide_layouts) - 1]
 
 
-def render_slide(prs: Presentation, spec: SlideSpec, theme: dict, total_slides: int):
-    """Render a single slide based on its visual_type."""
-    slide_layout = _get_blank_layout(prs)
+def _compute_safe_area(theme: dict) -> SafeArea:
+    """计算 theme 对应的 SafeArea. 单独抽出来让 render_presentation 入口算一次后透传."""
+    margin = theme.get("spacing", {}).get("slide_margin_inches", 0.5)
+    return get_safe_area({"left": margin, "top": margin, "right": margin, "bottom": margin})
+
+
+def render_slide(prs: Presentation, spec: SlideSpec, theme: dict, total_slides: int,
+                 slide_layout=None, safe: SafeArea | None = None):
+    """Render a single slide based on its visual_type.
+
+    2026-05-19 audit fix (PERF): slide_layout + safe 改为可选参数, 由 render_presentation 入口
+    一次算好透传. 老 caller 不传仍能 fallback 自己算 (向后兼容). 50 页 deck 上省 200+ 次 dict.get
+    链 + N 次 layout 名 lowercase 扫描.
+    """
+    if slide_layout is None:
+        slide_layout = _get_blank_layout(prs)
+    if safe is None:
+        safe = _compute_safe_area(theme)
     slide = prs.slides.add_slide(slide_layout)
-    safe = get_safe_area(
-        {"left": theme.get("spacing", {}).get("slide_margin_inches", 0.5),
-         "top": theme.get("spacing", {}).get("slide_margin_inches", 0.5),
-         "right": theme.get("spacing", {}).get("slide_margin_inches", 0.5),
-         "bottom": theme.get("spacing", {}).get("slide_margin_inches", 0.5)},
-    )
-    renderer = _RENDERERS.get(spec.visual_type, _RENDERERS.get("bullets"))
-    if renderer:
-        renderer(slide, spec, theme, safe, total_slides)
+    renderer = _RENDERERS.get(spec.visual_type)
+    if renderer is None:
+        raise ValueError(
+            f"no renderer for visual_type={spec.visual_type!r} (slide {spec.id}). "
+            f"Registered: {sorted(_RENDERERS.keys())}. "
+            f"schemas/slide_plan.py VALID_VISUAL_TYPES 与 _RENDERERS 不同步."
+        )
+    renderer(slide, spec, theme, safe, total_slides)
     return slide
 
 
@@ -1029,30 +1153,60 @@ def render_presentation(plan: SlidePlan, theme: dict, output_path: str,
         for idx in indices_to_delete:
             delete_slide(prs, idx)
 
+    # 一次性算 layout + safe area, 传给每个 render_slide 调用 — 避免 N 次重复 dict.get / layout 扫描
+    blank_layout = _get_blank_layout(prs)
+    safe_area = _compute_safe_area(theme)
+
     total_slides = plan.narrative.total_slides
     for spec in plan.slides:
         if only_slides and spec.id not in only_slides:
             continue
-        render_slide(prs, spec, theme, total_slides)
+        render_slide(prs, spec, theme, total_slides, slide_layout=blank_layout, safe=safe_area)
 
-    # Windows file lock protection
+    # Windows file lock protection — 尝试 9 个备用名 (output_v2.pptx ... output_v9.pptx)
     try:
         prs.save(output_path)
-    except PermissionError:
+    except PermissionError as e0:
         import os
         base, ext = os.path.splitext(output_path)
+        tried: list[str] = []
         for v in range(2, 10):
             alt = f"{base}_v{v}{ext}"
+            tried.append(alt)
             try:
                 prs.save(alt)
                 print(f"Saved to {alt} (original path locked)")
                 return
             except PermissionError:
                 continue
-        raise
+        raise PermissionError(
+            f"All output paths locked: {output_path} + tried {tried}. "
+            f"Close PowerPoint or unlock these files and retry."
+        ) from e0
+
+
+def _assert_renderer_registry():
+    """启动时验证 renderer 注册完整, silent fallback 改 fail-fast.
+
+    比对集合而非总数 — 任何 visual_type ∈ VALID_VISUAL_TYPES 但缺 renderer 立即报错, 含具体名字.
+    旧版本 PEP 723 双 module 实例 bug 让 huawei 18 个版式全部 silent 走 bullets fallback,
+    用户拿到"标题+页码"的空白 deck 而无任何 WARN. 这个 assert 是最后一道防线.
+    """
+    from schemas.slide_plan import VALID_VISUAL_TYPES
+    registered = set(_RENDERERS.keys())
+    missing = VALID_VISUAL_TYPES - registered
+    extra = registered - VALID_VISUAL_TYPES
+    if missing or extra:
+        raise RuntimeError(
+            f"renderer registry 与 VALID_VISUAL_TYPES 不一致: "
+            f"missing={sorted(missing)}, extra={sorted(extra)}. "
+            f"可能原因: huawei renderer 模块未加载 / 双 module 实例 / schemas 加了 visual_type 但忘写 renderer."
+        )
+    print(f"[render] loaded {len(registered)} renderers", file=sys.stderr)
 
 
 def main():
+    _assert_renderer_registry()
     parser = argparse.ArgumentParser(description="Render PPTX from slide-plan.yaml")
     parser.add_argument("slide_plan", help="Path to slide-plan.yaml")
     parser.add_argument("--theme", default=None,

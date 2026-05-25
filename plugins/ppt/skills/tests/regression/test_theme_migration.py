@@ -132,22 +132,33 @@ def test_default_theme_constant_is_huawei(theme_loader_source):
     assert m, "_DEFAULT_THEME 定义未指向 'huawei'"
 
 
-def test_no_clean_light_as_default_value(render_source):
+def test_no_clean_light_as_default_value():
     """SPEC-RG-9：`clean-light` 字符串仅能出现在 _REMOVED_THEMES 上下文，不能作为 default 值。
 
-    启发式：所有 'clean-light' 命中必须在 _REMOVED_THEMES 或相关注释/错误消息里出现，
-    不能出现在 `default="clean-light"` 或 `theme = "clean-light"` 这类赋值右侧。
+    扫描范围: engine/ 全部 .py + schemas/slide_plan.py.
+    历史教训 (2026-05-19 audit): 原版只扫 render.py, 漏检 engine/plan.py:97 和 engine/test_render.py:114,
+    残留 ValueError 触发点活了多个版本无人察觉.
     """
     import re
-    # 禁止模式：等号直接赋值 clean-light 作为默认
     forbidden_patterns = [
         r'default\s*=\s*["\']clean-light["\']',
         r'theme\s*:\s*str\s*=\s*["\']clean-light["\']',
         r'theme\s*=\s*["\']clean-light["\']',
     ]
-    for pat in forbidden_patterns:
-        m = re.search(pat, render_source)
-        assert not m, f"render.py 含禁止的 default 模式 {pat!r}（SPEC-RG-9 违规）: {m.group(0) if m else ''}"
+    scan_targets = list((PLUGIN_ROOT / "engine").rglob("*.py")) + [SLIDE_PLAN_PY]
+    violations: list[str] = []
+    for f in scan_targets:
+        if not f.exists():
+            continue
+        text = f.read_text(encoding="utf-8")
+        for pat in forbidden_patterns:
+            m = re.search(pat, text)
+            if m:
+                violations.append(f"{f.relative_to(PLUGIN_ROOT)}: {pat!r} 命中 {m.group(0)!r}")
+    assert not violations, (
+        "SPEC-RG-9 违规 (clean-light 作为 default 残留):\n  "
+        + "\n  ".join(violations)
+    )
 
 
 def test_load_theme_order_removed_before_dir_check(theme_loader_source):

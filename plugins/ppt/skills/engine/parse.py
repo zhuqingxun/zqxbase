@@ -20,6 +20,11 @@ import re
 import sys
 from pathlib import Path
 
+# 防 decompression bomb: 限制 Pillow 解码图片最大像素数 (50M, 远低于默认 178M 但远高于真实需求)
+# 2026-05-19 audit fix: 默认上限只发 warning 不 raise, 恶意大图小文件可耗尽内存.
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = 50_000_000
+
 
 def parse_markdown(filepath: Path) -> dict:
     """Parse .md file into content blocks."""
@@ -52,17 +57,21 @@ def parse_markdown(filepath: Path) -> dict:
             i += 1  # skip closing ```
             continue
 
-        # Table
-        if "|" in line and i + 1 < len(lines) and re.match(r'^[\s|:-]+$', lines[i + 1]):
-            headers = [c.strip() for c in line.strip().strip("|").split("|")]
-            i += 2  # skip header and separator
-            rows = []
-            while i < len(lines) and "|" in lines[i]:
-                row = [c.strip() for c in lines[i].strip().strip("|").split("|")]
-                rows.append(row)
-                i += 1
-            blocks.append({"type": "table", "headers": headers, "rows": rows})
-            continue
+        # Table — 分隔符行必须同时含 '|' 和 '-' (避免纯空白行被误判为分隔符)
+        # 2026-05-19 audit fix: 原 `r'^[\s|:-]+$'` 允许行只有空白, "this is | sentence\n   \nnext"
+        # 被误判为 table 然后 rows=[] FAIL.
+        if "|" in line and i + 1 < len(lines):
+            sep = lines[i + 1]
+            if "|" in sep and "-" in sep and re.match(r'^[\s|:-]+$', sep):
+                headers = [c.strip() for c in line.strip().strip("|").split("|")]
+                i += 2  # skip header and separator
+                rows = []
+                while i < len(lines) and "|" in lines[i]:
+                    row = [c.strip() for c in lines[i].strip().strip("|").split("|")]
+                    rows.append(row)
+                    i += 1
+                blocks.append({"type": "table", "headers": headers, "rows": rows})
+                continue
 
         # Blockquote
         if line.strip().startswith(">"):
@@ -87,9 +96,14 @@ def parse_markdown(filepath: Path) -> dict:
             continue
 
         # Paragraph (non-empty lines)
+        # 2026-05-19 audit fix: 边界中止条件加 `^\s*` 前缀, 让缩进的 ordered/unordered list 也能切断段落.
+        # 原版 list_match 允许前导空白 (line 77), 但段落边界检查不允许 → "  1. item" 缩进 list 第一项
+        # 被段落吃掉, 输出 list 少 1 个 item.
         if line.strip():
             para_lines = []
-            while i < len(lines) and lines[i].strip() and not re.match(r'^(#{1,6}\s|[-*]\s|\d+\.\s|>|```|\|)', lines[i]):
+            while i < len(lines) and lines[i].strip() and not re.match(
+                r'^\s*(#{1,6}\s|[-*]\s|\d+\.\s|>|```|\|)', lines[i]
+            ):
                 para_lines.append(lines[i].strip())
                 i += 1
             blocks.append({"type": "paragraph", "text": " ".join(para_lines)})
@@ -143,7 +157,6 @@ def parse_image(filepath: Path) -> dict:
             "ai_description": "",
             "suggested_usage": suggest_image_usage(w, h) if w and h else "full-page-exhibit",
         }
-    from PIL import Image
     img = Image.open(filepath)
     w, h = img.size
     return {
@@ -169,10 +182,27 @@ def suggest_image_usage(w: int, h: int) -> str:
         return "sidebar"
 
 
+def _block_chars(b: dict) -> int:
+    """统计单个 content block 的字符数, 含 list.items / table.cells.
+
+    2026-05-19 audit fix: 原 `b.get("text", "")` 漏 list / table block 类型 (无 text 字段),
+    全列表型 markdown 被估为 0 字符 → volume=small 误导下游 architect.
+    """
+    btype = b.get("type")
+    if btype == "list":
+        return sum(len(it) for it in b.get("items", []))
+    if btype == "table":
+        return (
+            sum(len(h) for h in b.get("headers", []))
+            + sum(len(c) for row in b.get("rows", []) for c in row)
+        )
+    return len(b.get("text", ""))
+
+
 def estimate_volume(sources: list) -> str:
     """Estimate content volume from parsed sources."""
     total_chars = sum(
-        sum(len(b.get("text", "")) for b in s.get("content_blocks", []))
+        sum(_block_chars(b) for b in s.get("content_blocks", []))
         for s in sources if s.get("type") == "markdown"
     )
     if total_chars > 10000:

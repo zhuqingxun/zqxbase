@@ -144,9 +144,12 @@ def test_layout_strong_constraint(layouts, group, key, expected):
 # ============================================================
 
 def test_fonts_sans_stack(tokens):
-    """字体栈：Inter + Noto Sans SC + Microsoft YaHei（顺序敏感）。"""
+    """字体栈：Microsoft YaHei 第一 (PowerPoint 中文环境字体统一), Inter / Noto Sans SC fallback。
+
+    顺序敏感: Microsoft YaHei 必须在第 1 位, 否则系统无 Inter 时英文/中文 fallback 不一致 (旧顺序 bug).
+    """
     sans = tokens.get("fonts", {}).get("sans")
-    assert sans == ["Inter", "Noto Sans SC", "Microsoft YaHei"], f"got {sans!r}"
+    assert sans == ["Microsoft YaHei", "Inter", "Noto Sans SC"], f"got {sans!r}"
 
 
 def test_fonts_mono_stack(tokens):

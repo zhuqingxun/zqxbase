@@ -111,7 +111,7 @@ def run_tests(keep: bool = False) -> bool:
         meta=PlanMeta(
             title="回归测试",
             preset="research-report",
-            theme="clean-light",
+            theme="huawei",
             generated_at=datetime.now(),
         ),
         narrative=Narrative(
@@ -122,7 +122,7 @@ def run_tests(keep: bool = False) -> bool:
         slides=slides,
     )
 
-    theme = load_theme("clean-light")
+    theme = load_theme("huawei")
     output_path = str(SKILLS_DIR / "engine" / "_test_regression.pptx") if keep else tempfile.mktemp(suffix=".pptx")
 
     # 渲染

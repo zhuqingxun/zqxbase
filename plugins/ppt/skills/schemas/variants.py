@@ -248,7 +248,9 @@ class Persona(BaseModel):
     model_config = ConfigDict(extra="forbid")
     role: str
     name: str
-    attrs: list[MetaItem] = []
+    # 2026-05-19 audit fix: 加 max_length=6 防 LLM 输出 10+ attrs 让 renderer 静默截断 quote 区
+    # (renderers_huawei.py:1864-1925 persona quote_h 累积 cy 超 area 时计算结果为负, if 0.4 < neg 永假, 跳过 quote 绘制).
+    attrs: list[MetaItem] = Field(default_factory=list, max_length=6)
     quote: str | None = None
     citation: str | None = None
 
@@ -419,7 +421,9 @@ class HeatmapMatrixContent(BaseModel):
     subtitle: str | None = None
     columns: list[str] = Field(min_length=3, max_length=6)
     total_column_label: str | None = None
-    rows: list[HeatmapRow]
+    # 2026-05-19 audit fix: 加 max_length=12 防 N > 12 时 table 总高度被 area_h clamp + word_wrap=False
+    # 让文字超出 cell 边界 (renderers_huawei.py:1547-1551).
+    rows: list[HeatmapRow] = Field(min_length=1, max_length=12)
 
     @model_validator(mode="after")
     def _check_row_scores_length(self) -> "HeatmapMatrixContent":

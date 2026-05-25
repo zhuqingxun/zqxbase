@@ -43,10 +43,15 @@ colors:
   accent_color: "#C7000B"
 
 fonts:                         # 新 renderer 专用
+  # 跨平台 CJK 优先 + 西文兜底. v3.4.0 改: 不再 YaHei-only, 因为 _font_family() 已接入 resolve_font_for_pptx,
+  # FONT_FALLBACK_CHAIN + CJK_FALLBACK_BY_OS 在每平台都能找到 CJK 字体 (Mac=PingFang SC, Linux=Noto Sans CJK SC,
+  # Windows=Microsoft YaHei). 此栈仅是"首选优先级", 实际 fallback 由 lib/font_fallback.py 统一处理.
   sans:
-    - "Inter"
-    - "Noto Sans SC"
-    - "Microsoft YaHei"
+    - "Microsoft YaHei"  # Windows CJK 首选
+    - "PingFang SC"      # macOS CJK 首选
+    - "Noto Sans CJK SC" # Linux CJK 首选
+    - "Inter"            # 西文 fallback
+    - "Noto Sans SC"     # web 字体兜底
   mono:
     - "JetBrains Mono"
 
@@ -66,8 +71,9 @@ type_scale_px:                 # 新 renderer 专用 @ 1920x1080
 # ============================================================
 
 typography:                    # 旧 renderer 读 theme.typography.*_size_pt
-  title_font: "Inter"
-  body_font: "Noto Sans SC"
+  # 同 fonts.sans 的考虑: Microsoft YaHei 优先, 中英文统一
+  title_font: "Microsoft YaHei"
+  body_font: "Microsoft YaHei"
   title_size_pt: 32
   subtitle_size_pt: 20
   body_size_pt: 14

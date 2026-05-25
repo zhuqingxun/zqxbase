@@ -23,6 +23,7 @@ Usage:
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,17 @@ import yaml
 SKILLS_DIR = Path(__file__).resolve().parent.parent
 PRESETS_DIR = SKILLS_DIR / "presets"
 
+# 防 path traversal: preset/theme name 必须是简单标识符
+_SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _validate_safe_name(name: str, kind: str) -> None:
+    """Reject ".." / absolute paths / quotes / 任何非简单标识符的名字 (防 path traversal)."""
+    if not _SAFE_NAME_RE.match(name):
+        raise ValueError(
+            f"Invalid {kind} name: {name!r}. Must match {_SAFE_NAME_RE.pattern}."
+        )
+
 
 def load_parsed_content(path: str) -> dict:
     """Load parsed-content.json."""
@@ -38,7 +50,8 @@ def load_parsed_content(path: str) -> dict:
 
 
 def load_preset(name: str) -> dict:
-    """Load preset YAML by name."""
+    """Load preset YAML by name. name 限简单标识符防 path traversal."""
+    _validate_safe_name(name, "preset")
     preset_path = PRESETS_DIR / f"{name}.yaml"
     if not preset_path.exists():
         print(f"ERROR: Preset not found: {preset_path}", file=sys.stderr)
@@ -70,13 +83,20 @@ def validate_architecture(arch: dict, preset: dict) -> list[str]:
         issues.append(f"total_slides={total} exceeds recommended max (40)")
 
     # Check required sections covered
-    required = [s["role"] for s in preset.get("structure", {}).get("required_sections", [])]
-    chapters = [ch.get("title", "").lower() for ch in arch.get("chapters", [])]
-    # Heuristic: title and closing roles should exist
-    if "title" in required and total > 0:
-        pass  # title slide always created
-    if "closing" in required and total > 0:
-        pass  # closing slide always created
+    # 2026-05-19 audit fix: 原版两个分支都是 `pass` no-op, chapters 变量算了不用 — 完全失效校验.
+    # 现在真正检查 chapter.role (或 fallback 到 title 启发式) 是否覆盖 preset 声明的 required_sections.
+    # title / closing 由 render 阶段 always create, 此处仅校验内容章节的 required_sections.
+    required_roles = [s.get("role", "") for s in preset.get("structure", {}).get("required_sections", [])]
+    chapter_roles = {(ch.get("role") or "").lower() for ch in arch.get("chapters", [])}
+    chapter_titles_lower = " ".join(ch.get("title", "").lower() for ch in arch.get("chapters", []))
+    for r in required_roles:
+        r_lower = r.lower()
+        if r_lower in ("title", "closing"):
+            # title/closing slide always created by render 阶段, skip
+            continue
+        # 章节 role 字段命中 OR 标题文本包含 role 关键词 (启发式)
+        if r_lower not in chapter_roles and r_lower not in chapter_titles_lower:
+            issues.append(f"Required section role={r!r} not found in architecture chapters")
 
     return issues
 

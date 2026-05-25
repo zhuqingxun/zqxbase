@@ -26,12 +26,39 @@ import subprocess
 from functools import lru_cache
 from pathlib import Path
 
-# Default fallback chain: Aptos → Calibri → Arial → sans-serif
-# Aptos: Modern Microsoft font (Office 2024+)
-# Calibri: Standard Microsoft font (Office 2007+)
-# Arial: Universal cross-platform font
-# sans-serif: Generic fallback (system will choose)
-FONT_FALLBACK_CHAIN = ["Aptos", "Calibri", "Arial", "sans-serif"]
+# Default fallback chain: CJK 优先 → 西文兜底 → sans-serif
+# 顺序原则: 用户/主题传入的字体最优, 然后按当前 OS 的 CJK 字体补全 (确保中文有 glyph), 最后西文兜底
+# 历史教训 (2026-05-19 audit, INT-002/003): 原 chain 全是西文 (Aptos/Calibri/Arial), Mac/Linux 用户中文 fallback
+# 到 Arial → 缺 CJK glyph 显示豆腐方块.
+FONT_FALLBACK_CHAIN = [
+    "Microsoft YaHei",  # Windows CJK
+    "PingFang SC",      # macOS CJK
+    "Noto Sans CJK SC", # Linux CJK
+    "Noto Sans SC",     # 跨平台 web 字体
+    "Inter",            # 西文主打 (含部分 latin extended)
+    "Arial",            # 西文兜底
+    "sans-serif",       # 通用兜底
+]
+
+# Per-OS CJK fallback (供启发式判定 preferred 是 CJK 字体时优先尝试本平台)
+CJK_FALLBACK_BY_OS = {
+    "Darwin":  ["PingFang SC", "Hiragino Sans GB", "STHeiti", "Noto Sans CJK SC"],
+    "Linux":   ["Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", "AR PL UMing CN"],
+    "Windows": ["Microsoft YaHei", "Microsoft JhengHei", "SimHei", "SimSun"],
+}
+
+# 启发: 用户传入的字体名暗示 CJK 意图
+_CJK_FONT_HINTS = (
+    "YaHei", "雅黑", "PingFang", "苹方", "Hiragino", "STHeiti", "黑体", "宋体",
+    "SimHei", "SimSun", "Microsoft JhengHei", "Source Han", "Noto Sans CJK",
+    "Noto Sans SC", "Noto Sans TC", "WenQuanYi",
+)
+
+
+def _looks_cjk_intended(font_name: str) -> bool:
+    """启发式判断字体名是否指向 CJK 字体."""
+    return any(h.lower() in font_name.lower() for h in _CJK_FONT_HINTS)
+
 
 # Common sans-serif fonts to try when "sans-serif" is requested
 SANS_SERIF_FONTS = [
@@ -139,8 +166,9 @@ def is_font_available(font_name: str) -> bool:
 def get_available_font(preferred: str, fallback_chain: list[str] | None = None) -> str:
     """Get the first available font from the fallback chain.
 
-    Starts with the preferred font and traverses the fallback chain until
-    an available font is found. Falls back to "Arial" if nothing else works.
+    Starts with the preferred font, then prepends OS-specific CJK fallback if preferred
+    looks CJK-intended (避免在 Mac 上把"Microsoft YaHei" fallback 到 Arial → 中文豆腐方块),
+    then traverses the fallback chain.
 
     Args:
         preferred: The preferred font name to try first.
@@ -152,11 +180,17 @@ def get_available_font(preferred: str, fallback_chain: list[str] | None = None) 
     if fallback_chain is None:
         fallback_chain = FONT_FALLBACK_CHAIN
 
-    # Build the full chain starting with preferred font
-    chain = [preferred] if preferred not in fallback_chain else []
+    # Build chain: [preferred] + (OS-specific CJK if 启发命中) + global fallback
+    chain: list[str] = [preferred]
+    if _looks_cjk_intended(preferred):
+        chain.extend(CJK_FALLBACK_BY_OS.get(platform.system(), []))
     chain.extend(fallback_chain)
 
+    seen: set[str] = set()
     for font_name in chain:
+        if font_name in seen:
+            continue
+        seen.add(font_name)
         if is_font_available(font_name):
             return font_name
 
@@ -210,12 +244,15 @@ def get_available_font_with_path(
     return ("Arial", None)
 
 
+@lru_cache(maxsize=32)
 def resolve_font_for_pptx(font_name: str) -> str:
     """Resolve a font name for PPTX generation.
 
     For PPTX files, we want to use the actual font name (not a file path)
     since PowerPoint will resolve the font on the target system. However,
     we should still apply the fallback chain for measurement consistency.
+
+    @lru_cache 让 50 页 deck × 25 textbox = 1250 次调用只首次实算, 余 1249 次 O(1).
 
     Args:
         font_name: The requested font name.

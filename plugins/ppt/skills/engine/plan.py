@@ -94,7 +94,7 @@ def main():
 
     load_cmd = sub.add_parser("load")
     load_cmd.add_argument("architecture", help="Path to content-architecture.yaml")
-    load_cmd.add_argument("--theme", default="clean-light")
+    load_cmd.add_argument("--theme", default="huawei")
     load_cmd.add_argument("--preset", default="research-report")
 
     validate_cmd = sub.add_parser("validate")

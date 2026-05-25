@@ -6,81 +6,52 @@ description: >-
   也适用于: 用户提供了 markdown 文件或目录并要求转化为 PPT 的场景。
 argument-hint: "<输入路径> [--preset <name>] [--theme <name>] [--output <path>]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.3
+version: 3.0.4
 ---
 
 # PPT:Create — 一键生成最高质量 PPT
 
-从目录/文件输入，经过四阶段管线 + 审查门禁，生成高质量 .pptx 文件。
+## v3.4.0 简化说明
+
+v3.3.x 把 4 个独立 LLM reviewer (Agent-P/A/V/R) 各跑 10 轮迭代 + 多重 4.x/5 评分门禁堆叠, 用户反思"skill 越做越复杂效果远没达到预期"——LLM 评分无 ground truth, 模糊上"过得去"的输出占据大半 token. v3.4.0 删除所有非 deterministic reviewer, 保留 deterministic 校验 (`validate_plan.py` 内容量 + 应用率门禁) + 1 个用户确认 gate, 视觉评审交给独立的 `/ppt:taste` skill (后置, 用户按需调用).
+
+四阶段流水线保留 (parse → architect → plan → render), 但每阶段仅 deterministic 校验 + 失败 fail-fast, 不再做 LLM self-review.
 
 ## 路径约定
 
-本文档中 `<plugin-root>` 指 plugin 根目录。推导方式：Base directory 的两级父目录（即 `skills/create/` 的上两层）。执行 bash 命令前，先确定实际路径再替换 `<plugin-root>`。
-
-## 核心原则
-
-**质量优先** — 愿意用时间、token、人工介入换取高质量输出。
+`<plugin-root>` 指 plugin 根目录, 推导: skills/create/ 的两级父目录. 执行 bash 前替换为实际绝对路径.
 
 ## 参数解析
 
-从 `$ARGUMENTS` 中解析：
-- **输入路径**（必需）：目录路径或文件路径
-- `--preset <name>`：内容组织预设（默认 `research-report`），可选值见 `<plugin-root>/presets/`
-- `--theme <name>`：视觉主题（默认 `huawei`，v3.0.x 当前唯一内置主题），可选值见 `<plugin-root>/themes/` 下的子目录。未传此参数时自动 fallback 到 `huawei`。旧主题名（`clean-light` / `academic` / `dark-business`）已删除，显式传入会抛 `ValueError`
-- `--output <path>`：输出路径（默认 `./output/<input-name>.pptx`）
+从 `$ARGUMENTS` 中解析:
+- **输入路径** (必需): 目录路径或文件路径
+- `--preset <name>`: 内容预设 (默认 `research-report`), 可选值见 `<plugin-root>/presets/`
+- `--theme <name>`: 视觉主题 (默认 `huawei`, v3.4.0 仅 huawei). 旧主题 (`clean-light` / `academic` / `dark-business`) 显式传入会 `ValueError`
+- `--output <path>`: 输出路径 (默认 `./output/<input-name>.pptx`)
 
 ## 执行流程
 
-### Stage 1: Parse（多格式解析）
+### Stage 1: Parse (deterministic)
 
-运行解析脚本：
 ```bash
 uv run python <plugin-root>/engine/parse.py <input-path> --output <workdir>/parsed-content.json
 ```
 
-解析完成后，**你作为审查 Agent-P** 审查 `parsed-content.json`：
+parse.py 失败 (exit ≠ 0) 立即停管线并报错给用户, 不做 LLM review.
 
-**审查维度**（阈值 4.5/5，最多 10 轮）：
-- **完整性**（5分）：对比输入目录文件列表，是否有遗漏文件？
-- **结构识别准确率**（5分）：标题层级、列表、表格、代码块是否正确识别？
-- **格式保真度**（5分）：内容块是否保留了原始格式信息？
+### Stage 2: Architect (LLM 产出 + 用户确认 gate)
 
-输出审查 JSON：
-```json
-{
-  "pass": true/false,
-  "score": 4.5,
-  "dimensions": {
-    "completeness": {"score": 5, "evidence": "...", "issues": []},
-    "structure_accuracy": {"score": 4, "evidence": "...", "issues": ["..."]},
-    "format_fidelity": {"score": 5, "evidence": "...", "issues": []}
-  },
-  "threshold": 4.5,
-  "improvement_directives": []
-}
-```
+读取 `parsed-content.json`、预设文件 `<plugin-root>/presets/<preset>.yaml`、`<plugin-root>/design-guide.md`.
 
-**强制举证规则**：每个评分必须引用具体文件名或内容块。扣分必须给出改进指令。满分必须论证为何无法进一步改进。
+**你作为内容架构师**:
+1. 全局分析输入材料的核心信息, 提炼核心论点 / 叙事线
+2. 做内容取舍 (哪些纳入 / 裁剪), 划分章节, 设计叙事弧线
+3. 为每页规划结构化内容要点 (每 point 的 body **80-150 字**, 含数据 / 案例 / 论证细节)
+4. 为每页撰写 description (1-3 句上下文), 数据引用页标 footnote
 
-不通过时：将 `improvement_directives` 反馈给 parse.py 重新处理。连续 3 轮无提升 → 将反馈交给用户决策。第 10 轮 → 输出当前最佳版本。
-
-### Stage 2: Architect（内容架构设计）
-
-读取 `parsed-content.json`、预设文件和 `<plugin-root>/design-guide.md`（设计哲学和反模式清单）。
-
-**你作为 AI 内容架构师**，执行以下任务：
-1. 全局分析所有输入材料的核心信息
-2. 提炼核心论点/叙事线
-3. 做出内容取舍决策 — 哪些纳入、哪些裁剪
-4. 设计叙事弧线（opening -> context -> evidence -> challenges -> recommendations -> closing）
-5. 划分章节，每章明确核心信息和预计页数
-6. **为每页规划结构化内容要点**（每 point 的 body 80-150 字，含数据/案例/论证细节）
-7. **为每页撰写 description**（1-3 句上下文描述）
-8. **标记数据来源为 footnote**
-
-产出 `<workdir>/content-architecture.yaml`，格式：
+产出 `<workdir>/content-architecture.yaml`:
 ```yaml
-thesis: "核心论点（完整句子）"
+thesis: "核心论点 (完整句子)"
 target_audience: "目标受众"
 arc: "opening -> context -> evidence -> ... -> closing"
 chapters:
@@ -88,29 +59,15 @@ chapters:
     key_message: "核心信息"
     source_refs: ["file.md:15-42"]
     slide_briefs:
-      - slide_title: "行动标题（传达观点，不只是描述）"
+      - slide_title: "行动标题 (传达观点, 不只是描述)"
         visual_type_hint: "data-contrast"
-        description: "1-3 句上下文描述（必填）"
+        description: "1-3 句上下文 (必填, 豁免类型除外)"
         content_points:
-          - heading: "指标/卡片标题"
-            body: "80-150字详细阐述，从源材料提取具体数据、案例或论证"
+          - heading: "卡片标题"
+            body: "80-150 字详细阐述, 从源材料提取数据 / 案例 / 论证"
             metric_value: "大号指标值"
             metric_label: "指标标签"
-          - heading: "第二个指标/卡片标题"
-            body: "80-150字详细阐述"
-            metric_value: "对比指标值"
-            metric_label: "对比标签"
-        footnote: "数据来源: xxx（有数据引用时必填）"
-      - slide_title: "另一页行动标题"
-        visual_type_hint: "cards-3"
-        description: "1-3 句上下文"
-        content_points:
-          - heading: "卡片标题1"
-            body: "80-150字详细阐述"
-          - heading: "卡片标题2"
-            body: "80-150字详细阐述"
-          - heading: "卡片标题3"
-            body: "80-150字详细阐述"
+        footnote: "数据来源 (有数据引用时必填)"
 total_slides: 18
 excluded_content:
   - reason: "裁剪原因"
@@ -118,207 +75,109 @@ excluded_content:
     content_summary: "被裁剪的内容摘要"
 ```
 
-**内容量硬约束**：
-- 每个 `content_points` 的 `body` 字段必须 80-150 字
-- cards/comparison/process 类型的 content_points **必须有 heading**
-- data-contrast 类型 **必须有 metric_value + metric_label**
-- 非豁免页面（hero-statement/quote-hero/story-card 除外）**必须有 description**
+**内容量硬约束** (Stage 3 的 validate_plan 会再次拦截, 此处先尽力保证):
+- `content_points.body` 字段 80-150 字
+- cards / comparison / process 类型 content_points **必须有 heading**
+- data-contrast **必须有 metric_value + metric_label**
+- 非豁免页面 (hero-statement / quote-hero / story-card 除外) **必须有 description**
 - 有数据引用的页面 **必须有 footnote**
 
-写摘要性短句（body<40字）是最常见的质量问题根因——Stage 3 的 validate_plan.py 会拦截，但在此阶段就应保证充足。
+**用户确认 gate (必须 AskUserQuestion)**:
 
-产出后，**你切换为审查 Agent-A** 审查：
+输出架构摘要 (核心论点、章节标题 + 核心信息、预计页数、被裁剪内容清单), 然后 AskUserQuestion:
 
-**审查维度**（阈值 4.0/5，最多 10 轮）：
-- **叙事连贯**（5分）：叙事弧线是否有逻辑递进？
-- **信息覆盖**（5分）：核心信息是否被充分覆盖？
-- **受众匹配**（5分）：内容深度和表达方式是否匹配目标受众？
-- **精炼度**（5分）：是否有冗余或重复？
-- **结构均衡**（5分）：各章节页数分配是否合理？
+- 选项 1: "确认, 进入视觉规划"
+- 选项 2: "需要调整" (用户输入修改意见后重做 Architect)
+- 选项 3: "查看某章节的详细 content_points"
 
-审查通过后，**用户确认点**（必须使用 AskUserQuestion 工具）：
+用户确认后进入 Stage 3.
 
-先输出架构摘要（核心论点、章节标题+核心信息、预计页数、被裁剪内容清单），然后用 AskUserQuestion 提供选项：
+### Stage 3: Plan (LLM 产出 + deterministic 门禁)
 
-- **选项 1**："确认，进入 Stage 3 视觉规划"
-- **选项 2**："需要调整"（用户输入修改意见后重新架构）
-- **选项 3**："查看某章节的详细 content_points"（展示后再决策）
+读取 `content-architecture.yaml`、主题 yaml、preset yaml、`<plugin-root>/design-guide.md`、`<plugin-root>/anchors.yaml` (huawei 审美锚点 metadata, 不默认 Read PNG).
 
-用户选择确认后进入下一阶段。
+锚点库使用: `anchors.yaml.usage_by_skill.ppt:create` — 决定 layout 时查 layout_only / extended 找参考案例 (学 layout 不学 palette, 按原则 P2); 生成前对照 antipatterns AP1-AP5 主动避免反模式.
 
-### Stage 3: Plan（视觉规划）
-
-读取 `content-architecture.yaml`、主题 YAML、预设 YAML、`<plugin-root>/design-guide.md`。
-
-**前置步骤：装载主题决策框架**
-
-执行（生成 `.theme-prompt.md`，包含主题级硬约束 + 软引导 + 18 版式字段速查 + 退回链）：
-
+**前置: 装载主题决策框架**:
 ```bash
-uv run --script <plugin-root>/engine/prompt_assembler.py \
-    --theme <theme> \
-    --output <workdir>/.theme-prompt.md
+uv run --script <plugin-root>/engine/prompt_assembler.py --theme <theme> --output <workdir>/.theme-prompt.md
 ```
 
-然后**用 Read 工具加载 `<workdir>/.theme-prompt.md`**——它由 `engine/prompt_assembler.py` 在运行时从 `themes/<theme>/preferences.yaml` + `schemas/variants.py` 自动派生，是当前主题的视觉决策权威来源，包含：
+Read `.theme-prompt.md` — 由 `engine/prompt_assembler.py` 从 `themes/<theme>/preferences.yaml` + `schemas/variants.py` 派生, 含 6 类硬约束 + 12 类软引导 + 18 版式字段速查 + 退回链 + path X 字段填法.
 
-- **6 类硬约束**（必须遵守的 role 映射 / 内容触发 / 禁用版式）
-- **12 类软引导**（visual_type 偏好权重，内容歧义时按权重排序）
-- **18 版式字段速查 cookbook**（字段名/类型/约束/嵌套子模型，派生自 Pydantic schema）
-- **退回链**（schema 校验失败时的 fallback 顺序）
-- **path X 字段填法**（变体专属字段放 `slide.variant`，公共字段放 `slide.content`）
+**所有视觉规划决策必须严格遵循 `.theme-prompt.md`**.
 
-**所有视觉规划决策必须严格遵循 `.theme-prompt.md` 的硬约束、软引导与字段说明**。
+**你作为视觉规划师**, 为每页:
+1. 按 .theme-prompt.md 硬约束 + 软引导选 visual_type (通用 fallback 决策树见下)
+2. key_points 用结构化对象格式 (heading + body, data-contrast 加 metric_value + metric_label)
+3. 每页有 description (豁免类型除外), 数据页有 footnote
+4. 连续 2 页不得用相同 visual_type (布局多样性)
 
-**你作为 AI 视觉规划师**，为每页做视觉设计决策：
+**huawei 18 版式字段填法**:
+- 公共字段 (title / subtitle / description) → `slide.content`
+- 专属字段 (kpis / chapters / layers / steps / phases / quadrants / personas / risks / units / ...) → `slide.variant`
+- 不要把专属字段平铺到 slide.content 顶层
 
-对每一页 slide：
-1. 根据内容类型选择 visual type（**优先**遵循 `.theme-prompt.md` 的硬约束 + 软引导；通用 fallback 决策树见下方）
-2. 指定设计参数（来自主题 YAML）
-3. 确保全局视觉一致性
-4. **key_points 必须使用结构化对象格式**（heading + body，data-contrast 加 metric_value + metric_label）
-5. **每页必须有 description**（豁免类型除外）
-6. **有数据的页面必须有 footnote**
-7. **连续 2 页不得使用相同 visual_type**（布局多样性约束）
-
-**huawei 专属版式的字段填法**（与 `.theme-prompt.md` path X 段一致）：
-
-- 当 visual_type 选 huawei 18 版式之一（kpi-stats / cover-left-bar / architecture-layered / ...）时：
-  - 公共字段（title / subtitle / description）放在 `slide.content` 下
-  - 专属字段（kpis / chapters / layers / steps / phases / quadrants / personas / risks / units / ...）放在 `slide.variant` 下
-  - **不要**把专属字段平铺到 slide.content 顶层（虽然向后兼容兜底仍可工作，但 schema 严格化将失败）
-- 通用版式（cards-N / bullets / data-contrast / ...）继续用 slide.content.key_points
-
-具体每版式的字段名/类型/约束见 `.theme-prompt.md` 的"18 版式字段速查"段。
-
-**通用 Visual Type 决策框架**（仅当 `.theme-prompt.md` 加载失败时使用，按顺序匹配）：
-
-1. 有序列/流程？ → `process-N-phase`（N=2-5）
-2. 有对比？ → `comparison-N`（N=2-5）
-3. 有并列但非序列的条目？ → `cards-N`（N=2-5）
-4. 有两组数据的张力/对比？ → `data-contrast`
-5. 有有力引言？ → `quote-hero`
-6. 数据确实是表格形式？ → `table`
-7. 单句核心陈述？ → `hero-statement`
+**通用 Visual Type 决策树** (仅 .theme-prompt.md 加载失败时):
+1. 有序列 / 流程 → `process-N-phase` (N=2-5)
+2. 有对比 → `comparison-N` (N=2-5)
+3. 有并列非序列条目 → `cards-N` (N=2-6)
+4. 两组数据张力 → `data-contrast`
+5. 有力引言 → `quote-hero`
+6. 数据是表格 → `table`
+7. 单句核心陈述 → `hero-statement`
 8. 默认 → `bullets`
 
-**通用禁止**（即使 `.theme-prompt.md` 未加载也必须遵守）：
-- hero-statement 不得用于 3+ 条目的内容
-- table 不得用于流程/方法论
-- bullets 不得用于并列对比
+通用禁止: hero-statement 不得用于 3+ 条目; table 不得用于流程; bullets 不得用于并列对比.
 
-产出 `<workdir>/slide-plan.yaml`（schema 由 `schemas/slide_plan.py` 定义）。
+产出 `<workdir>/slide-plan.yaml` (schema 由 `schemas/slide_plan.py` 定义).
 
-**内容量门禁 + 主题应用率门禁**（强制，不可跳过）：
-
-slide-plan.yaml 写入后，立即运行校验脚本（**必须带 `--theme`**）：
+**Deterministic 门禁 (强制, 不可跳)**:
 ```bash
 uv run --script <plugin-root>/engine/validate_plan.py <workdir>/slide-plan.yaml --theme <theme> --json
 ```
 
-校验规则：
+校验规则:
+1. **内容量**: cards/process/framework/timeline 每 key_point ≥ 80 字; comparison ≥ 100; bullets 总计 ≥ 200; data-contrast 总计 ≥ 80; table rows ≥ 2; hero-statement/quote-hero/story-card 豁免
+2. **应用率** (仅 `--theme=huawei`): huawei 18 版式占比, 默认 ≥60% PASS / 30-60% WARN / <30% FAIL
 
-1. **内容量**（按 visual type）：
-   - `cards-N` / `process-N-phase` / `framework*` / `timeline*`：每 key_point ≥ 80 字
-   - `comparison-N`：每 key_point ≥ 100 字
-   - `bullets`：key_points 总计 ≥ 200 字
-   - `data-contrast`：内容区总计 ≥ 80 字
-   - `table`：rows ≥ 2 且 headers 非空
-   - `hero-statement` / `quote-hero` / `story-card`：豁免
+**Exit code**:
+- `0`: 全通过
+- `1`: 内容量 FAIL — 读 JSON 的 `point_issues`/`total_issue`, 从 content-architecture.yaml source_refs 回溯源材料补充; 连续 3 轮无法通过 → AskUserQuestion 让用户决策
+- `2`: 应用率 FAIL — 按 .theme-prompt.md 重新审视 visual_type 选择 (cards-N → cards-6 / kpi-stats / architecture-layered 等); 连续 2 轮未达阈值 → AskUserQuestion
 
-2. **主题应用率**（仅 `--theme=huawei` 触发）：huawei 18 版式占比阈值由 `themes/huawei/preferences.yaml` 的 `application_thresholds` 定义（默认 ≥60% PASS / 30~60% WARN / <30% FAIL）。
+### Stage 4: Render (deterministic) + 可选评审
 
-**Exit code 语义**：
-- `0`：内容量 + 应用率均通过
-- `1`：内容量 fail（`status: FAIL` slides）
-- `2`：内容量通过但应用率 FAIL（`theme_application.status == "FAIL"`）
-
-**校验不通过时**：
-
-A. **内容量 fail（exit 1）**：
-1. 读取 JSON 输出中 `status: "FAIL"` 的 slides 清单
-2. 对每个 FAIL slide，根据 `point_issues` 或 `total_issue` 补充内容——从 `content-architecture.yaml` 的 source_refs 回溯源材料，提取具体数据、案例或论证细节
-3. 更新 slide-plan.yaml 后重新运行校验
-4. 连续 3 轮无法全部通过 → 将 FAIL 清单交给用户决策（AskUserQuestion：接受当前版本 / 手动补充内容 / 降低该 slide 的 visual type 复杂度）
-
-B. **应用率 FAIL（exit 2）**：
-1. 读取 JSON 输出中 `theme_application` 段的 `ratio` 与 `huawei_count` / `total_slides`
-2. 根据 `.theme-prompt.md` 的硬约束 + 软引导**重新审视通用版式选择**：哪些 cards-N / bullets / process-N-phase 应改为对应 huawei 版式（cards-6 / kpi-stats / process-flow-huawei / architecture-layered 等）
-3. 更新 slide-plan.yaml 后重新校验
-4. 连续 2 轮无法达到 30% 阈值 → AskUserQuestion：接受当前版本 / 重新规划 huawei 适配版式 / 改用其他主题
-
-产出后，**你切换为审查 Agent-V** 审查：
-
-**审查维度**（阈值 4.0/5，最多 10 轮）：
-- **visual type 适配度**（5分）：每页选择的 visual type 是否最佳匹配内容？
-- **设计一致性**（5分）：配色/字号/间距是否全局一致？
-- **主题规范符合度**（5分）：所有参数是否来自主题定义？
-- **信息层级清晰度**（5分）：标题/正文/辅助信息的层级是否清晰？
-
-### Stage 4: Render（确定性渲染）
-
-运行渲染脚本：
 ```bash
 uv run python <plugin-root>/engine/render.py <workdir>/slide-plan.yaml --theme <theme> --output <output-path>
 ```
 
-渲染完成后，运行渲染后校验：
+渲染后再跑一次 validate_plan 防御性检查:
 ```bash
 uv run --script <plugin-root>/engine/validate_plan.py <workdir>/slide-plan.yaml --json
 ```
 
-如果校验仍有 FAIL（理论上 Stage 3 已通过，此处为防御性检查），**立即停止管线**，用 AskUserQuestion 报告问题。
+仍有 FAIL → 立即停管线, AskUserQuestion 报告.
 
-然后，**你作为审查 Agent-R** 执行视觉 QA：
-
-**QA 验证循环**（假设有问题，你的工作是找到它们）：
-
-1. **内容 QA**：检查 validate_plan.py --json 的输出，关注 FAIL 和 WARN（包括反模式警告）
-2. **渲染 QA**：检查 render.py 的退出码和 stderr 输出
-3. **视觉 QA**（如有 LibreOffice）：
-   ```bash
-   soffice --headless --convert-to pdf <output-path>
-   pdftoppm -jpeg -r 150 <output>.pdf slide
-   ```
-   转为图片后，用 Agent 子代理以全新视角审查：
-   - 重叠元素（文本穿过形状、线条穿过文字）
-   - 文本溢出或在边界处截断
-   - 间距不均（一处大空白，另一处拥挤）
-   - 低对比度文字
-   - 留白过多的页面
-4. **无 LibreOffice 时**：基于 slide-plan.yaml 推理检查字号对比度、布局多样性、内容密度
-5. 发现问题 → 修改 slide-plan.yaml → 重渲染 → 再验证
-6. **至少完成一轮"修复-验证"循环后才能声明完成**
-
-**审查维度**（阈值 4.5/5，最多 10 轮）：
-- **无溢出/截断**（5分）：所有文本是否在形状边界内？
-- **字体覆盖率**（5分）：所有字符是否能被指定字体渲染？
-- **图片比例**（5分）：图片是否保持原始宽高比？
-- **视觉一致性**（5分）：配色/间距/字号是否与 slide-plan 一致？
-- **可读性**（5分）：最小字号是否 >= 12pt？对比度是否足够？
-
-**FAIL 时强制停管线**：审计不通过时，**禁止 LLM 自行决定如何处理**。必须用 AskUserQuestion 向用户展示 FAIL 详情，提供选项：
-- "修复后重新渲染"（AI 修改 slide-plan.yaml 参数后重跑 render）
-- "接受当前版本"（用户知情接受）
-- "放弃本次生成"
+**视觉评审 (可选, 用户按需)**: v3.4.0 起删除内嵌 LLM 视觉 QA. 用户需要视觉评审时调:
+```
+/ppt:taste <output-path>
+```
+ppt:taste skill 用 huawei 锚点库 + 双轴评分 (layout / palette) 给出 actionable 改进项. ppt:create 本身不主动调它.
 
 ### 完成
 
-输出：
 ```
 PPT 已生成: <output-path>
 N 页 | 主题: <theme> | 预设: <preset>
-如需调整，使用 /ppt:refine <output-path> <调整指令>
+评审 (可选): /ppt:taste <output-path>
+调整: /ppt:refine <output-path> <调整指令>
 ```
 
-## 中间产物路径
+## 中间产物
 
-所有中间产物存放在 `<output-dir>/.ppt-workdir/`：
+`<output-dir>/.ppt-workdir/` 下:
 - `parsed-content.json`
 - `content-architecture.yaml`
+- `.theme-prompt.md`
 - `slide-plan.yaml`
-
-## 退化保护
-
-- 连续 3 轮审查评分无提升 → 自动将审查反馈 + 当前产出交给用户决策
-- 第 10 轮仍未通过 → 输出当前最佳版本 + 未解决问题清单
