@@ -1,6 +1,6 @@
 {
   "name": "rpiv-loop",
-  "version": "2.1.10",
+  "version": "2.1.11",
   "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
   "author": {
     "name": "zhuqingxun"

@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.1.10",
+      "version": "2.1.11",
       "keywords": [
         "rpiv",
         "workflow",
@@ -25,7 +25,7 @@
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.1.7",
+      "version": "2.1.8",
       "keywords": [
         "meeting",
         "transcription",
@@ -38,7 +38,7 @@
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
-      "version": "1.0.7",
+      "version": "1.0.8",
       "keywords": [
         "reflect",
         "retrospective",
@@ -88,7 +88,7 @@
       "name": "ppt",
       "source": "./plugins/ppt",
       "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, manage visual themes",
-      "version": "3.0.4",
+      "version": "3.0.5",
       "keywords": [
         "ppt",
         "presentation",

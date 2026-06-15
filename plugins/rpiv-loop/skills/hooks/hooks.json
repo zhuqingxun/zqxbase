@@ -19,6 +19,27 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|clear|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project python \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff_detector.py\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --no-project python \"${CLAUDE_PLUGIN_ROOT}/hooks/handoff_first_prompt.py\""
+          }
+        ]
+      }
     ]
   }
 }

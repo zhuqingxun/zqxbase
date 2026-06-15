@@ -9,29 +9,29 @@ canvas:
 # ===== P0 八版式（§O6 权威字号表）=====
 
 cover_left_bar:
-  bar_width_px: 16
-  title_size_px: 108
-  subtitle_size_px: 34          # 专属，非 tokens subtitle=36
-  eyebrow_size_px: 18           # 专属，非 tokens micro=16
-  meta_size_px: 16
+  # 2026-05-31 taste 选型 A (去红条): 全局规则——huawei 风格不要贯穿边缘的细红条; 标题克制
+  title_size_px: 88             # ~52pt (旧 108px 巨标题)
+  subtitle_size_px: 36
+  eyebrow_size_px: 26
+  meta_label_size_px: 20
+  meta_size_px: 26              # meta value 字号
 
 toc:
-  number_column_px: 160
-  item_gap_px: 24
-  giant_title_size_px: 300      # 专属巨字，不在 tokens 内
-  chapter_size_px: 22
-  page_size_px: 20
-  eyebrow_size_px: 36
+  # 2026-05-31 taste 选型 C (去页码): 克制标题 + 红编号列表, 无巨号/无页码/无分隔线
+  header_size_px: 66            # ~40pt 标题 (旧 giant_title 300px 违反 P3)
+  header_suffix: "· CONTENTS"   # 标题后缀 (设 "" 可去掉双语后缀)
+  number_size_px: 57            # ~34pt 红编号 (强调但不巨大)
+  item_size_px: 33              # ~20pt 章节标题
 
 section_divider_dark:
-  big_number_size_px: 360
-  big_number_weight: 200
-  title_size_px: 88             # 专属，非 tokens section=84
-  description_size_px: 30
-  eyebrow_size_px: 22
-  grid_left_column_px: 380
-  grid_gap_px: 80
-  background_token: ink_dark
+  # 2026-05-31 taste 选型 B: 浅底极简章节过渡页 (旧深底 ink_dark + 360px 巨号违反 P1/P3, 用户评 0)
+  title_size_px: 66             # ~40pt, 合 P3 (标题 ≤ 正文 3 倍)
+  tag_size_px: 27               # ~16pt 章节标签 (eyebrow · number)
+  description_size_px: 27       # ~16pt 描述
+  background_token: paper       # 浅底 (旧 ink_dark 深炭黑)
+  tag_color_token: primary      # 红色标签
+  title_color_token: ink        # 黑色标题
+  desc_color_token: ink_soft    # 次级灰描述
 
 kpi_stats:
   columns: 4
@@ -89,6 +89,10 @@ roadmap:
 pyramid:
   levels_default: 4
   top_width_ratio: 0.35
+  # 2026-05-31 taste 选型 A 红色渐变阶梯: 顶浓红(primary) → 底极浅红 线性插值,
+  # 替代旧 顶 primary_dark + 二 primary + 下 paper_2 的"红红灰灰灰"断裂配色 (顶层近黑被用户评低)
+  gradient_top_token: primary
+  gradient_bottom_hex: "#FBE9EA"
 
 heatmap_matrix:
   row_label_column_px: 220
@@ -96,8 +100,18 @@ heatmap_matrix:
   score_chars: "█████"          # 研究报告推荐 Unicode 方案 A
 
 thankyou:
-  title_size_px: 360
-  background_token: primary
+  # 2026-05-31 taste 选型 A: 浅底华为致谢式 (旧红底 360px 巨字违反 P1/AP2/AP3, 用户评 2/1)
+  # 2026-06-12 issue: 160px(~96pt) 仍占画面 1/3+ 命中 AP3, 收敛到 88px(~52.8pt) 对照 golden banking-p043
+  title_size_px: 88             # ~52.8pt
+  eyebrow_size_px: 27           # ~16pt 红色小标签
+  emphasis_size_px: 54          # ~32pt 红色 punchline (第二行强调)
+  subtitle_size_px: 30          # ~18pt
+  label_size_px: 20             # ~12pt 联系方式标签
+  value_size_px: 26             # ~15.6pt 联系方式值
+  background_token: paper       # 白底 (旧 primary 红满底)
+  title_color_token: ink        # 黑色大字
+  left_column_in: 6.5
+  right_column_x_in: 8.0
   contact_columns: 4
 
 # ===== P2 四版式 =====

@@ -7,7 +7,7 @@ description: >-
   仅 interview 场景可用；polish 通过受访者类型选择对应提纲。
 argument-hint: "[add|list|remove] [<id>] [<name>] [--default-template <tpl-id>]"
 allowed-tools: Read, Bash, Glob, AskUserQuestion
-version: 2.1.7
+version: 2.1.8
 ---
 
 # mint:types — 受访者类型注册表管理

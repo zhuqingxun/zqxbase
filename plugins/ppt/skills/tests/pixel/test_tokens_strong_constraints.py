@@ -114,12 +114,12 @@ def test_canvas_padding(layouts, key, expected):
 # ============================================================
 
 EXPECTED_LAYOUT_STRONG: dict[tuple[str, str], int | str] = {
-    ("cover_left_bar", "bar_width_px"): 16,
-    ("cover_left_bar", "title_size_px"): 108,
-    ("section_divider_dark", "big_number_size_px"): 360,
-    ("section_divider_dark", "big_number_weight"): 200,
-    ("section_divider_dark", "title_size_px"): 88,
-    ("section_divider_dark", "background_token"): "ink_dark",
+    # 2026-05-31 taste 选型 A (去红条): bar_width_px 已删 (全局不要边缘红条), 标题 108→88px
+    ("cover_left_bar", "title_size_px"): 88,
+    # 2026-05-31 taste 选型 B: 浅底极简章节页 (旧 ink_dark + 360px 巨号违反 P1/P3, 用户评 0)
+    ("section_divider_dark", "title_size_px"): 66,
+    ("section_divider_dark", "tag_size_px"): 27,
+    ("section_divider_dark", "background_token"): "paper",
     ("matrix_2x2", "border_width_px"): 2,
     ("matrix_2x2", "border_token"): "ink",
     ("architecture_layered", "header_column_px"): 260,
@@ -144,12 +144,23 @@ def test_layout_strong_constraint(layouts, group, key, expected):
 # ============================================================
 
 def test_fonts_sans_stack(tokens):
-    """字体栈：Microsoft YaHei 第一 (PowerPoint 中文环境字体统一), Inter / Noto Sans SC fallback。
+    """字体栈：跨平台 CJK 优先 + 西文兜底 (v3.4.0 起, 不再 YaHei-only)。
 
-    顺序敏感: Microsoft YaHei 必须在第 1 位, 否则系统无 Inter 时英文/中文 fallback 不一致 (旧顺序 bug).
+    顺序: Windows CJK (Microsoft YaHei) → macOS CJK (PingFang SC) → Linux CJK
+    (Noto Sans CJK SC) → 西文 fallback (Inter) → web 兜底 (Noto Sans SC)。
+    实际 fallback 由 lib/font_fallback.py 统一处理, 此栈仅是首选优先级。
+    顺序敏感不变量: Microsoft YaHei 必须在第 1 位 (Windows 中文环境字体统一, 旧顺序 bug)。
+    锚点: themes/huawei/tokens.yaml fonts.sans。
     """
     sans = tokens.get("fonts", {}).get("sans")
-    assert sans == ["Microsoft YaHei", "Inter", "Noto Sans SC"], f"got {sans!r}"
+    assert sans == [
+        "Microsoft YaHei",   # Windows CJK 首选
+        "PingFang SC",       # macOS CJK 首选
+        "Noto Sans CJK SC",  # Linux CJK 首选
+        "Inter",             # 西文 fallback
+        "Noto Sans SC",      # web 字体兜底
+    ], f"got {sans!r}"
+    assert sans[0] == "Microsoft YaHei", f"YaHei 必须第 1 位, got {sans!r}"
 
 
 def test_fonts_mono_stack(tokens):

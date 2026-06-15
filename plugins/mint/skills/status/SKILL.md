@@ -5,7 +5,7 @@ description: >-
   当用户说"看看进度""处理到哪了""status""状态""工作区全景""详细状态"时触发。
 argument-hint: "[<工作目录>] [--detail] [--workspace]"
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.7
+version: 2.1.8
 ---
 
 

@@ -112,34 +112,29 @@ def _render_first_slide(tmp_path, theme, visual_type: str):
     pytest.fail(f"sample {sample} 未含 {visual_type} slide")
 
 
-def test_spec_r_v01_ex_cover_left_bar_has_red_bar(tmp_path, huawei_theme):
-    """SPEC-R-V01-EX：cover-left-bar slide 含左红条 shape（x≈0，窄宽度，红色填充）。"""
+def test_spec_r_v01_cover_no_edge_red_bar(tmp_path, huawei_theme):
+    """cover-left-bar 不应有贯穿边缘的细红条 (2026-05-31 全局规则: huawei 风格不要 edge bar, 用户选型 A 去红条)。"""
     from pptx.util import Emu
     from pptx.dml.color import RGBColor
 
     slide = _render_first_slide(tmp_path, huawei_theme, "cover-left-bar")
-    candidates = [
-        sh for sh in slide.shapes
-        if sh.left is not None and sh.left <= Emu(0.2 * 914400)
-        and sh.width is not None and sh.width < Emu(0.5 * 914400)
-    ]
-    assert candidates, "cover-left-bar 无左红条候选 shape"
-
-    # 期望填充色 = #C7000B
-    expected = RGBColor(0xC7, 0x00, 0x0B)
-    hit = False
-    for sh in candidates:
-        try:
-            if sh.fill.fore_color.rgb == expected:
-                hit = True
-                break
-        except Exception:
+    red = RGBColor(0xC7, 0x00, 0x0B)
+    for sh in slide.shapes:
+        if sh.left is None or sh.width is None or sh.height is None:
             continue
-    assert hit, f"左红条 shape 颜色非 #C7000B（候选 {len(candidates)} 个）"
+        # 贯穿边缘红条 = 贴左边 (x≈0) + 窄 (<0.5") + 高 (≥5")
+        edge_bar = (sh.left <= Emu(0.2 * 914400)
+                    and sh.width < Emu(0.5 * 914400)
+                    and sh.height >= Emu(5.0 * 914400))
+        if edge_bar:
+            try:
+                assert sh.fill.fore_color.rgb != red, "检测到贯穿边缘的红条 — 违反全局 huawei 风格规则"
+            except (AttributeError, TypeError):
+                pass
 
 
-def test_spec_r_v02_ex_section_divider_dark_bg(tmp_path, huawei_theme):
-    """SPEC-R-V02-EX：section-divider-dark slide 背景色 = #2A2A2A。"""
+def test_spec_r_v02_ex_section_divider_light_bg(tmp_path, huawei_theme):
+    """section-divider-dark 背景色 = #FFFFFF (2026-05-31 taste 选型 B: 浅底极简, 旧 #2A2A2A 深底违反 P1/P3 用户评 0)。"""
     from pptx.dml.color import RGBColor
 
     slide = _render_first_slide(tmp_path, huawei_theme, "section-divider-dark")
@@ -147,7 +142,7 @@ def test_spec_r_v02_ex_section_divider_dark_bg(tmp_path, huawei_theme):
         rgb = slide.background.fill.fore_color.rgb
     except Exception as e:
         pytest.skip(f"slide.background 不可读（实现未设 solid fill）: {e}")
-    assert rgb == RGBColor(0x2A, 0x2A, 0x2A), f"背景期望 #2A2A2A，实际 #{rgb}"
+    assert rgb == RGBColor(0xFF, 0xFF, 0xFF), f"背景期望浅底 #FFFFFF，实际 #{rgb}"
 
 
 def _content_field(spec, field_name):
@@ -189,11 +184,13 @@ def test_spec_r_v06_ex_toc_items(tmp_path, huawei_theme):
     assert titles_found >= 1, f"toc 渲染未包含任何章节 title（chapters={chapters}, rendered_text={all_text!r}）"
 
 
-def test_spec_r_v13_ex_thankyou_main_text_large(tmp_path, huawei_theme):
-    """SPEC-R-V13-EX：thankyou main_text 字号 ≥ 72 pt。
+def test_spec_r_v13_ex_thankyou_main_text_restrained(tmp_path, huawei_theme):
+    """SPEC-R-V13-EX (2026-06-12 修订)：thankyou 标题字号收敛到 ~52pt 区间, 不再是 ≥72pt 巨字。
+
+    历史断言要求 ≥72pt, 但 2026-06-12 issue 明确: 96pt 标题占画面 1/3+ 命中 AP3,
+    须收敛到 ~52pt (对照 golden banking-p043)。本断言改为校验"标题是最大字号但克制"。
 
     兼容 pptx 的两种字号承载方式：paragraph 级 `p.font.size` 与 run 级 `r.font.size`。
-    renderer 可能把尺寸设在 paragraph 而非 run 上，扫描时要两者都看。
     """
     slide = _render_first_slide(tmp_path, huawei_theme, "thankyou")
     sizes = []
@@ -207,7 +204,11 @@ def test_spec_r_v13_ex_thankyou_main_text_large(tmp_path, huawei_theme):
                 if r.font.size is not None:
                     sizes.append(r.font.size.pt)
     assert sizes, "thankyou slide 无任何 paragraph/run 带 font.size"
-    assert max(sizes) >= 72, f"thankyou 最大字号 {max(sizes)} pt < 72 pt，可能未应用大字号"
+    # 标题应为最大字号, 落在克制区间 (~52.8pt); 上限 64pt 防回退到旧巨字, 下限 44pt 防过小
+    assert 44 <= max(sizes) <= 64, (
+        f"thankyou 标题最大字号 {max(sizes)} pt 不在克制区间 [44, 64]"
+        f"（>64 疑回退巨字命中 AP3, <44 疑过小）"
+    )
 
 
 def test_spec_r_v14_ex_cards_6_has_six_cards(tmp_path, huawei_theme):

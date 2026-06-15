@@ -179,3 +179,35 @@ def test_release_directory_scan_passes(scanner_module):
     """SPEC-DS-9：发布目录 skills-release/... 全量扫描必须 0 命中。"""
     fails = scanner_module.scan(RELEASE_DIR)
     assert fails == 0, f"发布包含 {fails} 条敏感词命中"
+
+
+# ============================================================
+# 域 D (TC-D1): us-military-rotation fixture 脱敏扫描 (S3-P0)
+#
+# PRD §9 + §14.2 硬约束:
+# - fixture 三层 (input/recorded/expected) 过 K01-K22 零命中 (零容忍)
+# - 独立新增 case, **不改** SOURCE_DIR:150 (扫 plugin 根属 S1, 会引爆 anchors)
+# - **不扩**扫到 plugin 根
+# 任何命中 = FAIL, 禁止标误报/改词表绕过 (CLAUDE.md 全局规则)
+# ============================================================
+
+US_MILITARY_FIXTURE_DIR = (
+    Path("D:/CODE/plugins/ppt") / "tests" / "fixtures" / "us-military-rotation"
+)
+
+
+@pytest.mark.skipif(
+    not US_MILITARY_FIXTURE_DIR.exists(),
+    reason=f"us-military fixture 尚未就绪（Dev 任务 9 前）: {US_MILITARY_FIXTURE_DIR}",
+)
+def test_us_military_fixture_scan_passes(scanner_module):
+    """TC-D1: us-military fixture 目录 K01-K22 零命中 (PRD §11.7, 零容忍)。
+
+    扫描覆盖 fixture 内全部 .md/.yaml/.yml/.txt/.html/.css/.js
+    (assert_no_sensitive.TEXT_EXTENSIONS)。命中即 FAIL, Dev 须重脱敏三层后重扫。
+    """
+    fails = scanner_module.scan(US_MILITARY_FIXTURE_DIR)
+    assert fails == 0, (
+        f"us-military fixture 含 {fails} 条敏感词命中 (零容忍)。"
+        f"参考 stdout 逐条修源文件 (改措辞, 禁止加白名单绕过) 后重跑。"
+    )

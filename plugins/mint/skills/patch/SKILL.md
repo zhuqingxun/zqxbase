@@ -7,7 +7,7 @@ description: >-
   或在阅读任意稿件时指出某个词识别错误（如"XX应该是YY"）。
 argument-hint: "<纠错指令> [<工作目录>] [--from 校对稿|编辑稿|分析稿]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.7
+version: 2.1.8
 ---
 
 

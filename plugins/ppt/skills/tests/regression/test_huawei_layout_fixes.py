@@ -14,6 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pptx.oxml.ns import qn
 
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 
@@ -139,12 +140,11 @@ def test_L1_section_divider_long_title_not_overlap_description(tmp_path):
 # L-2: toc giant_label 中文不裁切
 # ============================================================
 
-def test_L2_toc_giant_label_chinese_2chars_within_canvas(tmp_path):
-    """L-2: '目录' 2 字 giant_label 渲染时 textbox 应在画布内, 字号自适应."""
+def test_L2_toc_header_restrained_no_giant(tmp_path):
+    """L-2 (2026-05-31 taste C): toc 标题克制 — 无 300px 巨号 '目录'; 标题含 '目录'、在画布内、全页无巨号 (≤60pt, 合 P3)。"""
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "toc",
         "content": {
-            "giant_label": "目录",
             "title": "目录",
             "chapters": [
                 {"number": "01", "title": "A", "page": "01"},
@@ -155,21 +155,23 @@ def test_L2_toc_giant_label_chinese_2chars_within_canvas(tmp_path):
     }])
     prs = _render_one(plan, tmp_path)
     slide = prs.slides[0]
-    # canvas 7.5 inch * 914400 EMU/inch
     canvas_h_emu = int(7.5 * 914400)
     canvas_w_emu = int(13.333 * 914400)
-    # 找 giant text shape
-    giant = None
+    header = None
+    max_pt = 0.0
     for s in slide.shapes:
-        if s.has_text_frame and s.text_frame.text.strip() == "目录":
-            giant = s
-            break
-    assert giant is not None, "giant '目录' shape 未渲染"
-    # textbox 边界全部在画布内
-    assert giant.top >= 0 and giant.top + giant.height <= canvas_h_emu, (
-        f"giant textbox 垂直 ({giant.top} ~ {giant.top + giant.height}) 超画布 (0 ~ {canvas_h_emu})"
-    )
-    assert giant.left >= 0 and giant.left + giant.width <= canvas_w_emu
+        if not s.has_text_frame:
+            continue
+        if "目录" in s.text_frame.text and header is None:
+            header = s
+        for para in s.text_frame.paragraphs:
+            if para.font.size is not None:
+                max_pt = max(max_pt, para.font.size.pt)
+    assert header is not None, "toc 标题 '目录' 未渲染"
+    assert header.top >= 0 and header.top + header.height <= canvas_h_emu
+    assert header.left >= 0 and header.left + header.width <= canvas_w_emu
+    # 旧 giant '目录' 为 300px≈180pt, 违反 P3; 新设计全页字号封顶
+    assert max_pt <= 60.0, f"toc 出现巨号字 ({max_pt}pt), 违反 P3 装饰字不应巨大"
 
 
 # ============================================================
@@ -208,12 +210,20 @@ def test_L3_kpi_value_unit_single_line(tmp_path):
 # ============================================================
 
 def test_L4_matrix_y_axis_long_text_not_intrude_quadrant(tmp_path):
-    """L-4: y_axis 17 字长文本旋转 textbox 视觉宽度 (即 height) 应被字号自适应限制, 不压 quadrant."""
+    """L-4: y_axis 超长文本竖排 (eaVert) 时字号应被 fit_pt 自适应压到 [9, default) 防 height 溢出 grid.
+
+    2026-05-31 taste B: 旋转 270° (中文字侧躺+拥挤) → 真竖排 eaVert (字正立).
+    旧断言查 rotation==270 + height 自适应; 新断言查 vert=eaVert + 字号自适应.
+    注: 竖排 box 宽=axis 列宽、高=grid_h 都是硬编码几何, 不能作有效断言 (恒真);
+    eaVert 的真实失败模式是 height 溢出/换列, 唯一防回退点 = fit_pt 字号缩放.
+    """
+    # 36+ 字超长标签: 任何 grid_h (≤7.5") 下竖排都超高, fit_pt 必压到 9pt 下限
+    long_y = "专业深度纵轴关键岗位时间投入与作战经验广度综合评估多维度衡量标准参考体系"
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "matrix-2x2",
         "content": {
             "title": "M",
-            "y_axis": "专业深度(纵轴) × KD 关键岗位时间",  # 长文本
+            "y_axis": long_y,
             "x_axis": "广度",
             "quadrants": [
                 {"position": f"Q{i}", "heading": f"H{i}", "desc": "d"} for i in range(1, 5)
@@ -222,19 +232,20 @@ def test_L4_matrix_y_axis_long_text_not_intrude_quadrant(tmp_path):
     }])
     prs = _render_one(plan, tmp_path)
     slide = prs.slides[0]
-    # 找 y_axis 旋转 textbox
+    # 找 y_axis 竖排 (eaVert) textbox — 同时验证用真竖排而非回退到旧 rotation=270
     y_axis_shape = None
     for s in slide.shapes:
-        if s.has_text_frame and s.rotation in (270.0, 270):
+        if not s.has_text_frame:
+            continue
+        bodyPr = s.text_frame._txBody.find(qn("a:bodyPr"))
+        if bodyPr is not None and bodyPr.get("vert") == "eaVert":
             y_axis_shape = s
             break
-    assert y_axis_shape is not None, "y_axis 旋转 textbox 未找到"
-    # textbox.height (旋转后视觉宽度) 不应超 axis 列宽 + 安全边界
-    # axis_y_column_px = 140 -> 约 1.46 inch -> 1.46 * 914400 EMU
-    # 容许视觉宽度 ≤ 2 * y_col_in (中心对称)
-    max_height_emu = int(2 * 1.46 * 914400 + 0.5 * 914400)  # 加 0.5" buffer
-    assert y_axis_shape.height <= max_height_emu, (
-        f"y_axis 旋转 textbox.height ({y_axis_shape.height} EMU) 超过允许 {max_height_emu}, 会压象限"
+    assert y_axis_shape is not None, "y_axis 竖排 (eaVert) textbox 未找到 (不应回退到 rotation=270)"
+    # default_pt = _px_pt(y_axis_label_size_px=20) = 12pt; 超长标签 fit_pt 应压到 [9,12) 区间
+    y_pt = y_axis_shape.text_frame.paragraphs[0].font.size.pt
+    assert 9.0 <= y_pt < 12.0, (
+        f"超长 y_axis 字号 ({y_pt}pt) 应被 fit_pt 自适应压到 [9,12) 防 height 溢出 grid_h, 实际未缩放"
     )
 
 
@@ -360,6 +371,39 @@ def test_L7_pyramid_descriptions_align_with_layers(tmp_path):
     # 5 个 desc 顶沿应递增 (与 layer 顺序一致)
     tops = [s.top for s in desc_shapes]
     assert tops == sorted(tops), f"descriptions 顺序应与 layer 顺序一致, 实际 tops: {tops}"
+
+
+# ============================================================
+# taste A: pyramid 红色渐变阶梯 (替旧 顶 primary_dark 近黑 + 红红灰灰灰)
+# ============================================================
+
+def test_pyramid_gradient_fill_lightens_top_to_bottom(tmp_path):
+    """2026-05-31 taste A: pyramid N 层红色渐变 (顶 primary 浓红 → 底极浅红), 替旧 顶 primary_dark 近黑 + 下层 paper_2 灰.
+
+    防回退断言: 顶层填充 = primary (#C7000B); 各层亮度自顶向下单调递增 (越下越浅).
+    """
+    plan = _build_plan([{
+        "id": 1, "role": "content", "visual_type": "pyramid",
+        "content": {
+            "title": "P",
+            "levels": [{"name": f"L{i}"} for i in range(5)],
+        },
+    }])
+    prs = _render_one(plan, tmp_path)
+    slide = prs.slides[0]
+    from pptx.enum.shapes import MSO_SHAPE_TYPE  # type: ignore
+    # pyramid 梯形: AUTO_SHAPE 且高度明显 (排除标题区短红线 ~0.05")
+    traps = [s for s in slide.shapes
+             if s.shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE and s.height > int(0.3 * 914400)]
+    traps.sort(key=lambda s: s.top)
+    assert len(traps) >= 5, f"5 层 pyramid 应有 ≥5 个梯形, 实际 {len(traps)}"
+    fills = [s.fill.fore_color.rgb for s in traps[:5]]
+    # 顶层 = primary 浓红 (非旧 primary_dark 近黑)
+    assert str(fills[0]) == "C7000B", f"顶层应为 primary #C7000B, 实际 {fills[0]}"
+    # 亮度自顶向下单调递增 (红色渐变阶梯, 越下越浅)
+    lums = [0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] for c in fills]
+    for i in range(1, 5):
+        assert lums[i] > lums[i - 1], f"第 {i} 层应比上层浅 (渐变变浅), lums={lums}"
 
 
 # ============================================================

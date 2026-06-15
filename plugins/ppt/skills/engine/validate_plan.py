@@ -28,93 +28,21 @@ from pathlib import Path
 
 import yaml
 
-# ---------------------------------------------------------------------------
-# 阈值配置
-# ---------------------------------------------------------------------------
-
-# 每 key_point 最小字符数
-PER_POINT_MIN: dict[str, int] = {
-    "cards": 80,
-    "comparison": 100,
-    "process": 80,
-    "framework": 80,
-    "timeline": 80,
-}
-
-# 整页最小总字符数
-TOTAL_MIN: dict[str, int] = {
-    "bullets": 200,
-    "data-contrast": 80,
-    "table": 0,  # table 用行数校验
-}
-
-# 豁免类型（标题型页面，内容量不适用）
-EXEMPT_TYPES = {"hero-statement", "quote-hero", "story-card"}
-
-# 华为主题 variant 视觉类型 — 单一来源, 从 schemas.variants import 防 drift.
-# 2026-05-19 audit (P2-A) 前: 此处写死 18 字面列表与 schemas/variants.VARIANT_TYPES 重复, 加新 variant
-# 时容易只改 schemas 忘改这里 → 新 variant 走 "整页总量 min_total=150" 而非 variant Pydantic 校验
-# → 错误内容被放行渲染崩.
+# 华为主题 variant 视觉类型 — 单一来源 (P2-A 审计教训), ValidationReport 应用率口径用。
 from schemas.variants import VARIANT_TYPES as VARIANT_EXEMPT_TYPES
 
-# table 最小行数
-TABLE_MIN_ROWS = 2
+# 校验器子模块 (S4 Phase 2 god-module 拆分)
+from engine.validators.types import PointIssue, SlideResult  # noqa: F401
+from engine.validators.content_volume import (  # noqa: F401
+    _match_type_group, _total_content_chars, validate_content_volume,
+)
+from engine.validators.schema import validate_variant_schema
+from engine.validators.anti_patterns import validate_anti_patterns, _check_slide_warnings
 
 
 # ---------------------------------------------------------------------------
-# 数据结构
+# 报告聚合数据结构
 # ---------------------------------------------------------------------------
-
-@dataclass
-class PointIssue:
-    """单个 key_point 的问题。"""
-    index: int
-    text: str
-    char_count: int
-    min_required: int
-
-    @property
-    def deficit(self) -> int:
-        return max(0, self.min_required - self.char_count)
-
-
-@dataclass
-class SlideResult:
-    """单页校验结果。"""
-    slide_id: int
-    visual_type: str
-    title: str
-    status: str  # "PASS" | "FAIL" | "SKIP"
-    total_chars: int = 0
-    point_issues: list[PointIssue] = field(default_factory=list)
-    total_issue: str = ""  # 整页级别问题描述
-    table_issue: str = ""
-
-    def to_dict(self) -> dict:
-        d: dict = {
-            "slide_id": self.slide_id,
-            "visual_type": self.visual_type,
-            "title": self.title,
-            "status": self.status,
-            "total_chars": self.total_chars,
-        }
-        if self.point_issues:
-            d["point_issues"] = [
-                {
-                    "index": p.index,
-                    "chars": p.char_count,
-                    "min": p.min_required,
-                    "deficit": p.deficit,
-                    "text_preview": p.text[:60] + ("..." if len(p.text) > 60 else ""),
-                }
-                for p in self.point_issues
-            ]
-        if self.total_issue:
-            d["total_issue"] = self.total_issue
-        if self.table_issue:
-            d["table_issue"] = self.table_issue
-        return d
-
 
 @dataclass
 class ValidationReport:
@@ -180,95 +108,13 @@ class ValidationReport:
         }
 
 
+
 # ---------------------------------------------------------------------------
-# 校验逻辑
+# 校验编排
 # ---------------------------------------------------------------------------
-
-_VARIANT_MODEL_CACHE: dict[str, type] | None = None
-
-
-def _lookup_variant_model(visual_type: str) -> type:
-    """按 visual_type 返回 schemas/variants.py 对应 Content 子模型类。
-
-    首次调用时构建缓存；未找到抛 KeyError。
-    """
-    global _VARIANT_MODEL_CACHE
-    if _VARIANT_MODEL_CACHE is None:
-        from schemas import variants as _v  # 延迟导入避免循环
-        cache: dict[str, type] = {}
-        import inspect
-        from pydantic import BaseModel
-        for _name, _cls in inspect.getmembers(_v, inspect.isclass):
-            if not issubclass(_cls, BaseModel) or _cls is BaseModel:
-                continue
-            vt_field = _cls.model_fields.get("visual_type")
-            if vt_field is None:
-                continue
-            # Literal[...] 的取值位于 annotation 的 __args__
-            anno = vt_field.annotation
-            args = getattr(anno, "__args__", ())
-            for literal_val in args:
-                if isinstance(literal_val, str):
-                    cache[literal_val] = _cls
-        _VARIANT_MODEL_CACHE = cache
-    return _VARIANT_MODEL_CACHE[visual_type]
-
-
-def _match_type_group(visual_type: str) -> str | None:
-    """将 visual_type 映射到阈值组。"""
-    if visual_type in EXEMPT_TYPES:
-        return "exempt"
-    # 华为 variant 的字数约束由 Pydantic min_length 提供，字数阈值在这里豁免
-    if visual_type in VARIANT_EXEMPT_TYPES:
-        return "variant"
-    for prefix in PER_POINT_MIN:
-        if visual_type.startswith(prefix):
-            return prefix
-    if visual_type in TOTAL_MIN:
-        return visual_type
-    return None
-
-
-def _count_chars(text: str) -> int:
-    """计算有效字符数（去除首尾空白）。"""
-    return len(text.strip())
-
-
-def _point_text(point) -> str:
-    """Extract text from a key_point (str or StructuredPoint dict)."""
-    if isinstance(point, str):
-        return point
-    if isinstance(point, dict):
-        parts = []
-        for key in ("heading", "body", "metric_value", "metric_label"):
-            if point.get(key):
-                parts.append(point[key])
-        return " ".join(parts)
-    return str(point)
-
-
-def _point_body_chars(point) -> int:
-    """Count body chars from a key_point (for per-point validation)."""
-    if isinstance(point, str):
-        return _count_chars(point)
-    if isinstance(point, dict):
-        return _count_chars(point.get("body", ""))
-    return _count_chars(str(point))
-
-
-def _total_content_chars(content: dict) -> int:
-    """计算一页的总内容字符数。"""
-    total = 0
-    for key in ("title", "subtitle", "description", "body_text"):
-        if content.get(key):
-            total += _count_chars(content[key])
-    for point in content.get("key_points") or []:
-        total += _count_chars(_point_text(point))
-    return total
-
 
 def validate_slide(slide: dict) -> SlideResult:
-    """校验单页内容量。"""
+    """校验单页 (编排: setup -> exempt -> variant schema 或 content volume)。"""
     slide_id = slide.get("id", 0)
     visual_type = slide.get("visual_type", "bullets")
     content = slide.get("content", {})
@@ -285,144 +131,17 @@ def validate_slide(slide: dict) -> SlideResult:
 
     group = _match_type_group(visual_type)
 
-    # 豁免类型
+    # 豁免类型 (标题型页面)
     if group == "exempt":
         result.status = "SKIP"
         return result
 
-    # 华为 variant 校验：优先读 slide['variant']（Dev-1 renderer 读这里），
-    # 缺失时回退从 content 顶层取字段子集。两条路径都按 visual_type 路由到
-    # schemas/variants.py 对应子模型做严格校验（extra='forbid'）。
+    # 华为 variant: 按 schemas/variants.py 子模型严格校验 (path X)
     if group == "variant":
-        try:
-            model_cls = _lookup_variant_model(visual_type)
-        except KeyError:
-            result.status = "FAIL"
-            result.total_issue = f"visual_type '{visual_type}' 未注册 variant 子模型"
-            return result
+        return validate_variant_schema(slide, result, visual_type, content)
 
-        variant_data = slide.get("variant")
-        if variant_data is not None:
-            # 路径 A：slide['variant'] 已提供（推荐路径）
-            payload = dict(variant_data)
-            payload.setdefault("visual_type", visual_type)
-            source = "variant"
-        else:
-            # 路径 B：回退——从 content 取子模型声明字段子集 + 注入 discriminator
-            declared_fields = set(model_cls.model_fields.keys()) - {"visual_type"}
-            payload = {k: v for k, v in content.items() if k in declared_fields}
-            payload["visual_type"] = visual_type
-            source = "content"
-
-        try:
-            model_cls.model_validate(payload)
-            result.status = "PASS"
-        except Exception as exc:
-            result.status = "FAIL"
-            result.total_issue = (
-                f"{source} 按 {model_cls.__name__} 校验失败: {exc.__class__.__name__}"
-            )
-        return result
-
-    key_points = content.get("key_points") or []
-
-    # 按 point 校验的类型
-    if group in PER_POINT_MIN:
-        min_per_point = PER_POINT_MIN[group]
-        for i, point in enumerate(key_points):
-            chars = _point_body_chars(point)
-            text_preview = _point_text(point).strip()
-            if chars < min_per_point:
-                result.point_issues.append(PointIssue(
-                    index=i + 1,
-                    text=text_preview,
-                    char_count=chars,
-                    min_required=min_per_point,
-                ))
-        if result.point_issues:
-            result.status = "FAIL"
-        return result
-
-    # table 校验
-    if visual_type == "table":
-        table_data = content.get("table_data") or {}
-        headers = table_data.get("headers") or []
-        rows = table_data.get("rows") or []
-        issues = []
-        if not headers:
-            issues.append("headers 为空")
-        if len(rows) < TABLE_MIN_ROWS:
-            issues.append(f"rows={len(rows)} (min {TABLE_MIN_ROWS})")
-        if issues:
-            result.status = "FAIL"
-            result.table_issue = "; ".join(issues)
-        return result
-
-    # 整页总量校验（bullets, data-contrast, 其他）
-    if group in TOTAL_MIN:
-        min_total = TOTAL_MIN[group]
-    else:
-        min_total = 150  # 兜底
-
-    # key_points 的总字符（不含 title/subtitle）
-    points_chars = sum(_point_body_chars(p) for p in key_points)
-    body_chars = _count_chars(content.get("body_text") or "")
-    content_chars = points_chars + body_chars
-
-    if content_chars < min_total:
-        result.status = "FAIL"
-        result.total_issue = f"内容区 {content_chars} 字 (min {min_total})"
-
-    return result
-
-
-def _check_slide_warnings(slide: dict) -> list[str]:
-    """Check a single slide for WARN-level issues (non-blocking)."""
-    warnings = []
-    visual_type = slide.get("visual_type", "bullets")
-    content = slide.get("content", {})
-
-    if visual_type in EXEMPT_TYPES:
-        return warnings
-
-    # Missing description
-    if not content.get("description"):
-        warnings.append("missing description")
-
-    key_points = content.get("key_points") or []
-
-    # cards/comparison/process without heading
-    for prefix in ("cards", "comparison", "process", "framework"):
-        if visual_type.startswith(prefix):
-            for i, pt in enumerate(key_points):
-                if isinstance(pt, dict) and not pt.get("heading"):
-                    warnings.append(f"point {i+1}: missing heading")
-                elif isinstance(pt, str) and ": " not in pt:
-                    warnings.append(f"point {i+1}: missing heading (plain string)")
-            break
-
-    # data-contrast without metric_value
-    if visual_type == "data-contrast":
-        for i, pt in enumerate(key_points):
-            if isinstance(pt, dict) and not pt.get("metric_value"):
-                warnings.append(f"point {i+1}: missing metric_value")
-
-    return warnings
-
-
-def validate_anti_patterns(slides: list[dict]) -> list[str]:
-    """Detect plan-level anti-patterns (non-blocking warnings)."""
-    warnings = []
-    # Consecutive same visual_type
-    for i in range(1, len(slides)):
-        vt_prev = slides[i-1].get("visual_type", "")
-        vt_curr = slides[i].get("visual_type", "")
-        if vt_prev == vt_curr and vt_prev not in EXEMPT_TYPES:
-            warnings.append(
-                f"Slide {slides[i-1].get('id')}-{slides[i].get('id')}: "
-                f"consecutive {vt_curr}"
-            )
-    return warnings
+    # 其余: 按内容量校验 (per-point / table / 整页总量)
+    return validate_content_volume(result, visual_type, content, group)
 
 
 def validate_plan(plan_path: str) -> ValidationReport:
@@ -497,7 +216,7 @@ def format_text_report(report: ValidationReport, slide_warnings: dict[int, list[
 # CLI
 # ---------------------------------------------------------------------------
 
-def _load_theme_thresholds(theme_name: str) -> tuple[float, float]:
+def load_theme_thresholds(theme_name: str) -> tuple[float, float]:
     """读 themes/<theme>/preferences.yaml 的 application_thresholds.
 
     优先用 engine.theme_loader (P2 引入的单一来源), 不可用时回退 engine.render.load_theme.
@@ -520,6 +239,10 @@ def _load_theme_thresholds(theme_name: str) -> tuple[float, float]:
             warn_below = float(thresholds.get("warn_below", warn_below))
             fail_below = float(thresholds.get("fail_below", fail_below))
     return warn_below, fail_below
+
+
+# 向后兼容 alias (S4 Phase 2 L4: 公有化前旧名, orchestrator/tests 过渡用)
+_load_theme_thresholds = load_theme_thresholds
 
 
 def main() -> None:
@@ -555,7 +278,7 @@ def main() -> None:
     application_status: str | None = None
     application_thresholds: tuple[float, float] | None = None
     if args.theme == "huawei":
-        warn_below, fail_below = _load_theme_thresholds(args.theme)
+        warn_below, fail_below = load_theme_thresholds(args.theme)
         application_thresholds = (warn_below, fail_below)
         application_status = report.theme_application_status(warn_below, fail_below)
 

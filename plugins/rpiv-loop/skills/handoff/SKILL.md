@@ -1,8 +1,8 @@
 ---
 name: rpiv-loop:handoff
-description: 长程任务跨会话打结 + 续会话冷启动。把当前会话的状态、决策、待办、教训持久化成 handoff 文件，下次会话首条消息引用即可机械化恢复。当用户提到"打个结"、"生成 handoff"、"今天到这"、"明天接着"、"暂停一下"、"切别的话题"、"/handoff" 时触发。也适用于：完成显著 milestone 后用户切换任务、context window 用量明显增长、跨日推进同一长程任务。注意：本 skill 的 "handoff" 是 Claude Code 社区"跨会话打结"语义（非 OpenAI Agents SDK 的多 agent 间运行时转移）。状态机仅 pending → archived 两状态，handoff 是一次性票据，被新会话消费后即归档。
+description: 长程任务跨会话打结 + 续会话冷启动。**本 skill 仅负责创建新 handoff 或 mark-consumed 已有 handoff**，把当前会话的状态、决策、待办、教训持久化成 handoff 文件，下次会话首条消息引用即可机械化恢复。当用户提到"打个结"、"生成 handoff"、"创建 handoff"、"今天到这"、"明天接着"、"暂停一下"、"切别的话题"、"/rpiv-loop:handoff" 时触发。**用户意图为"查看 / 列出 / 看一下 pending handoff" 时, 禁止触发本 skill, 改用 `/rpiv-loop:handoff-list` 命令 (fast path, 不加载 SOP)**。也适用于：完成显著 milestone 后用户切换任务、context window 用量明显增长、跨日推进同一长程任务。**配套双层 hook 自动检测**：(1) SessionStart hook 启动时扫 cwd + 直接子目录的 pending handoff，命中即注入 system context；(2) UserPromptSubmit hook 在会话**首条 user prompt** 时再次注入 prompt 前缀强提醒 (用 ~/.claude/handoff_first_prompt_seen.json 跟踪 session_id, 同会话只注入一次)。两层叠加保证: 即使 LLM 漏看 SessionStart 注入, 也会在第一条用户消息时被 UserPromptSubmit 强制提醒, 你必须先用 AskUserQuestion 询问用户是否推进 handoff 再处理用户原始请求。注意：本 skill 的 "handoff" 是 Claude Code 社区"跨会话打结"语义（非 OpenAI Agents SDK 的多 agent 间运行时转移）。状态机仅 pending → archived 两状态，handoff 是一次性票据，被新会话消费后即归档。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.10
+version: 2.1.11
 ---
 
 # Handoff: 跨会话长程任务交接
@@ -19,8 +19,9 @@ version: 2.1.10
 # 标记已消费（由 bootstrap prompt 自动调用，不需要手动跑）
 /rpiv-loop:handoff --mark-consumed rpiv/handoff-YYYY-MM-DD-v<n>.md
 
-# 列出当前项目所有 pending handoff
-/rpiv-loop:handoff --list-pending
+# 列出当前项目所有 pending handoff (fast path, 不走本 skill)
+/rpiv-loop:handoff-list           # 列 pending
+/rpiv-loop:handoff-list --all     # 连 archived 一起列
 ```
 
 ## 核心概念（动手前必读）
@@ -202,6 +203,69 @@ Pending handoff (N):
 ```
 
 `N > 1` 时输出 warn："⚠️ 多份 pending handoff 同时存在，工作流可能出错。预期应为 0 或 1。"
+
+## 模式 D: SessionStart hook 自动检测（v1.1.0 起）
+
+新会话启动时（matcher `startup|clear|resume`）自动跑 `hooks/handoff_detector.py`，检测 pending handoff 并在 system context 中注入提醒。**无需手动调用**，作为 mode C 的"被动触发"对照面。
+
+### 行为
+
+1. **扫描范围**：cwd + cwd 的直接子目录（深度 ≤2），匹配 `<dir>/rpiv/handoff-*.md` 和 `<dir>/handoff/handoff-*.md`
+2. **黑名单排除**：`.git` / `node_modules` / `.venv` / `__pycache__` / `dist` / `build` / `.next` / `target` / 隐藏目录（`.` 开头）
+3. **过滤**：仅 frontmatter `status: pending` 才计入
+4. **排序**：优先 frontmatter `updated_at`，fallback `mtime`，最新在前
+5. **stale 标红**：距今 ≥7 天加 `[⚠️ 距今 N 天未消费]` 视觉提示
+6. **静默返回**：cwd 下 + 直接子目录均无 pending → exit 0 不注入任何东西
+7. **错误兜底**：脚本任何异常静默 exit 0，绝不阻塞会话启动
+
+### 注入文本格式
+
+```
+🎯 检测到 N 份 pending handoff (cwd: <path>):
+
+📍 **当前项目 (./)** - K 条:
+  [1] `rpiv/handoff-2026-05-27-v1.md`  [今天更新]
+      📝 <description>
+      → /rpiv-loop:handoff --mark-consumed rpiv/handoff-2026-05-27-v1.md
+
+📂 **子项目 sub_a/** - M 条:
+  · `sub_a/rpiv/handoff-2026-05-15-v0.md`  [⚠️ 距今 12 天未消费]
+      📝 <description>
+      → /rpiv-loop:handoff --mark-consumed sub_a/rpiv/handoff-2026-05-15-v0.md
+
+---
+**请在本次会话开头主动用 AskUserQuestion 询问用户:**
+- 是否要 mark-consumed 某份 handoff 并按其 bootstrap prompt 推进
+- 还是先做别的 (跳过本次提醒)
+```
+
+### Claude 收到此 context 应做的事
+
+注入文本末尾明确要求：**首条回复中主动用 AskUserQuestion 询问用户是否继续推进**。选项至少含：
+1. "推进 [1] - <最新 pending 的 description>" → 读该 handoff + 调 `/rpiv-loop:handoff --mark-consumed <path>` + 按 bootstrap prompt 推进
+2. "推进 [其他编号]"（多份时）
+3. "跳过本次提醒，先做别的"（用户当前有别的任务，本次会话不消费 pending）
+4. "归档某份"（stale 太久已无意义）
+
+注意：单纯 Read handoff **不会**改 status，必须显式调 `--mark-consumed`。
+
+### 与模式 C `--list-pending` 的关系
+
+| 维度 | 模式 C `--list-pending` | 模式 D SessionStart hook |
+|------|------------------------|--------------------------|
+| 触发 | 用户主动调用 | 新会话启动自动 |
+| 输出渠道 | terminal stdout | system context（Claude 可见）|
+| 扫描深度 | cwd 一层 | cwd + 直接子目录（≤2）|
+| 失败影响 | 报错 | 静默（不阻塞）|
+| 适用场景 | 怀疑有遗忘的 pending | 防止"不知道有 handoff 待续" |
+
+### Hook 部署位置
+
+- 脚本：`D:/CODE/plugins/rpiv-loop/hooks/handoff_detector.py`
+- 注册：`D:/CODE/plugins/rpiv-loop/hooks/hooks.json` 的 `SessionStart` 块（matcher `startup|clear|resume`）
+- 调用：`uv run --no-project python "${CLAUDE_PLUGIN_ROOT}/hooks/handoff_detector.py"`
+
+cc-dev 模式加载本 plugin 时自动注册；sync-claude 同步给其他设备后随 plugin 一起生效。
 
 ## Source-of-truth 文件分层（强烈建议）
 

@@ -2,11 +2,13 @@
 name: ppt:taste
 description: >-
   视觉评审 PPT, 输出双轴评分 (layout / palette 解耦) + 描述性建议 + actionable 改进项.
-  基于 ppt plugin 共享锚点库 (10 张华为 golden 锚点 + 5 条审美原则 + 5 类反模式).
+  双模式 (锚点模式 / 通用原则模式): 锚点模式基于 ppt plugin 共享锚点库 (10 张华为 golden
+  锚点 + 5 条审美原则 + 5 类反模式) 做视觉对照; 通用原则模式仅按 P1-P5 原则 + AP1-AP5
+  反模式打分, 适用于 codex 等非华为风产物.
   当用户提到 "评审 PPT" "ppt:taste" "看一下 deck 质量" "审美评分" "找问题" 时触发.
-argument-hint: "<pptx 路径> 或 <png 目录>"
+argument-hint: "<pptx 路径> 或 <png 目录> [--mode anchor|general]"
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
-version: 3.0.4
+version: 3.0.5
 ---
 
 # PPT:Taste — 视觉评审
@@ -42,14 +44,29 @@ version: 3.0.4
 
 **关键**: 评 4 之前问自己 "这页真的接近 golden 锚点吗?" 避免默认 5 分.
 
+## 评分模式选择
+
+两种评分模式, 双轴解耦与 1-5 标尺在两种模式下都成立, 区别在**评分依据**:
+
+- **anchor (锚点模式, 默认)**: golden 锚点视觉对照 + P1-P5 + AP1-AP5. 适用 huawei renderer 产物及任何希望对标华为 golden 水准的 deck.
+- **general (通用原则模式)**: 仅按 anchors.yaml 的 P1-P5 原则 + AP1-AP5 反模式打分, 不做 golden 对照. 适用 codex 等非华为风格产物 — 不以 "像不像华为" 论分.
+
+模式判定优先级 (从高到低):
+
+1. 用户显式 `--mode anchor|general`
+2. 已知产物来源: 检查 deck 同目录 `.ppt-workdir/runs/*-codex/manifest.json`, 仅当某 manifest 的 `pptx_path` 指向目标 deck (路径归一化后一致) 时 → general; 其余情况 (无 -codex run 目录, 或 manifest 指向别的 deck — 如 `--compare` 后双引擎产物共存同一目录) → anchor. 不能只看 "-codex run 目录是否存在", 双引擎共存目录会误判 renderer 产物
+3. 默认 anchor
+
 ## 参数解析
 
 从 `$ARGUMENTS` 解析:
 - **路径** (必需): `.pptx` 文件 或 PNG 目录 (含 slide-NN.png)
+- `--mode anchor|general` (可选): 评分模式, 缺省按「评分模式选择」节判定
 
 示例:
 - `/ppt:taste output/report.pptx` — 输入 PPTX, skill 内部转 PNG
 - `/ppt:taste output/.ppt-workdir/png/` — 输入 PNG 目录, 直接评
+- `/ppt:taste output/codex-deck.pptx --mode general` — 通用原则模式评审
 
 ## 执行流程
 
@@ -112,6 +129,7 @@ version: 3.0.4
 - **Deck**: <name>
 - **Timestamp**: <ISO 8601>
 - **Pages**: <N>
+- **Mode**: anchor | general-principles
 - **Anchor library version**: 2.0 (plugin scope)
 
 ## Deck 总分
@@ -150,12 +168,36 @@ version: 3.0.4
 - {列出实际用到的 golden 文件}
 ```
 
+(general 模式下「锚点参考来源」节替换为: `## 评分依据` + 一行 `anchors.yaml P1-P5 + AP1-AP5`)
+
 ### Step 5: 输出确认
 
 完成报告后:
 1. 输出报告路径让用户打开
 2. 简短总结 deck 级别 layout / palette 双轴分数 + Top 3 改进项
 3. 询问用户是否需要对某些页深入分析 / 或对建议提问
+
+## 通用原则模式规程 (--mode general)
+
+general 模式复用上述执行流程骨架 (Step 1 PNG 准备 / Step 4 报告 / Step 5 确认不变), 仅替换 Step 2 与 Step 3:
+
+### Step 2 (general 替代): 加载评分依据
+
+仅 Read `<plugin-root>/anchors.yaml` 的 principles 节 (P1-P5) + antipatterns 节 (AP1-AP5). **不 Read golden PNG** — 省 token, 且不以 "像不像华为" 论分. layout-only / extended 同样不加载.
+
+### Step 3 (general 替代): 逐页评审
+
+对每张 slide PNG (用 Read 加载):
+
+1. **识别 slide type**: cover / toc / section / content / data / closing / slogan
+2. **逐条原则观察**: 每页按 P1 (浅色调) / P3 (字号节制 + 内容舒展) / P4 (框间关联可视化) / P5 (数据严谨) 逐条给出具体观察; P2 (解耦) 体现为双轴评分本身, 不单独打分
+3. **反模式检查**: 对照 AP1-AP5 标明命中项 (若有)
+4. **双轴评分** (标尺语义平移):
+   - 5 = P1/P3/P4/P5 全满足且无任何 AP 命中, 布局有编辑级叙事感
+   - 4 = 满足专业标准的合格水平
+   - 3 及以下与锚点模式标尺含义相同
+   - **命中 AP 任一, 对应轴自动 ≤ 2**
+5. **改进建议** (仅当任一轴 ≤ 3 时): actionable 1-2 句, **引用原则编号** (如 "P1: 改浅色底" / "P3: 标题字号缩到正文 3 倍以内"), 不引用 golden 文件名
 
 ## 注意事项
 
@@ -166,6 +208,7 @@ version: 3.0.4
 5. **extended 仅文字**: 不要主动 Read extended/ 下 PNG (token 成本高), 仅查 anchors.yaml 描述.
 6. **textual rendering bug 检测**: 看到 `code='X' title='Y' summary='Z'` 类 Python 字面值要立即标 AP5 (模板变量泄露).
 7. **避免空泛形容词**: 禁止 "整洁现代" / "克制有力" 这种泛词. 必须给具体观察 (字号几号 / 底色什么 / 哪里对齐失衡).
+8. **general 模式公平性**: general 模式禁止因 "不像华为风格" 扣分, 只按 P1-P5 原则与 AP1-AP5 反模式打分. 非华为风的高品位设计 (编辑级排版 / 摄影感视觉) 满足原则即可得高分.
 
 ## 输出位置
 

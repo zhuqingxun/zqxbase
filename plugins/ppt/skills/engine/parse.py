@@ -131,10 +131,12 @@ def _parse_svg_dimensions(filepath: Path) -> tuple[int | None, int | None]:
             parts = vb.split()
             if len(parts) == 4:
                 return int(float(parts[2])), int(float(parts[3]))
-        # Try width/height attributes (strip units like "px")
+        # Try width/height attributes (strip units like "px"); 百分比单位 (如 "100%") 无绝对
+        # 尺寸, 跳过避免把 "100%" 误抽成 100px → 错误纵横比 (viewBox 已优先尝试; 无 viewBox
+        # 又是百分比 → 返回 None 让上层 fallback 到 full-page-exhibit).
         w_attr = root.get("width", "")
         h_attr = root.get("height", "")
-        if w_attr and h_attr:
+        if w_attr and h_attr and "%" not in w_attr and "%" not in h_attr:
             w_val = re.sub(r'[^0-9.]', '', w_attr)
             h_val = re.sub(r'[^0-9.]', '', h_attr)
             if w_val and h_val:
@@ -224,10 +226,14 @@ def main(input_path: str, output: str) -> None:
         print(f"ERROR: Path not found: {input_path}", file=sys.stderr)
         sys.exit(1)
 
+    # 单次扫描: 在主循环内累计 total_files, 避免对 files 再做一次 is_file() 全量遍历
+    # (rglob 已是单次 walk; 原版 assets.total_files 又 list-comp 调一遍 is_file 重复 stat).
     sources = []
+    total_files = 0
     for f in files:
         if not f.is_file():
             continue
+        total_files += 1
         ext = f.suffix.lower()
         if ext == ".md":
             sources.append(parse_markdown(f))
@@ -236,7 +242,7 @@ def main(input_path: str, output: str) -> None:
         # Phase 2: elif ext == ".docx": ...
 
     assets = {
-        "total_files": len([f for f in files if f.is_file()]),
+        "total_files": total_files,
         "text_sources": sum(1 for s in sources if s["type"] == "markdown"),
         "image_assets": sum(1 for s in sources if s["type"] == "image"),
         "estimated_content_volume": estimate_volume(sources),

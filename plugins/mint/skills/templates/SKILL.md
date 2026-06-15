@@ -7,7 +7,7 @@ description: >-
   仅 interview 场景可用；polish 通过 resolve-template 自动选出本表中的条目。
 argument-hint: "[add|list|remove] [<id>] [<name>] [<file>] [<applies_to>] [--set-default]"
 allowed-tools: Read, Bash, Glob, AskUserQuestion
-version: 2.1.7
+version: 2.1.8
 ---
 
 # mint:templates — 访谈提纲注册表管理

@@ -2,7 +2,7 @@
 name: rpiv-loop:flow-status
 description: 查看过程文件的状态
 allowed-tools: Bash, Edit, AskUserQuestion
-version: 2.1.10
+version: 2.1.11
 ---
 
 # /rpiv-loop:flow-status
