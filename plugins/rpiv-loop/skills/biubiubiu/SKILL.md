@@ -2,8 +2,8 @@
 name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage, Skill
-version: 2.1.11
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskStop, SendMessage, Skill
+version: 2.1.12
 ---
 
 # Biubiubiu: 全自主 RPIV 团队执行
@@ -73,13 +73,11 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 ### 场景 1：...
 ```
 
-### 步骤 2：创建团队
+### 步骤 2：团队机制说明（无需显式创建团队）
 
-```
-TeamCreate:
-  team_name: rpiv-{feature-name}
-  description: RPIV 全自主开发: {feature-name}
-```
+当前 Claude Code harness **没有 `TeamCreate`/`TeamDelete` 工具**。团队是**单一 implicit flat team**：你（main 会话）即 Leader，用 `Agent` 工具 spawn 的每个 named agent 自动加入该 implicit team，可被 `SendMessage` 按 name 寻址。因此本步骤无需任何操作，直接进入步骤 3。
+
+> 历史备注：旧 SOP 曾用 `TeamCreate` / `team_name`，当前 harness 已废弃——`Agent` 工具的 `team_name` 参数标注 "Deprecated; ignored. The session has a single implicit team."
 
 ### 步骤 3：创建任务结构
 
@@ -110,7 +108,9 @@ TeamCreate:
 
 **第一批（并行启动 3 个 agent）：**
 
-使用 Task 工具启动以下 agent，设置 `team_name` 为当前团队名，`subagent_type` 为 `general-purpose`：
+用 `Agent` 工具 spawn 以下每个角色，参数：`name` = 角色名（如 `architect`）、`subagent_type` = `general-purpose`、`run_in_background` = `true`（不阻塞 Leader 协调）。**不要传 `team_name`**（已废弃且被忽略）。spawn 出的 named agent 自动加入 implicit team，后续用 `SendMessage`（`to` = 角色名）双向通信；spawn 返回的 `agent_id`（形如 `architect@session-xxxx`）可用于 `TaskStop` 兜底。
+
+> 实测（2026-06-18 当前 harness）：main 会话可正常 spawn ≥4 个 named teammate；spawn 时 Leader 身份正确识别为 `team-lead`；`SendMessage` 双向投递正常。**历史现象（2026-06-17 偶发，当前不复现）**：曾出现 spawn 第 3 个 named 报 `team roster is flat` + Leader 的 `SendMessage` sender 被显示成 teammate（architect）——根因是 harness 把 main 误降级成 teammate（teammate 不能再 spawn teammate）。若再次遇到，按「规模自适应 → 降级路径」处理，不要反复重试 spawn。
 
 #### Architect Agent
 
@@ -302,7 +302,7 @@ Leader **同一时刻 spawn 多个 agent**（如 Dev-1 + Architect + QA 同步�
 3. 同一资源名出现在多个 prompt 时,**确认 ownership 唯一**(只能一个 agent 主负责,其他至多 verify-only 或下游消费)
 4. 有冲突先修后 spawn,**禁止 spawn 后用 SendMessage 纠正**——SendMessage 是异步队列,agent 已按旧 prompt 推进时 race condition 难恢复
 
-**触发关键词**：spawn 多 agent / 同时启动 / TeamCreate / Architect + QA + Dev 并行启动 / 多 agent 任务分配
+**触发关键词**：spawn 多 agent / 同时启动 / Agent 工具 spawn 多个 named teammate / Architect + QA + Dev 并行启动 / 多 agent 任务分配
 
 **为什么**：2026-05-26 P-B 清理 RPIV 复盘暴露——Leader spawn Dev-1 + Architect 时 prompt 对 `test_reflection.py` / `TestDigestCompat` ownership 矛盾,Dev-1 按旧 prompt 执行完成了 QA 应做的 Q2/Q3,QA 后续 verify-only 部分时间浪费。spawn 多 agent 是 RPIV 流程中**最易产生 race condition 的关键节点**,cross-check 单次约 2-3 秒,相对错误 ownership 导致的 1-2 轮 agent 工作浪费成本可忽略。
 
@@ -360,7 +360,7 @@ related_files:
 {推荐的改进和扩展方向}
 ```
 
-2. **关闭团队**：对所有 agent 发送 `shutdown_request`，等待确认后 `TeamDelete`
+2. **关闭团队**：对每个仍活跃的 named teammate 用 `SendMessage` 发送 `{"type": "shutdown_request", "reason": "..."}`，agent 回 `shutdown_response approve=true` 后自行终止。**当前 harness 无 `TeamDelete`**，无需也不能调用。某 agent 无响应时，用 `TaskStop`（task_id = spawn 返回的 agent_id）强制终止兜底
 3. **归档过程文件**：将本次流程产生的所有 `rpiv/` 过程文件归档到 `rpiv/archive/`。具体操作：
    - 创建 `rpiv/archive/` 目录（如不存在）
    - 遍历以下文件（如存在）：
@@ -400,6 +400,8 @@ related_files:
 - **大型**（>10 文件或多模块）：5-6 agent — 完整团队配置
 
 在步骤 1 完成后，根据需求复杂度判断规模，选择合适的团队配置。
+
+**降级路径（named spawn 受限时）**：当前 harness 实测可正常 spawn 多个 named teammate；但若遇到 named spawn 受限（步骤 4 备注的历史现象），按以下顺序降级——① **Leader 兼任 Dev**：plan 已机械化到代码片段级时，中大型也可由 Leader 直接实现 + named Architect/QA 审查；② **Dev/Research 改用 omit-name background subagent**：`Agent` 不传 `name`、`run_in_background: true`，完成即返回结果，不中途双向通信。named teammate 仅保留给需要全程双向协作的 Architect/QA。这条也是 2026-06-17 实战的兜底做法（Leader 兼 Dev + omit-name subagent，10 AC 全通过，质量未受损）。
 
 ## 备注
 
