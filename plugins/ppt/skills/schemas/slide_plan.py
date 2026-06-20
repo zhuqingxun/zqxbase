@@ -84,8 +84,13 @@ class ImagePosition(BaseModel):
 
 
 class SlideContent(BaseModel):
-    """单页内容。"""
-    model_config = ConfigDict(extra="allow")
+    """单页内容。
+
+    2026-06-19 ARCH-002 阶段2 (T12): extra='allow'→'forbid'。收紧数据契约——
+    华为版式专属字段必须放 slide.variant (path X) 下, 禁止平铺到 content 顶层
+    (path Y)。path Y 平铺数据经 SlidePlan.from_yaml 构造时直接 ValidationError。
+    """
+    model_config = ConfigDict(extra="forbid")
     title: str
     subtitle: str | None = None
     description: str | None = None
@@ -127,6 +132,18 @@ _LEGACY_VISUAL_TYPES: set[str] = {
     "framework", "framework-2col", "framework-3col", "framework-4col",
 }
 
+# 2026-06-19 S4 收敛 (T13): 废弃但**仍合法可渲染**的 visual_type (向后兼容一版)。
+# 这些类型停止被 prompt_assembler / SKILL.md 推荐 (Architect 侧改动), schema 侧仅
+# 标记 deprecated —— 它们仍在 _LEGACY_VISUAL_TYPES 内 (故 VALID_VISUAL_TYPES 不变,
+# 旧 plan 仍能渲染), renderer 也保留一版 (Dev-1 侧不物理删)。下一版本评估物理删除。
+# framework 系列被无后缀自适应母版 (cards/process/comparison) + huawei 18 版式取代;
+# story-card / timeline-horizontal 被 quote-hero / timeline-huawei 取代。
+_DEPRECATED_VISUAL_TYPES: set[str] = {
+    "framework", "framework-2col", "framework-3col", "framework-4col",
+    "story-card",
+    "timeline-horizontal",
+}
+
 VALID_VISUAL_TYPES: set[str] = _LEGACY_VISUAL_TYPES | VARIANT_TYPES
 
 
@@ -136,9 +153,9 @@ class SlideSpec(BaseModel):
     华为 18 个新版式的专属字段通过 `variant` 字段承载（Annotated discriminated union，
     extra='forbid' 严格校验）。renderer 从 `spec.variant` 读取结构化数据。
 
-    兼容模式：不填 `variant` 的旧生产者可把字段直接放进 content 顶层
-    （SlideContent.extra='allow' 兜底），validate_plan.py 优先校验 `slide['variant']`，
-    缺失时退回从 content 取字段子集按 visual_type 对应子模型二次校验。
+    数据契约（2026-06-19 ARCH-002 阶段2 收紧后）：专属字段必须放 `slide.variant`
+    下（path X）。SlideContent 已改 extra='forbid'，**不再**接受字段平铺到 content
+    顶层（path Y）——validate_plan.py 对缺 variant 块的平铺数据直接判 FAIL。
     """
 
     id: int = Field(ge=1)

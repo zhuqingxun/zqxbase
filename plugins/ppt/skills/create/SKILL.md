@@ -6,7 +6,7 @@ description: >-
   也适用于: 用户提供了 markdown 文件或目录并要求转化为 PPT 的场景。
 argument-hint: "<输入路径> [--preset <name>] [--theme <name>] [--output <path>] [--engine codex|renderer] [--compare] [--cover-image] [--style-ref <pptx>] [--no-style-ref]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.5
+version: 3.0.6
 ---
 
 # PPT:Create — 一键生成最高质量 PPT
@@ -150,7 +150,7 @@ orchestrator 会: 校验 `02-architect/output.yaml` (协议层: 存在性 + YAML
 
 ### Step 4: 视觉规划 (你作为视觉规划师 + deterministic 门禁)
 
-**Read `<run-dir>/03-plan/prompt-context.md` 和 `<run-dir>/03-plan/theme-prompt.md`**. 后者由 `engine/prompt_assembler.py` 从 `themes/<theme>/preferences.yaml` + `schemas/variants.py` 派生, 含 6 类硬约束 + 12 类软引导 + 18 版式字段速查 + 退回链 + path X 字段填法.
+**Read `<run-dir>/03-plan/prompt-context.md` 和 `<run-dir>/03-plan/theme-prompt.md`**. 后者由 `engine/prompt_assembler.py` 从 `themes/<theme>/preferences.yaml` + `schemas/variants.py` 派生, 含 6 类硬约束 + 软引导 + 母版字段速查 + 退回链 + path X 字段填法. 优先选无后缀自适应母版 (cards / process / comparison): **选母版给数据, 布局由数据量自动派生, 不要猜具体 N** (旧 cards-N / process-N-phase / comparison-N 仍兼容但 deprecated, 不推荐新用).
 
 锚点库使用 (可选参考): `<plugin-root>/anchors.yaml` 的 `usage_by_skill.ppt:create` — 决定 layout 时查 layout_only / extended 找参考案例 (学 layout 不学 palette, 按原则 P2); 生成前对照 antipatterns AP1-AP5 主动避免反模式.
 
@@ -160,9 +160,9 @@ orchestrator 会: 校验 `02-architect/output.yaml` (协议层: 存在性 + YAML
 3. 每页有 description (豁免类型除外), 数据页有 footnote
 4. 连续 2 页不得用相同 visual_type (布局多样性)
 
-**huawei 18 版式字段填法 (path X)**:
+**母版字段填法 (path X)**:
 - 公共字段 (title / subtitle / description) → `slide.content`
-- 专属字段 (kpis / chapters / layers / steps / phases / quadrants / personas / risks / units / ...) → `slide.variant`
+- 专属字段 (kpis / chapters / layers / steps / phases / quadrants / personas / risks / units / 自适应母版的 points / ...) → `slide.variant`
 - 不要把专属字段平铺到 slide.content 顶层
 
 产出 `<run-dir>/03-plan/output.yaml` (= slide-plan, schema 由 `schemas/slide_plan.py` 定义).
@@ -178,7 +178,7 @@ orchestrator 会: `SlidePlan.from_yaml` pydantic 校验 → `validate_plan` 内�
 **失败处理 (读 `error.json` 的 `rule` 字段区分)**:
 - exit 1, `rule=schema.variant_validation`: variant 字段不合法, 按 theme-prompt.md path X 修正后覆写 output.yaml 重新 resume
 - exit 1, `rule=content_volume.*`: 内容量 FAIL — 读 `error.json` 的 `message` (含 slide_no + 字数), 从 `02-architect/output.yaml` source_refs 回溯源材料补充 body; **连续 3 轮无法通过 → AskUserQuestion 让用户决策**
-- exit 1, `rule=application_rate.fail_below_30`: 应用率 FAIL — 按 theme-prompt.md 重选 visual_type (cards-N → kpi-stats / architecture-layered 等); **连续 2 轮未达阈值 → AskUserQuestion**
+- exit 1, `rule=application_rate.fail_below_30`: 应用率 FAIL — 按 theme-prompt.md 重选 visual_type (通用 bullets/table → 自适应 cards/process 或 kpi-stats / architecture-layered 等母版); **连续 2 轮未达阈值 → AskUserQuestion**
 
 > orchestrator 短命无状态, 不计轮数. 重试轮数 (内容量 3 轮 / 应用率 2 轮) 由你 (会话) 据 error.json 自行计数 + 决定何时升级 AskUserQuestion.
 

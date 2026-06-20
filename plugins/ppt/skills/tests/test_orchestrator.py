@@ -230,8 +230,8 @@ class TestRunSubcommand:
             f"input_sha256 应为 64 hex 小写, 实际 {manifest.get('input_sha256')!r}"
         )
         assert manifest["input_kind"] in ("dir", "file")
-        assert manifest["plugin_version"] == "3.6.3", (
-            f"plugin_version 应为 3.6.3, 实际 {manifest.get('plugin_version')!r}"
+        assert manifest["plugin_version"] == "3.7.0", (
+            f"plugin_version 应为 3.7.0, 实际 {manifest.get('plugin_version')!r}"
         )
         assert manifest["taste_requested"] is False
         # stages: parse 已 completed

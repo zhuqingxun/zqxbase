@@ -259,11 +259,39 @@ def normalize_point(p) -> StructuredPoint:
     return StructuredPoint(body=str(p))
 
 
+def _adaptive_point_to_structured(p) -> StructuredPoint:
+    """AdaptivePoint (cards/process/comparison 自适应母版 path X 条目) → StructuredPoint。
+
+    AdaptivePoint 字段 heading/body/icon; StructuredPoint 无 icon (cards/process/comparison
+    renderer 当前不渲染 icon, 忽略)。元素可能是 AdaptivePoint 对象或 dict (防御性)。
+    """
+    if isinstance(p, StructuredPoint):
+        return p
+    if isinstance(p, dict):
+        return StructuredPoint(heading=p.get("heading"), body=p.get("body") or "")
+    # AdaptivePoint / 其它带属性对象
+    return StructuredPoint(
+        heading=getattr(p, "heading", None),
+        body=getattr(p, "body", None) or "",
+    )
+
+
 def get_points(spec: SlideSpec) -> list[StructuredPoint]:
-    """Extract and normalize key_points from spec."""
-    if not spec.content.key_points:
-        return []
-    return [normalize_point(p) for p in spec.content.key_points]
+    """Extract and normalize points from spec, path Y (content.key_points) 优先, path X (variant.points) fallback。
+
+    收敛后无后缀母版 (cards/process/comparison) 的 typed variant 把条目放在 `variant.points`
+    (list[AdaptivePoint]); 而 path Y 仍用 `content.key_points`。本函数统一两路: key_points 非空
+    时走原路径 (零行为变化); 为空时 fallback 读 variant.points (AdaptivePoint.heading/body)。
+    这是 T8 新建的 path X→points 桥, AdaptivePoint docstring 所述"双路兼容"由此落地。
+    """
+    if spec.content.key_points:
+        return [normalize_point(p) for p in spec.content.key_points]
+    # path X fallback: typed CardsContent/ProcessContent/ComparisonContent.points
+    variant = getattr(spec, "variant", None)
+    variant_points = getattr(variant, "points", None) if variant is not None else None
+    if variant_points:
+        return [_adaptive_point_to_structured(p) for p in variant_points]
+    return []
 
 
 def get_point_bodies(points: list[StructuredPoint]) -> list[str]:
@@ -536,13 +564,18 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
     gap = theme.get("spacing", {}).get("element_gap_inches", 0.25)
     corner_r = theme.get("visual_preferences", {}).get("corner_radius_inches", 0.1)
 
-    # 6 卡走 3x2; 其他 (2/3/4/5) 单行
-    if n_cards == 6:
-        n_cols, n_rows = 3, 2
-    else:
+    # 自适应布局派生 (T8 收敛: legacy cards-2..5 单行 + huawei cards-6 网格统一为按 n 派生):
+    #   n in {2, 3}: 单行 N 列 (横排)
+    #   n == 4:      双行 2x2
+    #   n in {5, 6}: 3 列 x 2 行网格 (n=5 时末格留空, 复用 cards-6 网格底座)
+    # 视觉统一会改变旧 cards-4 (4 列单行→2x2) / cards-5 (5 列单行→3x2) 外观 = 蓝图决策2 拍板接受。
+    if n_cards <= 3:
         n_cols, n_rows = n_cards, 1
+    elif n_cards == 4:
+        n_cols, n_rows = 2, 2
+    else:  # 5, 6
+        n_cols, n_rows = 3, 2
     card_width = (safe.width - gap * (n_cols - 1)) / n_cols
-    card_height_grid = (content_h - gap * (n_rows - 1)) / n_rows  # 网格分配的最大单卡高度
 
     points = get_points(spec)
     # path X: content.key_points 为空时, 从 variant.cards (Cards6Content.cards: heading/body)
@@ -570,24 +603,34 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
     has_headers = any(p.heading for p in points)
     header_h = ve["card_header_height_inches"] if has_headers else 0.0
 
-    # Content-aware card height: 单行场景按 content_h 算; 多行场景按 card_height_grid 算
-    max_card_height = card_height_grid
-    body_height = compute_card_height(
-        bodies, card_width, spec.design.body_size_pt, max_card_height - header_h,
-    ) if bodies else 2.0
-    card_height = min(body_height + header_h, max_card_height)
+    # 垂直铺满 content 区 (T9 视觉迭代修头重脚轻):
+    # 旧逻辑 card_height=min(内容高度, 网格高度) 在文案短时取矮卡 + 顶部对齐 + 固定 gap 行距,
+    # 导致多行网格挤 content 上半、下半大量空白。现改为按行均分 content 区垂直铺满。
+    # row_pitch = 每行占用的垂直步距 (含行间距); card_height = row_pitch - 行间距, 卡片更高更舒展。
+    # 卡高直接取网格均分高度 (不再 min 到内容高度), 内容靠卡内 body textbox 自适应渲染。
+    row_gap = gap if n_rows > 1 else 0.0
+    row_pitch = content_h / n_rows
+    card_height = max(row_pitch - row_gap, 0.5)
 
-    # Top-aligned cards (no vertical centering, 多行场景 center 不适用)
+    # 网格整体顶端对齐 content_top; 卡高已按行均分铺满, 自然填充到接近 footer。
     grid_top = content_top
-    if n_rows == 1 and ve["card_content_alignment"] == "center":
-        grid_top = content_top + max(0, (content_h - card_height) / 2)
+
+    # 单行场景 (cards-2/3) 卡高上限 (T9 v4): 用户审美判据"内外留白平衡" — 卡片矮下来,
+    # 卡外留白 (卡到 content 区上下边) 与卡内文字留白视觉相当。单行卡封顶到 content_h 的 50%
+    # (~2.67"), 封顶后整个单行卡带在 content 区垂直居中, 卡外上下留白各约 1.34"。
+    # body 文本框 MIDDLE 锚点让文字在矮卡内垂直居中, 内外留白趋于平衡。多行不受影响。
+    if n_rows == 1:
+        single_row_max = content_h * 0.5
+        if card_height > single_row_max:
+            card_height = single_row_max
+            grid_top = content_top + (content_h - card_height) / 2
 
     show_number = ve["card_show_number"]
     for i in range(n_cards):
         r = i // n_cols
         c = i % n_cols
         x = safe.left + c * (card_width + gap)
-        card_top = grid_top + r * (card_height + gap)
+        card_top = grid_top + r * row_pitch
         fill = colors[i % len(colors)]
         use_rounded = theme.get("visual_preferences", {}).get("rounded_corners", True)
 
@@ -615,16 +658,18 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
                 theme, spec, index=i,
             )
 
-        # Card body text — top-aligned
+        # Card body text — 垂直居中 (T9 v3, 用户诉求"文字整体在中间, 不顶在上面更舒服")。
+        # header 仍在卡顶, header 下方 body 区里文本框垂直锚点 MIDDLE, 让文字在可用空间上下留白均衡。
         text = pt.body
         body_top = card_top + h_used + 0.12
         body_avail = card_height - h_used - 0.22
-        add_textbox(
+        body_box = add_textbox(
             slide, x + 0.2, body_top,
             card_width - 0.4, body_avail,
             text, spec.design.font_family,
             spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
+        body_box.text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
 
 
 # ===========================================================================
@@ -708,12 +753,13 @@ def _extra(source, *fields: str, default=None):
             vextras = getattr(variant, "__pydantic_extra__", None) or {}
             if field in vextras and vextras[field] is not None:
                 return vextras[field]
+        # content 直属声明字段 (title/subtitle/description/key_points 等) — 保留。
         val = getattr(content, field, None)
         if val is not None:
             return val
-        extras = getattr(content, "__pydantic_extra__", None) or {}
-        if field in extras and extras[field] is not None:
-            return extras[field]
+        # T13 (ARCH-002 阶段3): content.__pydantic_extra__ path Y 分支已删 —— SlideContent
+        # extra='forbid' 后 __pydantic_extra__ 恒为 None/空, 此分支永不命中 (死代码)。
+        # 华为版式专属字段统一走 variant (path X) 上方分支读取。
     return default
 
 
@@ -745,6 +791,10 @@ def _extra_list_merge(source, field: str) -> list:
         return v2 if isinstance(v2, list) else []
 
     list_v = _extract_list(variant, field)
+    # T13 (ARCH-002 阶段3) DEFER 标注: SlideContent extra='forbid' 后, levels/descriptions 等
+    # 华为专属 list 字段既非 content 声明字段、又被 forbid 拒, 故 list_c 恒空 —— 下方 merge
+    # 实际已退化为只读 variant (path X)。content 侧为死代码, 但简化 merge 循环收益低 (仅
+    # pyramid 调用) 且重构有丢字段风险, 按 team-lead 指示 defer 不强求清理, 保留 + 标注。
     list_c = _extract_list(content, field)
 
     def _to_dict(obj) -> dict:
@@ -843,6 +893,21 @@ def _add_rect(slide, left_in: float, top_in: float, width_in: float, height_in: 
         shape.line.color.rgb = hex_to_rgb(line_hex)
         shape.line.width = Pt(line_width_pt)
     return shape
+
+
+def clamp(value: int, lo: int, hi: int) -> int:
+    """整数钳制到 [lo, hi]。自适应母版按 n=clamp(len(points), lo, hi) 派生布局时复用。"""
+    return max(lo, min(hi, value))
+
+
+def safe_h(height_in: float, minimum: float = 0.1) -> float:
+    """高度下限钳制: 防 textbox/shape 计算出负高或近零高传给 Inches() 渲染异常。
+
+    多个 huawei renderer 用 `area_bottom - cursor - padding` 推算剩余高度, 当内容区被上方
+    元素挤占时该差值可能为负 (timeline desc / roadmap lane 等)。统一走本 helper 兜底,
+    保证 >= minimum (默认 0.1")，避免 Inches(负值) 产出异常 shape。
+    """
+    return max(minimum, height_in)
 
 
 def _canvas_dims_in(theme: dict) -> tuple[float, float]:

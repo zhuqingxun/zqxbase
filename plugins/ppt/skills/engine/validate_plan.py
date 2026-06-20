@@ -69,12 +69,19 @@ class ValidationReport:
 
     @property
     def huawei_variant_count(self) -> int:
-        """已选 huawei 18 版式的 slide 数（来自 VARIANT_EXEMPT_TYPES）."""
+        """已选主题母版的 slide 数（口径 = 母版覆盖率, 来自 VARIANT_EXEMPT_TYPES）.
+
+        S4 收敛 (T11): 判定集 VARIANT_EXEMPT_TYPES 直接 import schemas.variants.VARIANT_TYPES
+        (单源), T7 已把无后缀自适应母版 cards/process/comparison 增补进去, 故此处
+        无需硬编码即自动从"18 名单命中"扩展为"母版覆盖" (含无后缀自适应类型, 共 21)。
+        老后缀 alias (cards-2..5 / process-2..5-phase / comparison-2..5) 属
+        _LEGACY_VISUAL_TYPES, **不**计入母版覆盖 —— 应用率门禁以此推动 LLM 改选无后缀母版。
+        """
         return sum(1 for r in self.results if r.visual_type in VARIANT_EXEMPT_TYPES)
 
     @property
     def huawei_variant_ratio(self) -> float:
-        """huawei 18 版式占比 = huawei_variant_count / total_slides."""
+        """母版覆盖率 = huawei_variant_count / total_slides."""
         if self.total_slides == 0:
             return 0.0
         return self.huawei_variant_count / self.total_slides
@@ -306,7 +313,7 @@ def main() -> None:
             warn_below, fail_below = application_thresholds
             print()
             print(
-                f"Theme Application: {args.theme} 18 variants in "
+                f"Theme Application: {args.theme} 母版覆盖 ({len(VARIANT_EXEMPT_TYPES)} 母版) in "
                 f"{report.huawei_variant_count}/{report.total_slides} slides "
                 f"({report.huawei_variant_ratio*100:.1f}%)"
             )

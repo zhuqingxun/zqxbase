@@ -76,7 +76,7 @@ from engine.renderer_kit import (  # noqa: E402
     render_title_zone, render_footer, get_content_zone,
     _get_card_accent, _truncate_for_single_line, _add_textbox_no_wrap,
     render_card_header, render_card_number_badge,
-    _render_cards,
+    _render_cards, clamp,
 )
 
 # ===========================================================================
@@ -172,9 +172,16 @@ def render_bullets(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
         if y > content_top + content_h:
             break
 
-# 注册 cards-2 到 cards-5 (单行布局); cards-6 由 renderers_huawei.@register_renderer("cards-6") 提供 3x2 huawei 实现
+# T8 收敛: 无后缀 `cards` 自适应母版 — n=clamp(len(points),2,6) 派生布局 (2-3 单行/4 双行/5-6 网格)。
+# 老后缀 cards-2..5 改为 deprecated alias, **忽略后缀按 len 派生** (走同一自适应实现, 向后兼容渲染)。
+# cards-6 由 engine.renderers.huawei.cards_6 的 @register_renderer("cards-6") 提供 (独立 Cards6Content, 不在此重注册)。
+def _render_cards_adaptive(s, sp, t, sa, ts):
+    n = clamp(len(get_points(sp)), 2, 6)
+    _render_cards(s, sp, t, sa, n, ts)
+
+_RENDERERS["cards"] = _render_cards_adaptive
 for n in range(2, 6):
-    _RENDERERS[f"cards-{n}"] = lambda s, sp, t, sa, ts, _n=n: _render_cards(s, sp, t, sa, _n, ts)
+    _RENDERERS[f"cards-{n}"] = lambda s, sp, t, sa, ts: _render_cards_adaptive(s, sp, t, sa, ts)
 
 # Comparison renderer (comparison-2 through comparison-5)
 def _render_comparison(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cols: int, total_slides: int):
@@ -226,8 +233,15 @@ def _render_comparison(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_co
             spec.design.body_size_pt, _resolve_body_color(spec, theme),
         )
 
+# T8 收敛: 无后缀 `comparison` 自适应母版 — n_cols=clamp(len(points),2,5) 列数派生。
+# 老后缀 comparison-2..5 改为 deprecated alias, 忽略后缀按 len 派生 (走同一实现, 向后兼容)。
+def _render_comparison_adaptive(s, sp, t, sa, ts):
+    n = clamp(len(get_points(sp)), 2, 5)
+    _render_comparison(s, sp, t, sa, n, ts)
+
+_RENDERERS["comparison"] = _render_comparison_adaptive
 for n in range(2, 6):
-    _RENDERERS[f"comparison-{n}"] = lambda s, sp, t, sa, ts, _n=n: _render_comparison(s, sp, t, sa, _n, ts)
+    _RENDERERS[f"comparison-{n}"] = lambda s, sp, t, sa, ts: _render_comparison_adaptive(s, sp, t, sa, ts)
 
 # Process renderer (process-2-phase through process-5-phase)
 def _render_process(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_phases: int, total_slides: int):
@@ -294,8 +308,15 @@ def _render_process(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_phase
             shape.fill.fore_color.rgb = hex_to_rgb(_resolve_accent(spec, theme))
             shape.line.fill.background()
 
+# T8 收敛: 无后缀 `process` 自适应母版 — n_phases=clamp(len(points),2,5) 阶段数派生。
+# 老后缀 process-2..5-phase 改为 deprecated alias, 忽略后缀按 len 派生 (走同一实现, 向后兼容)。
+def _render_process_adaptive(s, sp, t, sa, ts):
+    n = clamp(len(get_points(sp)), 2, 5)
+    _render_process(s, sp, t, sa, n, ts)
+
+_RENDERERS["process"] = _render_process_adaptive
 for n in range(2, 6):
-    _RENDERERS[f"process-{n}-phase"] = lambda s, sp, t, sa, ts, _n=n: _render_process(s, sp, t, sa, _n, ts)
+    _RENDERERS[f"process-{n}-phase"] = lambda s, sp, t, sa, ts: _render_process_adaptive(s, sp, t, sa, ts)
 
 @register_renderer("data-contrast")
 def render_data_contrast(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int):

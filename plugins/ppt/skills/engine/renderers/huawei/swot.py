@@ -42,6 +42,9 @@ def render_swot(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slide
     cfg = _layout(theme, "swot")
     cross_w_px = cfg.get("cross_line_width_px", 2)
     cross_token = cfg.get("cross_line_token", "primary")
+    # 象限角标字母字号: 从 layouts.swot.letter_size_px 取 (旧为硬编码 heading_pt*1.5).
+    # fallback 42px≈25.2pt 与旧值等价, 保证默认主题零视觉变化.
+    letter_pt = _px_pt(cfg.get("letter_size_px", 42))
 
     top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
     font = _font_family(spec, theme)
@@ -97,7 +100,7 @@ def render_swot(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slide
 
         add_textbox(
             slide, x + 0.2, y + 0.15, 1.0, heading_pt / 72 * 1.3 + 0.1,
-            letter, font, heading_pt * 1.5,
+            letter, font, letter_pt,
             primary, bold=True,
         )
         add_textbox(

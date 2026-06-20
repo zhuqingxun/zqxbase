@@ -41,7 +41,6 @@ def render_roadmap(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
 
     cfg = _layout(theme, "roadmap")
     lane_col_px = cfg.get("lane_column_px", 180)
-    bar_h_px = cfg.get("phase_bar_height_px", 56)
 
     top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
     font = _font_family(spec, theme)
@@ -52,11 +51,9 @@ def render_roadmap(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
     area_h = sh - area_top - bottom_pad - 0.5
 
     lane_w = _px_in(lane_col_px)
-    bar_h = _px_in(bar_h_px)
     body_pt = _px_pt(_type_px(theme, "body", 24))
     small_pt = _px_pt(_type_px(theme, "small", 20))
 
-    lanes = _extra(spec, "lanes", default=None) or []
     phases = _extra(spec, "phases", default=None) or ["Q1", "Q2", "Q3", "Q4"]
     n_phases = max(len(phases), 1)
     right_x = area_left + lane_w + 0.15
@@ -68,7 +65,6 @@ def render_roadmap(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
     paper_2 = _color(theme, "paper_2", "#F4F4F4")
     ink = _color(theme, "ink", "#1F1F1F")
     ink_soft = _color(theme, "ink_soft", "#4B4B4B")
-    rule = _color(theme, "rule_soft", "#ECECEC")
 
     # Phase 表头: title 主显 + summary 副显 (双层)
     title_h = 0.28
@@ -155,43 +151,10 @@ def render_roadmap(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_sl
                     )
         return
 
-    # path Y legacy: lanes[].bars[] (start/span/emphasis/label 横条模型)。lanes 已在上方读取。
-    if not lanes:
-        for p in get_points(spec):
-            lanes.append({"name": p.heading or "", "bars": []})
-    n_lanes = max(len(lanes), 1)
-    lane_h = (area_h - header_h - 0.15) / n_lanes
-
-    for li, lane in enumerate(lanes):
-        if isinstance(lane, str):
-            lane = {"name": lane, "bars": []}
-        ly = area_top + header_h + 0.15 + li * lane_h
-
-        # 泳道标签
-        add_textbox(
-            slide, area_left, ly + (lane_h - bar_h) / 2, lane_w, bar_h,
-            str(_dget(lane, "name", "label", default="")), font, body_pt,
-            ink, bold=True,
-        )
-        # 泳道底色
-        _add_rect(slide, right_x, ly, right_w, lane_h, rule)
-
-        for bar in _dget(lane, "bars", default=[]) or []:
-            start = int(_dget(bar, "start", default=0))
-            span = int(_dget(bar, "span", default=1))
-            emphasis = str(_dget(bar, "emphasis", default="default"))
-            fill = emphasis_fill.get(emphasis, paper_2)
-            bx = right_x + start * phase_col_w + 0.06
-            bw = max(span * phase_col_w - 0.12, 0.3)
-            by = ly + (lane_h - bar_h) / 2
-            add_rounded_rect(slide, bx, by, bw, bar_h, fill, corner_radius=0.08)
-            label = str(_dget(bar, "label", default=""))
-            if label:
-                text_color = "#FFFFFF" if emphasis in emph_on else ink
-                add_textbox(
-                    slide, bx + 0.15, by + 0.05, bw - 0.3, bar_h - 0.1,
-                    label, font, small_pt,
-                    text_color, bold=True,
-                )
+    # T13 (ARCH-002 阶段3): path Y legacy lanes/bars 横条分支已删除。
+    # SlideContent extra='forbid' 后 content.lanes/bars 不可达 (typed RoadmapContent 走 rows/cells
+    # path X 上方分支, 且 rows 为必填 min_length=1 → path X 永远命中, 此处不可达)。
+    # 随分支一并删除 T14 加的 start/span 非整数 guard (path Y 专用, path X cells 无 start/span 字段)。
+    # 兜底: 万一 rows 为空 (理论上 schema 拦截), 仅渲染 phase 表头, 不再 fallback 横条模型。
 
 

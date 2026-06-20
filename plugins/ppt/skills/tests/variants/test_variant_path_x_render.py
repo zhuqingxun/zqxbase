@@ -357,3 +357,72 @@ def test_path_x_variant_content_rendered(tmp_path, huawei_theme, visual_type):
         f"{visual_type} (path X) 渲染泄漏 pydantic repr 片段 {repr_leaks} — "
         f"renderer 对 typed 子模型误用 str() 而非字段取值\n实际渲染文本:\n{all_text}"
     )
+
+
+# ---------------------------------------------------------------------------
+# 视觉特征回归断言 (S4 T12 从已删 test_variants_render_smoke 迁移, 改 path X 构造)
+# path_x_render 主测文本内容; 这 3 条补几何/fill/字号区间的视觉特征覆盖,
+# 防红条/深底/巨字回退 (各有历史 issue 来源, 见 docstring)。
+# ---------------------------------------------------------------------------
+
+def _render_path_x_first_slide(tmp_path, theme, visual_type: str):
+    """用 PATH_X_CASES 的 path X 数据渲染单页, 返回首张 slide 对象。"""
+    from pptx import Presentation
+
+    variant = PATH_X_CASES[visual_type][0]
+    plan = SlidePlan.model_validate(_build_plan(visual_type, variant))
+    out = tmp_path / f"{visual_type}-visual.pptx"
+    render_presentation(plan, theme, str(out))
+    return Presentation(str(out)).slides[0]
+
+
+def test_visual_cover_no_edge_red_bar(tmp_path, huawei_theme):
+    """cover-left-bar 不应有贯穿边缘的细红条 (2026-05-31 全局规则: huawei 去红条, 用户选型 A)。"""
+    from pptx.util import Emu
+    from pptx.dml.color import RGBColor
+
+    slide = _render_path_x_first_slide(tmp_path, huawei_theme, "cover-left-bar")
+    red = RGBColor(0xC7, 0x00, 0x0B)
+    for sh in slide.shapes:
+        if sh.left is None or sh.width is None or sh.height is None:
+            continue
+        # 贯穿边缘红条 = 贴左边 (x≈0) + 窄 (<0.5") + 高 (≥5")
+        edge_bar = (sh.left <= Emu(int(0.2 * 914400))
+                    and sh.width < Emu(int(0.5 * 914400))
+                    and sh.height >= Emu(int(5.0 * 914400)))
+        if edge_bar:
+            try:
+                assert sh.fill.fore_color.rgb != red, "检测到贯穿边缘红条 — 违反 huawei 去红条规则"
+            except (AttributeError, TypeError):
+                pass
+
+
+def test_visual_section_divider_light_bg(tmp_path, huawei_theme):
+    """section-divider-dark 背景 = #FFFFFF (2026-05-31 浅底选型 B; 旧深底违反 P1/P3 用户评 0)。"""
+    from pptx.dml.color import RGBColor
+
+    slide = _render_path_x_first_slide(tmp_path, huawei_theme, "section-divider-dark")
+    try:
+        rgb = slide.background.fill.fore_color.rgb
+    except Exception as e:
+        pytest.skip(f"slide.background 不可读 (实现未设 solid fill): {e}")
+    assert rgb == RGBColor(0xFF, 0xFF, 0xFF), f"背景期望浅底 #FFFFFF, 实际 #{rgb}"
+
+
+def test_visual_thankyou_main_text_restrained(tmp_path, huawei_theme):
+    """thankyou 标题字号收敛区间 [44,64]pt (2026-06-12 收敛 AP3 巨字, 旧 ≥72pt 占画面 1/3+)。"""
+    slide = _render_path_x_first_slide(tmp_path, huawei_theme, "thankyou")
+    sizes = []
+    for sh in slide.shapes:
+        if not sh.has_text_frame:
+            continue
+        for p in sh.text_frame.paragraphs:
+            if p.font.size is not None:
+                sizes.append(p.font.size.pt)
+            for r in p.runs:
+                if r.font.size is not None:
+                    sizes.append(r.font.size.pt)
+    assert sizes, "thankyou slide 无任何 paragraph/run 带 font.size"
+    assert 44 <= max(sizes) <= 64, (
+        f"thankyou 标题最大字号 {max(sizes)} pt 不在克制区间 [44, 64]"
+    )

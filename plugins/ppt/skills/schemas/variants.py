@@ -16,6 +16,16 @@
 - P1 五个: swot / roadmap / pyramid / heatmap-matrix / thankyou
 - P2 三个: cards-6 / rings / personas
 - 变体两个: risk-list / governance
+
+2026-06-18 S4 Phase 3 (T7) 收敛: 新增 3 个无后缀自适应母版 Content 模型
+（cards / process / comparison）。它们用 `Literal[无后缀, 老后缀...]` 多值
+discriminator 复用同一模型——无后缀值置首位, 使 prompt_assembler 自动反射出
+无后缀母版名 (`_visual_type_of` 取 Literal 首值); 老后缀 (cards-2..5 /
+process-2..5-phase / comparison-2..5) 保留为 deprecated alias 走同一模型,
+向后兼容现有 slide-plan.yaml (蓝图 §3.2/§3.3 钦定)。布局由 `len(points)` 派生
+(renderer 层 `n = clamp(len(get_points), lo, hi)`, 蓝图 §3.1), 故字段为自适应
+区间的 `points` 列表而非固定 N。cards-6 (Cards6Content) 保持不动 (typed 产物
++ 测试依赖, 不并入自适应模型)。
 """
 
 from __future__ import annotations
@@ -222,6 +232,20 @@ class Card(BaseModel):
     heading: str
     body: str | None = None
     icon: str | None = None
+
+
+class AdaptivePoint(BaseModel):
+    """自适应母版（cards / process / comparison）的单个条目。
+
+    与 schemas.slide_plan.StructuredPoint 同构（heading + body），是无后缀母版
+    path X 的结构化承载。renderer 层 `get_points(spec)` 既读 content.key_points
+    (path Y), 也能从此处构造 points——双路兼容 (renderer_kit._render_cards 先例)。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    heading: str | None = None
+    body: str | None = None
+    icon: str | None = None  # cards 场景可选图标; process/comparison 忽略
 
 
 class Ring(BaseModel):
@@ -500,6 +524,60 @@ class GovernanceContent(BaseModel):
     raci: RaciTable | None = None
 
 
+# ==================== 自适应母版（无后缀，T7 收敛新增）====================
+
+
+class CardsContent(BaseModel):
+    """自适应卡片母版：2..6 张卡，布局由 len(points) 派生。
+
+    收敛 legacy cards-2..5 (单行) + huawei cards-6 (3x2 网格) 为单一母版:
+    n∈{2,3} 单行 / n=4 双行 2x2 / n∈{5,6} 3x2 网格 (复用 cards-6 网格底座)。
+    无后缀 `cards` 为首选; cards-2..5 为 deprecated alias (走同模型, 向后兼容)。
+    cards-6 仍由独立 Cards6Content 承载 (不并入), 此处不含 cards-6 alias。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    visual_type: Literal["cards", "cards-2", "cards-3", "cards-4", "cards-5"]
+    title: str
+    subtitle: str | None = None
+    points: list[AdaptivePoint] = Field(min_length=2, max_length=6)
+
+
+class ProcessContent(BaseModel):
+    """自适应流程母版：2..5 步，箭头串联，布局由 len(points) 派生。
+
+    收敛 legacy process-2..5-phase 为单一母版 (复用 process-flow-huawei 底座)。
+    无后缀 `process` 为首选; process-2..5-phase 为 deprecated alias。
+    huawei `process-flow-huawei` (ProcessFlowHuaweiContent) 保持独立, 不并入。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    visual_type: Literal[
+        "process", "process-2-phase", "process-3-phase",
+        "process-4-phase", "process-5-phase",
+    ]
+    title: str
+    subtitle: str | None = None
+    points: list[AdaptivePoint] = Field(min_length=2, max_length=5)
+
+
+class ComparisonContent(BaseModel):
+    """自适应对比母版：2..5 列，含 header row，列数由 len(points) 派生。
+
+    收敛 legacy comparison-2..5 为单一母版 (保留 N 列对比语义, 不并 adaptive-cards)。
+    无后缀 `comparison` 为首选; comparison-2..5 为 deprecated alias。
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    visual_type: Literal[
+        "comparison", "comparison-2", "comparison-3",
+        "comparison-4", "comparison-5",
+    ]
+    title: str
+    subtitle: str | None = None
+    points: list[AdaptivePoint] = Field(min_length=2, max_length=5)
+
+
 # ==================== Discriminated Union ====================
 
 
@@ -523,12 +601,21 @@ VariantUnion = Annotated[
         PersonasContent,
         RiskListContent,
         GovernanceContent,
+        # T7 收敛: 无后缀自适应母版 (多值 Literal discriminator, 含 deprecated alias)
+        CardsContent,
+        ProcessContent,
+        ComparisonContent,
     ],
     Field(discriminator="visual_type"),
 ]
 
 
-# 18 个新视觉类型的 visual_type 字面量集合（供 slide_plan.py 扩充 valid_types）
+# typed variant 母版的 visual_type 字面量集合（供 slide_plan.py 扩充 valid_types
+# + validate_plan/prompt_assembler 单源）。
+# 18 huawei 母版 + 3 无后缀自适应母版 (cards/process/comparison, T7 收敛新增) = 21。
+# 老后缀 alias (cards-2..5 / process-2..5-phase / comparison-2..5) **不**列入此集——
+# 它们仍在 schemas.slide_plan._LEGACY_VISUAL_TYPES 中保证 visual_type 合法性,
+# 应用率口径归类 (legacy vs 母版) 留 T11 处理。无后缀 3 值是 LLM 应选的母版名。
 VARIANT_TYPES: set[str] = {
     "cover-left-bar",
     "toc",
@@ -548,4 +635,8 @@ VARIANT_TYPES: set[str] = {
     "personas",
     "risk-list",
     "governance",
+    # T7 收敛: 无后缀自适应母版
+    "cards",
+    "process",
+    "comparison",
 }

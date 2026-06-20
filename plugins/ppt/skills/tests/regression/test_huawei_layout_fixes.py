@@ -56,7 +56,7 @@ def test_bug_a_huawei_renderers_all_registered():
 
 
 # ============================================================
-# Bug B regression: schemas 字段名与 renderer 字段名双名兼容
+# 测试 plan 构造 helper
 # ============================================================
 
 def _build_plan(slides_yaml_data: list) -> SlidePlan:
@@ -79,39 +79,26 @@ def _render_one(plan: SlidePlan, tmp_path: Path):
     return Presentation(str(out))
 
 
-def test_bug_b_section_divider_reads_big_number_alias(tmp_path):
-    """Bug B 回归: section-divider-dark 既支持 number (legacy) 也支持 big_number (schemas)."""
-    plan_a = _build_plan([{
-        "id": 1, "role": "content", "visual_type": "section-divider-dark",
-        "content": {"title": "x", "number": "01", "description": "d"},
-    }])
-    plan_b = _build_plan([{
-        "id": 1, "role": "content", "visual_type": "section-divider-dark",
-        "content": {"title": "x", "big_number": "01", "description": "d"},
-    }])
-    prs_a = _render_one(plan_a, tmp_path / "a")
-    prs_b = _render_one(plan_b, tmp_path / "b")
-    # 两份都应包含相同数量的 shape (slide 上 number 已渲染)
-    assert len(prs_a.slides[0].shapes) == len(prs_b.slides[0].shapes)
-    # 提取所有文本, 确认 "01" 都出现
-    a_texts = " ".join(s.text_frame.text for s in prs_a.slides[0].shapes if s.has_text_frame)
-    b_texts = " ".join(s.text_frame.text for s in prs_b.slides[0].shapes if s.has_text_frame)
-    assert "01" in a_texts and "01" in b_texts
-
-
 # ============================================================
 # L-1: section_divider_dark 标题不压描述
 # ============================================================
+# 注: 原 test_bug_b_section_divider_reads_big_number_alias (测 number/big_number
+# path Y 平铺双名兼容) 已随 ARCH-002 阶段2 (T12 SlideContent extra=forbid) 删除——
+# path Y 平铺被 schema 禁止, number↔big_number 的 path Y alias 不再是合法路径
+# (同 test_extra_dual_path 删除逻辑)。big_number 的 path X 渲染覆盖由下方 L-1 保证。
 
 def test_L1_section_divider_long_title_not_overlap_description(tmp_path):
     """L-1: 长标题 (24 字) 渲染后 description 起点应 ≥ title 底沿, 无重叠."""
     long_title = "下一步: 中国企业对照 + 数字化选型 + 文化手册"  # 24 字
+    desc = "这是一段紧跟标题的描述, 应当出现在标题下方不能重叠."
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "section-divider-dark",
-        "content": {
+        "content": {"title": long_title},
+        "variant": {
+            "visual_type": "section-divider-dark",
             "title": long_title,
-            "number": "01",
-            "description": "这是一段紧跟标题的描述, 应当出现在标题下方不能重叠.",
+            "big_number": "01",
+            "description": desc,
         },
     }])
     prs = _render_one(plan, tmp_path)
@@ -144,7 +131,9 @@ def test_L2_toc_header_restrained_no_giant(tmp_path):
     """L-2 (2026-05-31 taste C): toc 标题克制 — 无 300px 巨号 '目录'; 标题含 '目录'、在画布内、全页无巨号 (≤60pt, 合 P3)。"""
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "toc",
-        "content": {
+        "content": {"title": "目录"},
+        "variant": {
+            "visual_type": "toc",
             "title": "目录",
             "chapters": [
                 {"number": "01", "title": "A", "page": "01"},
@@ -182,7 +171,9 @@ def test_L3_kpi_value_unit_single_line(tmp_path):
     """L-3: 长 value + unit 应字号自适应单行渲染, label 不应被压. 通过 shape 顺序的 top 单调递增验证."""
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "kpi-stats",
-        "content": {
+        "content": {"title": "K", "subtitle": "s"},
+        "variant": {
+            "visual_type": "kpi-stats",
             "title": "K", "subtitle": "s",
             "kpis": [
                 {"value": "15,000", "unit": "军官", "label": "年度参与", "desc": "d"},
@@ -221,10 +212,11 @@ def test_L4_matrix_y_axis_long_text_not_intrude_quadrant(tmp_path):
     long_y = "专业深度纵轴关键岗位时间投入与作战经验广度综合评估多维度衡量标准参考体系"
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "matrix-2x2",
-        "content": {
+        "content": {"title": "M"},
+        "variant": {
+            "visual_type": "matrix-2x2",
             "title": "M",
-            "y_axis": long_y,
-            "x_axis": "广度",
+            "axis": {"x": {"label": "广度"}, "y": {"label": long_y}},
             "quadrants": [
                 {"position": f"Q{i}", "heading": f"H{i}", "desc": "d"} for i in range(1, 5)
             ],
@@ -317,7 +309,9 @@ def test_L6_risk_list_4_items_2x2_grid(tmp_path):
     """L-6: 4 risks 应自适应 2x2 网格, card 高度 > 旧上限 2.4" 撑满画布."""
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "risk-list",
-        "content": {
+        "content": {"title": "R"},
+        "variant": {
+            "visual_type": "risk-list",
             "title": "R",
             "risks": [
                 {"number": str(i), "title": f"R{i}", "desc": "d", "severity": "MED"}
@@ -343,7 +337,9 @@ def test_L7_pyramid_descriptions_align_with_layers(tmp_path):
     """L-7: descriptions[i] 渲染中心 Y 应与 levels[i] center Y 对齐 (≤ 0.4" tolerance)."""
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "pyramid",
-        "content": {
+        "content": {"title": "P"},
+        "variant": {
+            "visual_type": "pyramid",
             "title": "P",
             "levels": [
                 {"name": f"L{i}"} for i in range(5)
@@ -384,7 +380,9 @@ def test_pyramid_gradient_fill_lightens_top_to_bottom(tmp_path):
     """
     plan = _build_plan([{
         "id": 1, "role": "content", "visual_type": "pyramid",
-        "content": {
+        "content": {"title": "P"},
+        "variant": {
+            "visual_type": "pyramid",
             "title": "P",
             "levels": [{"name": f"L{i}"} for i in range(5)],
         },

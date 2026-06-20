@@ -184,11 +184,14 @@ def derive_field_cookbook(specs: dict[str, dict[str, Any]]) -> str:
     - 嵌套子模型直接缩进展开, 不另起 'defs:' 标签
     """
     lines: list[str] = [
-        "## 18 版式字段速查 (派生自 schemas/variants.py)",
+        "## 母版字段速查 (派生自 schemas/variants.py)",
         "",
         "> `*`=required, 类型后 `?`=nullable, `(N..M)`=列表 minItems..maxItems",
         "",
     ]
+    # 共享子模型去重: 多个母版引用同一 $def (如自适应 cards/process/comparison
+    # 均含 AdaptivePoint) 时只渲染一次, 避免重复占用 prompt 预算。
+    rendered_defs: set[str] = set()
     for vt in sorted(specs.keys()):
         spec = specs[vt]
         lines.append(f"### {vt} ({spec['class_name']})")
@@ -197,6 +200,9 @@ def derive_field_cookbook(specs: dict[str, dict[str, Any]]) -> str:
             flag = "*" if fname in required_set else " "
             lines.append(f"  {flag} {fname}: {_render_field_constraints(fschema)}")
         for def_name, def_schema in spec["defs"].items():
+            if def_name in rendered_defs:
+                continue
+            rendered_defs.add(def_name)
             lines.extend(_render_def(def_name, def_schema))
         lines.append("")
     return "\n".join(lines)

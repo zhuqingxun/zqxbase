@@ -48,6 +48,8 @@ def render_heatmap_matrix(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
     total_col_px = cfg.get("total_column_px", 220)
     # Unicode 方案 A：5 个 U+2588 Full Block。fallback 兜底防 layouts 缺字段或误填退格符。
     score_chars = cfg.get("score_chars") or "█████"
+    # 0.5 档精度: 小数部分 >= 0.5 时用 U+258C Left Half Block 占一格 (如 3.5 → ███▌░)。
+    half_char = cfg.get("half_block_char") or "▌"
 
     top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
     font = _font_family(spec, theme)
@@ -130,10 +132,16 @@ def render_heatmap_matrix(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
                   bold=True, align=PP_ALIGN.LEFT, size_pt=small_pt)
         scores = _dget(row, "scores", default=[]) or []
         for ci in range(len(columns)):
-            sc = int(scores[ci]) if ci < len(scores) else 0
-            sc = max(0, min(sc, 5))
-            filled = score_chars[:sc]
-            empty = "░" * (5 - sc)  # U+2591 Light Shade
+            # 支持 0.5 档: score 可为 float (3.5). 非数值/缺失回退 0, clamp 到 [0, 5].
+            try:
+                sc = float(scores[ci]) if ci < len(scores) else 0.0
+            except (ValueError, TypeError):
+                sc = 0.0
+            sc = max(0.0, min(sc, 5.0))
+            full = int(sc)                      # 整数档满块数
+            has_half = (sc - full) >= 0.5       # 小数 >=0.5 追加一个半块
+            filled = score_chars[:full] + (half_char if has_half else "")
+            empty = "░" * (5 - full - (1 if has_half else 0))  # U+2591 Light Shade 补满 5 格
             cell = tbl.cell(ri + 1, ci + 1)
             cell.text = ""
             tf = cell.text_frame

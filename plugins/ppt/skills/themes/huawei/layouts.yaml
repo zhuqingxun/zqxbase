@@ -81,6 +81,7 @@ process_flow_huawei:
 swot:
   cross_line_width_px: 2
   cross_line_token: primary
+  letter_size_px: 42          # 象限角标字母 (S/W/O/T) 字号; 42px≈25.2pt (旧硬编码 h4*1.5)
 
 roadmap:
   lane_column_px: 180

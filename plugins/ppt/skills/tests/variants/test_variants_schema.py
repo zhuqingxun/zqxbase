@@ -33,12 +33,12 @@ ta = TypeAdapter(VariantUnion) if VariantUnion is not None else None
 
 
 def test_variant_types_count():
-    """Plan T5 决策：风险 risk-list + governance 作为独立 variant，合计 18。"""
-    assert len(VARIANT_TYPES) == 18
+    """Plan T5: 18 huawei variant + S4 收敛新增无后缀 cards/process/comparison = 21。"""
+    assert len(VARIANT_TYPES) == 21
 
 
 def test_variant_types_exact_membership():
-    """精确列出 18 个 visual_type，防止后续误增减。"""
+    """精确列出 21 个 visual_type，防止后续误增减。"""
     expected = {
         "cover-left-bar", "toc", "section-divider-dark",
         "kpi-stats", "matrix-2x2", "architecture-layered",
@@ -46,6 +46,7 @@ def test_variant_types_exact_membership():
         "swot", "roadmap", "pyramid", "heatmap-matrix", "thankyou",
         "cards-6", "rings", "personas",
         "risk-list", "governance",
+        "cards", "process", "comparison",
     }
     assert VARIANT_TYPES == expected
 
@@ -215,6 +216,32 @@ VARIANT_CASES: list[tuple[str, dict, dict]] = [
      {"visual_type": "governance", "title": "治理",
       "top": {"name": "决策委员会"},
       "units": [{"code": "S", "name": "战略", "items": ["愿景"]}]}),  # units < 2
+
+    # ---- S4 收敛: 无后缀自适应母版 (points: list[AdaptivePoint]) ----
+    ("cards",
+     {"visual_type": "cards", "title": "卡片",
+      "points": [
+          {"heading": "要点一", "body": "说明一"},
+          {"heading": "要点二", "body": "说明二"},
+      ]},
+     {"visual_type": "cards", "title": "卡片",
+      "points": [{"heading": "要点一", "body": "说明一"}]}),  # points < 2
+    ("process",
+     {"visual_type": "process", "title": "流程",
+      "points": [
+          {"heading": "步骤一", "body": "说明一"},
+          {"heading": "步骤二", "body": "说明二"},
+      ]},
+     {"visual_type": "process", "title": "流程",
+      "points": [{"heading": "步骤一", "body": "说明一"}]}),  # points < 2
+    ("comparison",
+     {"visual_type": "comparison", "title": "对比",
+      "points": [
+          {"heading": "方案 A", "body": "优势一"},
+          {"heading": "方案 B", "body": "优势二"},
+      ]},
+     {"visual_type": "comparison", "title": "对比",
+      "points": [{"heading": "方案 A", "body": "优势一"}]}),  # points < 2
 ]
 
 

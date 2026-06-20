@@ -149,6 +149,16 @@ def test_whitelist_tokens_yaml_color_comment(scanner_module, tmp_path):
 RELEASE_DIR = Path("D:/CODE/plugin_test/skills-release/ppt/themes/huawei")
 SOURCE_DIR = Path("D:/CODE/plugins/ppt/themes/huawei")
 
+# SEC-001/002 (anchors 脱敏): plugin 根 + publisher 排除契约。
+# 注: SOURCE_DIR 仅扫 themes/huawei 是有意的 —— 不扩到 plugin 根做 K 词扫描,
+# 因 ppt 自带 K17(中文姓名)/K04(大模型) 规则对通用文本误报严重 (SKILL.md 的
+# 「汇总/总结」被 K17 截断误判、任何讲 AI 的「大模型」命中 K04), 扩范围会堵死
+# 正常发布。anchors 的真敏感 (银行/高层主打) 改用零误报的结构断言守护, 见
+# test_anchors_isolated_and_publish_tree_clean。
+PLUGIN_ROOT_DIR = Path("D:/CODE/plugins/ppt")
+# 与 zqxbase_publisher.py 的 HOOK_MANAGED_DIRS ∪ PLUGIN_CONFIGS["ppt"].exclude_dirs 对齐
+PUBLISH_EXCLUDED_DIRS = {"anchors", "references", "scripts"}
+
 
 @pytest.mark.skipif(not RELEASE_DIR.exists(), reason="发布包尚未生成（Dev T17 前）")
 def test_uploads_directory_absent_from_release():
@@ -172,6 +182,41 @@ def test_source_directory_scan_passes(scanner_module):
     """
     fails = scanner_module.scan(SOURCE_DIR)
     assert fails == 0, f"源目录含 {fails} 条敏感词命中，参考 stdout 修源文件后重跑"
+
+
+@pytest.mark.skipif(not PLUGIN_ROOT_DIR.exists(), reason="plugin 源目录不存在")
+def test_anchors_isolated_and_publish_tree_clean():
+    """SEC-001/002: 华为锚点资产隔离在 publisher 排除目录, 会发布的子树无残留。
+
+    结构断言 (零误报, 不依赖词扫描): anchors.yaml + anchors/*.png 含华为内部主打胶片
+    (211 张子集) metadata, 由 zqxbase_publisher.py 经 exclude_dirs=['anchors'] 排除,
+    本地保留供 taste 用。本测试守护两点:
+    1. anchors 资产确实在 plugin 根隔离目录内 (本地保留前提);
+    2. 模拟 publisher 会复制的子目录树 (排除 HOOK_MANAGED + exclude_dirs) 不得含
+       anchors.yaml / 锚点 PNG (golden/layout-only/extended) / *.pdf 残留。
+    """
+    # 1. anchors 资产在隔离目录 (本地保留前提)
+    assert (PLUGIN_ROOT_DIR / "anchors.yaml").exists(), "anchors.yaml 应在 plugin 根本地保留"
+    assert (PLUGIN_ROOT_DIR / "anchors").is_dir(), "anchors/ 应在 plugin 根本地保留"
+
+    # 2. 模拟会发布的子目录 (publisher sync_plugin 只 copytree 非排除子目录)
+    leaks: list[str] = []
+    for child in PLUGIN_ROOT_DIR.iterdir():
+        if not child.is_dir() or child.name in PUBLISH_EXCLUDED_DIRS:
+            continue
+        if child.name.startswith(".") or child.name == "__pycache__":
+            continue
+        for p in child.rglob("*"):
+            if not p.is_file():
+                continue
+            rel = p.relative_to(PLUGIN_ROOT_DIR).as_posix()
+            if p.name == "anchors.yaml" or p.suffix.lower() == ".pdf":
+                leaks.append(rel)
+            elif p.suffix.lower() == ".png" and p.parent.name in {
+                "golden", "layout-only", "extended",
+            }:
+                leaks.append(rel)
+    assert not leaks, f"会发布的子目录含敏感资产残留 (应隔离在 anchors/): {leaks}"
 
 
 @pytest.mark.skipif(not RELEASE_DIR.exists(), reason="发布包尚未生成（Dev T17 前）")
