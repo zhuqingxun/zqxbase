@@ -18,7 +18,7 @@ from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
 
 from engine.renderer_kit import (
-    register_renderer, _RENDERERS,
+    register_renderer, _RENDERERS, RendererContext,
     hex_to_rgb, add_textbox, add_textbox_rich, add_rounded_rect, set_slide_background,
     render_title_zone, render_footer, get_content_zone, get_points, get_point_bodies,
     _render_cards, _resolve_accent, _resolve_title_color, _resolve_body_color, _ve,
@@ -34,10 +34,7 @@ from engine.renderer_kit import (
 @register_renderer("kpi-stats")
 def render_kpi_stats(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int) -> None:
     """KPI 统计：N 列（默认 4）横排，每列 value(108px) + label(18px) + desc + trend(14px)。"""
-    sw, sh = _slide_dims_in()
-    set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
-    render_title_zone(slide, spec, theme, safe)
-    render_footer(slide, spec, theme, safe, total_slides)
+    ctx = RendererContext.build(slide, spec, theme, safe, total_slides)
 
     cfg = _layout(theme, "kpi_stats")
     columns_cfg = cfg.get("columns", 4)
@@ -48,8 +45,9 @@ def render_kpi_stats(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_
     trend_px = cfg.get("trend_size_px", 14)
     sep_px = cfg.get("column_separator_width_px", 2)
 
-    top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
-    font = _font_family(spec, theme)
+    sw, sh = ctx.sw, ctx.sh
+    right_pad, bottom_pad = ctx.right_pad, ctx.bottom_pad
+    font = ctx.font
 
     kpis = _extra(spec, "kpis", default=None) or []
     if not kpis:
@@ -103,10 +101,7 @@ def render_kpi_stats(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_
                 _add_rect(slide, x0, ry + row_h - 0.04, sw - x0 - right_pad, 0.012, rule)
         return
 
-    area_left = left_pad
-    area_top = top_pad + 1.4  # title zone 占位
-    area_w = sw - area_left - right_pad
-    area_h = sh - area_top - bottom_pad - 0.5
+    area_left, area_top, area_w, area_h = ctx.area_left, ctx.area_top, ctx.area_w, ctx.area_h
     col_w = area_w / max(n, 1)
 
     # kpi 内容只占上半 → 整块垂直居中 + 分隔线缩到内容高, 消除下半大片留空与悬空竖线

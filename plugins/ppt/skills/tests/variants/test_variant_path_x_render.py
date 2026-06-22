@@ -94,23 +94,25 @@ PATH_X_CASES: dict[str, tuple[dict, list[str]]] = {
             "title": "二维矩阵",
             "axis": {"x": {"label": "X轴标签"}, "y": {"label": "Y轴标签"}},
             "quadrants": [
-                {"position": "Q1", "heading": "象限一"},
+                {"position": "Q1", "heading": "象限一", "tags": ["角标甲", "角标乙"]},
                 {"position": "Q2", "heading": "象限二"},
                 {"position": "Q3", "heading": "象限三"},
                 {"position": "Q4", "heading": "象限四"},
             ],
         },
-        ["X轴标签", "Y轴标签", "象限一", "象限四"],
+        # "角标甲" 验证 QuadrantItem.tags 渲染 (历史 bug: renderer 只读单数 tag/corner_tag, schema 的 tags 列表静默丢)
+        ["X轴标签", "Y轴标签", "象限一", "象限四", "角标甲"],
     ),
     "architecture-layered": (
         {
             "visual_type": "architecture-layered",
             "title": "分层架构",
             "layers": [
-                {"header": {"code": "L1", "name": "接入层"}, "cells": [{"title": "网关甲"}]},
+                {"header": {"code": "L1", "name": "接入层"}, "cells": [{"title": "网关甲", "highlight": True}]},
                 {"header": {"code": "L2", "name": "服务层"}, "cells": [{"title": "服务乙"}]},
             ],
         },
+        # cells[].highlight=True 验证 ArchCell forbid 承载 (历史 bug: ArchCell 无 highlight 字段, path X 高亮被 forbid 拒)
         ["接入层", "网关甲", "服务层", "服务乙"],
     ),
     "timeline-huawei": (
@@ -253,7 +255,9 @@ PATH_X_CASES: dict[str, tuple[dict, list[str]]] = {
                 {"role": "角色乙", "name": "姓名B"},
             ],
         },
-        ["角色甲", "姓名A", "角色乙"],
+        # "年龄  30" = renderer 的 f"{label}  {value}" 正确形式; 若 attr(MetaItem)
+        # 误走 str() 泄漏则是 "label='年龄' value='30'", 不含此子串 → 精确区分。
+        ["角色甲", "姓名A", "年龄  30", "角色乙"],
     ),
     "risk-list": (
         {
@@ -350,7 +354,10 @@ def test_path_x_variant_content_rendered(tmp_path, huawei_theme, visual_type):
     # repr 泄漏防护: renderer 误对 pydantic 子模型做 str() 会渲染出 `label='x' field=None` 之类的
     # repr 文本 (rings 历史 bug)。这些 signature 不应出现在干净的演示文本里。
     repr_leaks = [
-        sig for sig in ("=None", "visual_type=", "sublabel=", "style='outline'")
+        sig for sig in ("=None", "visual_type=", "sublabel=", "style='outline'",
+                        # MetaItem/Contact 等 pydantic 子模型被误 str() 时的 __str__ 片段
+                        # (如 personas attrs: "label='年龄' value='30'"), 干净文本绝不含
+                        "label='", "value='")
         if sig in all_text
     ]
     assert not repr_leaks, (
@@ -425,4 +432,29 @@ def test_visual_thankyou_main_text_restrained(tmp_path, huawei_theme):
     assert sizes, "thankyou slide 无任何 paragraph/run 带 font.size"
     assert 44 <= max(sizes) <= 64, (
         f"thankyou 标题最大字号 {max(sizes)} pt 不在克制区间 [44, 64]"
+    )
+
+
+def test_visual_arch_cell_highlight_primary_fill(tmp_path, huawei_theme):
+    """architecture-layered 的 cell highlight=True 应渲染 primary 红底 (#C7000B)。
+
+    回归 (2026-06-22 misc §5): ArchCell 历史无 highlight 字段, extra=forbid 下 path X
+    cell 级高亮数据被拒, 高亮能力不可达 (非 never-fired, 是模型无法承载)。schema 加
+    highlight 字段后, path X highlight cell 必须真出 primary 红底。
+    """
+    from pptx.dml.color import RGBColor
+
+    slide = _render_path_x_first_slide(tmp_path, huawei_theme, "architecture-layered")
+    primary = RGBColor(0xC7, 0x00, 0x0B)  # huawei tokens.colors.primary
+    found = False
+    for sh in slide.shapes:
+        try:
+            if sh.fill.fore_color.rgb == primary:
+                found = True
+                break
+        except (AttributeError, TypeError):
+            continue
+    assert found, (
+        "architecture-layered highlight cell 未渲染 primary 红底 — "
+        "ArchCell.highlight 未被消费或 schema 未承载该字段"
     )

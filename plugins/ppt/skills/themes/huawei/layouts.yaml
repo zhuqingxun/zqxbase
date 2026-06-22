@@ -22,6 +22,11 @@ toc:
   header_suffix: "· CONTENTS"   # 标题后缀 (设 "" 可去掉双语后缀)
   number_size_px: 57            # ~34pt 红编号 (强调但不巨大)
   item_size_px: 33              # ~20pt 章节标题
+  layout:                       # S4 阶段3: 纵向等高分行 + 行高封顶 (原 min(0.82,...))
+    type: rows
+    count: data
+    gap_in: 0.0
+    row_height_cap: 0.82
 
 section_divider_dark:
   # 2026-05-31 taste 选型 B: 浅底极简章节过渡页 (旧深底 ink_dark + 360px 巨号违反 P1/P3, 用户评 0)
@@ -52,6 +57,11 @@ matrix_2x2:
   y_axis_label_size_px: 20
   small_label_size_px: 14
   desc_size_px: 16
+  layout:                       # S4 阶段3: 2×2 网格 (在 Y 轴列/X 轴行 fixed-leading 之后的
+    type: grid                  # grid 子 region 内; 子 region 由 renderer carve)
+    rows: 2
+    cols: 2
+    gap_in: from_px:grid_gap_px
 
 architecture_layered:
   header_column_px: 260
@@ -62,19 +72,29 @@ architecture_layered:
   header_label_size_px: 14
   cell_title_size_px: 16
   cell_desc_size_px: 14
+  layout:                       # S4 阶段3: 层级纵向等高分行 (cell 横向分栏由 renderer 在
+    type: rows                  # header 列右侧剩余区 carve 子 region 后调 split_columns)
+    count: data
+    gap_in: from_px:layer_gap_px
 
 timeline_huawei:
-  phase_column_px: 180
   year_size_px: 48              # 大纪元数字
   title_size_px: 22
   desc_size_px: 16
+  layout:                       # S4 阶段3: 横向等宽分栏 (count: data → 运行时 len(phases))
+    type: columns
+    count: data
+    gap_in: 0.0
 
 process_flow_huawei:
-  step_min_width_px: 240
   arrow_gap_px: 40
   step_title_size_px: 24
   step_desc_size_px: 16
   step_number_size_px: 14
+  layout:                       # S4 阶段3: 带 gap 的横向分栏 (gap 源自本 section arrow_gap_px)
+    type: columns
+    count: data
+    gap_in: from_px:arrow_gap_px
 
 # ===== P1 五版式 =====
 
@@ -82,10 +102,14 @@ swot:
   cross_line_width_px: 2
   cross_line_token: primary
   letter_size_px: 42          # 象限角标字母 (S/W/O/T) 字号; 42px≈25.2pt (旧硬编码 h4*1.5)
+  layout:                     # S4 阶段3: 等分切分骨架声明 (LayoutEngine 解释)
+    type: grid
+    rows: 2
+    cols: 2
+    gap_in: 0.0
 
 roadmap:
   lane_column_px: 180
-  phase_bar_height_px: 56
 
 pyramid:
   levels_default: 4
@@ -118,8 +142,12 @@ thankyou:
 # ===== P2 四版式 =====
 
 cards_6:
-  columns: 3
-  rows: 2
+  # S4 阶段3: 旧 columns/rows 是死配置 (代码硬编码 3×2 不读)。现移进 layout 子节并由
+  # _render_cards 真实读取——列轴经 split_columns 切分, 行轴保持 row_pitch 语义。
+  layout:
+    type: grid
+    rows: 2
+    cols: 3
 
 rings:
   ring_count_max: 3
@@ -128,6 +156,10 @@ rings:
 personas:
   columns_max: 4
   quote_accent_bar_px: 3
+  layout:                       # S4 阶段3: 列间距 0.25" 提进 yaml (原裸硬编码 personas.py gap=0.25)
+    type: columns
+    count: data
+    gap_in: 0.25
 
 # ===== top_tabs 通用 =====
 

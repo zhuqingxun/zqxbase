@@ -18,7 +18,7 @@ from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
 
 from engine.renderer_kit import (
-    register_renderer, _RENDERERS,
+    register_renderer, _RENDERERS, RendererContext,
     hex_to_rgb, add_textbox, add_textbox_rich, add_rounded_rect, set_slide_background,
     render_title_zone, render_footer, get_content_zone, get_points, get_point_bodies,
     _render_cards, _resolve_accent, _resolve_title_color, _resolve_body_color, _ve,
@@ -34,22 +34,14 @@ from engine.renderer_kit import (
 @register_renderer("governance")
 def render_governance(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int) -> None:
     """治理结构：顶部决策委员会 rect + 下方 N 个工作组 rect + 连接线。"""
-    sw, sh = _slide_dims_in()
-    set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
-    render_title_zone(slide, spec, theme, safe)
-    render_footer(slide, spec, theme, safe, total_slides)
+    ctx = RendererContext.build(slide, spec, theme, safe, total_slides)
 
     cfg = _layout(theme, "governance")
     top_h_px = cfg.get("top_box_height_px", 120)
     unit_cols_max = cfg.get("unit_columns_max", 4)
 
-    top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
-    font = _font_family(spec, theme)
-
-    area_left = left_pad
-    area_top = top_pad + 1.4
-    area_w = sw - area_left - right_pad
-    area_h = sh - area_top - bottom_pad - 0.5
+    font = ctx.font
+    area_left, area_top, area_w, area_h = ctx.area_left, ctx.area_top, ctx.area_w, ctx.area_h
 
     # schemas: spec.variant.top (GovTop {name, tag}); legacy: spec.content.top_box {title, desc}
     top_box = _extra(spec, "top_box", "top", default=None) or {}

@@ -18,26 +18,24 @@ from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
 
 from engine.renderer_kit import (
-    register_renderer, _RENDERERS,
+    register_renderer, _RENDERERS, RendererContext,
     hex_to_rgb, add_textbox, add_textbox_rich, add_rounded_rect, set_slide_background,
     render_title_zone, render_footer, get_content_zone, get_points, get_point_bodies,
     _render_cards, _resolve_accent, _resolve_title_color, _resolve_body_color, _ve,
     compute_card_height, estimate_content_height, normalize_point,
     render_card_header, render_card_number_badge, _get_card_accent,
     _truncate_for_single_line, _add_textbox_no_wrap,
-    _px_pt, _px_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
+    _px_pt, _px_in, _resolve_gap_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
     _extra, _extra_list_merge, _estimate_text_height_in, _dget, _add_rect,
     _canvas_dims_in, _canvas_padding_in, _slide_dims_in, _font_family, TREND_COLOR_TOKEN,
 )
+from engine.layout_engine import Region, split_grid
 
 
 @register_renderer("matrix-2x2")
 def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int) -> None:
     """2x2 矩阵：左 Y 轴 + 底 X 轴 + 4 象限卡片，可按 highlight 标记高亮象限。"""
-    sw, sh = _slide_dims_in()
-    set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
-    render_title_zone(slide, spec, theme, safe)
-    render_footer(slide, spec, theme, safe, total_slides)
+    ctx = RendererContext.build(slide, spec, theme, safe, total_slides)
 
     cfg = _layout(theme, "matrix_2x2")
     y_col_px = cfg.get("axis_y_column_px", 140)
@@ -50,13 +48,8 @@ def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
     small_px = cfg.get("small_label_size_px", 14)
     desc_px = cfg.get("desc_size_px", 16)
 
-    top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
-    font = _font_family(spec, theme)
-
-    area_left = left_pad
-    area_top = top_pad + 1.4
-    area_w = sw - area_left - right_pad
-    area_h = sh - area_top - bottom_pad - 0.5
+    font = ctx.font
+    area_left, area_top, area_w, area_h = ctx.area_left, ctx.area_top, ctx.area_w, ctx.area_h
 
     y_col_in = _px_in(y_col_px)
     x_row_in = _px_in(x_row_px)
@@ -159,12 +152,22 @@ def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
                 "highlight": False,
             })
     # 顺序约定：左上 / 右上 / 左下 / 右下
-    positions = [
-        (grid_left, grid_top),
-        (grid_left + cell_w + gap_in, grid_top),
-        (grid_left, grid_top + cell_h + gap_in),
-        (grid_left + cell_w + gap_in, grid_top + cell_h + gap_in),
-    ]
+    # S4 阶段3: 2×2 网格切分交给 LayoutEngine, 在 Y 轴列/X 轴行 (fixed-leading) 之后的 grid 子
+    # region 内分。split_grid row-major(idx 0=左上,1=右上,2=左下,3=右下) 与原固定坐标逐 EMU 恒等。
+    # cell_w/cell_h 保留供下方 rect 宽高 + textbox 宽 (== cells[i].width/height)。
+    layout_spec = cfg.get("layout")
+    if layout_spec is not None:
+        grid_region = Region(grid_left, grid_top, grid_w, grid_h)
+        _cells = split_grid(grid_region, layout_spec["rows"], layout_spec["cols"],
+                            _resolve_gap_in(layout_spec, cfg))
+        positions = [(c.left, c.top) for c in _cells]
+    else:
+        positions = [
+            (grid_left, grid_top),
+            (grid_left + cell_w + gap_in, grid_top),
+            (grid_left, grid_top + cell_h + gap_in),
+            (grid_left + cell_w + gap_in, grid_top + cell_h + gap_in),
+        ]
     heading_pt = _px_pt(heading_px)
     desc_pt = _px_pt(desc_px)
     small_pt = _px_pt(small_px)
@@ -178,8 +181,15 @@ def render_matrix_2x2(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total
         _add_rect(slide, x, y, cell_w, cell_h, fill,
                   line_hex=border_color, line_width_pt=max(border_px * 0.5, 0.5))
 
-        # 角标（tag / small_label）
+        # 角标（tag / corner_tag 单数兼容 path Y; tags 列表为 path X schema QuadrantItem 字段）
         tag = _dget(item, "tag", default="") or _dget(item, "corner_tag", default="")
+        if not tag:
+            _tags = _dget(item, "tags", default=None)
+            if _tags:
+                if isinstance(_tags, (list, tuple)):
+                    tag = " · ".join(str(t) for t in _tags if t)
+                else:
+                    tag = str(_tags)
         if tag:
             add_textbox(
                 slide, x + 0.15, y + 0.1, cell_w - 0.3, small_pt / 72 * 1.5 + 0.1,

@@ -25,10 +25,11 @@ from engine.renderer_kit import (
     compute_card_height, estimate_content_height, normalize_point,
     render_card_header, render_card_number_badge, _get_card_accent,
     _truncate_for_single_line, _add_textbox_no_wrap,
-    _px_pt, _px_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
+    _px_pt, _px_in, _resolve_gap_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
     _extra, _extra_list_merge, _estimate_text_height_in, _dget, _add_rect,
     _canvas_dims_in, _canvas_padding_in, _slide_dims_in, _font_family, TREND_COLOR_TOKEN,
 )
+from engine.layout_engine import Region, split_rows
 
 
 @register_renderer("toc")
@@ -71,11 +72,23 @@ def render_toc(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides
     n = max(len(items), 1)
     list_top = 2.0
     list_bottom = sh - bottom_pad - 0.1
-    row_h = min(0.82, (list_bottom - list_top) / n)
+    # S4 阶段3: 纵向等高分行 + 行高封顶交给 LayoutEngine (无 layout: 子节走原 min(0.82,...) 路径)。
+    # toc 不走 RendererContext, 手动构造 list_region; row_height_cap 经 yaml 传 0.82,
+    # split_rows 的 min 逻辑与原 min(0.82,(list_bottom-list_top)/n) 逐项恒等。编号/标题列
+    # (num_col=1.5 fixed-leading + title_w) 保持 renderer 内 (fixed-leading-column 不进 engine)。
+    layout_spec = cfg.get("layout")
+    if layout_spec is not None:
+        list_region = Region(x, list_top, sw - x - right_pad, list_bottom - list_top)
+        rows = split_rows(list_region, n, _resolve_gap_in(layout_spec, cfg),
+                          row_height_cap=layout_spec.get("row_height_cap"))
+        row_h = rows[0].height
+    else:
+        rows = None
+        row_h = min(0.82, (list_bottom - list_top) / n)
     num_col = 1.5
     title_w = sw - (x + num_col) - right_pad
     for i, item in enumerate(items):
-        cy = list_top + i * row_h
+        cy = rows[i].top if rows is not None else list_top + i * row_h
         title_text = item if isinstance(item, str) else str(_dget(item, "title", default=""))
         number_text = f"{i + 1:02d}"
         # 编号 (红, 垂直居中)

@@ -33,7 +33,12 @@ from engine.renderer_kit import (
 
 @register_renderer("cards-6")
 def render_cards_6(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int) -> None:
-    """6 卡（3×2）：直接复用 render.py 的 _render_cards。"""
-    _render_cards(slide, spec, theme, safe, 6, total_slides)
+    """6 卡（3×2）：直接复用 render.py 的 _render_cards。
+
+    S4 阶段3: 维度 (cols/rows) 经 layouts.yaml 的 cards_6.layout 子节声明 (死配置对齐),
+    _render_cards 据此用 LayoutEngine 切列轴; 无 layout 子节时退回内部硬编码 3×2。
+    """
+    cfg = _layout(theme, "cards_6")
+    _render_cards(slide, spec, theme, safe, 6, total_slides, layout_spec=cfg.get("layout"))
 
 

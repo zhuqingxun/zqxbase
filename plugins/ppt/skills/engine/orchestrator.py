@@ -202,6 +202,30 @@ def _stage_failed(run_dir: Path, manifest: dict, stage: str) -> None:
     _write_manifest(run_dir, manifest)
 
 
+def _ensure_taste_stage(manifest: dict) -> None:
+    """taste 是可选末阶段, 不进 _STAGE_NAMES (避免污染非-taste run 的 manifest).
+
+    仅在真正进入 taste gate / replay-taste 时惰性插入 stages.taste, 让 _stage_*
+    helper 能索引到该 key. 非-taste run 的 manifest 永远只含 4 个确定性阶段.
+    """
+    manifest["stages"].setdefault(
+        "taste", {"status": "pending", "started_at": None, "finished_at": None}
+    )
+
+
+def _record_taste_result(run_dir: Path, manifest: dict, report) -> None:
+    """把校验通过的 TasteReport 双轴均分 + AP 计数落 manifest.taste_result (下游机读)."""
+    manifest["taste_result"] = {
+        "report_path": "05-taste/taste-report.json",
+        "mode": report.mode,
+        "pages": report.pages,
+        "layout_avg": report.summary.layout_avg,
+        "palette_avg": report.summary.palette_avg,
+        "antipattern_count": len(report.antipattern_hits),
+    }
+    _write_manifest(run_dir, manifest)
+
+
 def _write_state(
     run_dir: Path,
     *,
@@ -605,7 +629,15 @@ def cmd_replay(args: argparse.Namespace) -> int:
         return EXIT_FAIL
     plan_out = run_dir / "03-plan" / "output.yaml"
     shutil.copyfile(plan_src, plan_out)
-    rc = _resume_plan_gate(run_dir, manifest, plan_out, theme, str(output_path))
+    # replay taste: 若请求, 传 fixture recorded/taste-report.json 给 plan gate 末尾确定性回放
+    taste_fix = (
+        fixture_dir / "recorded" / "taste-report.json"
+        if manifest.get("taste_requested")
+        else None
+    )
+    rc = _resume_plan_gate(
+        run_dir, manifest, plan_out, theme, str(output_path), taste_fixture=taste_fix
+    )
     return rc
 
 
@@ -671,7 +703,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     )
 
     if taste_requested:
-        print("taste 接入在 S3-P1 实现 (本期 manifest.taste_requested=true 占位)")
+        print("[orchestrator] taste 已请求 (--with-taste): 将在 render 完成后作为可选末阶段触发 (05-taste/)")
 
     print(f"[orchestrator] run 目录: {run_dir}")
     print(f"[orchestrator] NEED_LLM: 会话请按 02-architect/prompt-context.md 产出 {arch_output}")
@@ -703,6 +735,8 @@ def cmd_resume(args: argparse.Namespace) -> int:
     if current_stage == "plan":
         plan_out = run_dir / "03-plan" / "output.yaml"
         return _resume_plan_gate(run_dir, manifest, plan_out, theme, output_path)
+    if current_stage == "taste":
+        return _resume_taste_gate(run_dir, manifest)
     if current_stage == "done":
         print("[orchestrator] 该 run 已完成 (current_stage=done)")
         return EXIT_OK
@@ -777,11 +811,19 @@ def _resume_architect_gate(run_dir: Path, manifest: dict, preset: str, theme: st
 
 
 def _resume_plan_gate(
-    run_dir: Path, manifest: dict, plan_out: Path, theme: str, output_path: str
+    run_dir: Path, manifest: dict, plan_out: Path, theme: str, output_path: str,
+    taste_fixture: Path | None = None,
 ) -> int:
-    """plan gate: SlidePlan.from_yaml -> validate_plan -> render -> exit 0; 失败 exit 1.
+    """plan gate: SlidePlan.from_yaml -> validate_plan -> render -> (可选 taste) -> exit 0; 失败 exit 1.
 
     顶层统一 exit 1 (不透传 validate_plan 内部 1/2), error.json.rule 区分具体规则 (TC-A6).
+
+    taste 可选末阶段 (S3-P1 档位 B): render 完成后, 若 manifest.taste_requested 为真:
+    - bridge mode (taste_fixture=None): 转 taste gate (exit 3 NEED_LLM), 等会话用 ppt:taste
+      产出 05-taste/taste-report.json 后 resume 校验 -> done. (LLM 评分留会话层, orchestrator
+      只做 JSON 契约校验 + 归档, 接缝同 architect/plan gate.)
+    - replay mode (taste_fixture 给定): 确定性回放 — 拷 fixture taste-report.json 校验后 done;
+      无 fixture 则优雅跳过 (CI 无 LLM 不能真做视觉评审).
     """
     from schemas.slide_plan import SlidePlan  # noqa: PLC0415
 
@@ -862,7 +904,7 @@ def _resume_plan_gate(
     # 3. render
     _stage_start(run_dir, manifest, "render")
     try:
-        _run_render(run_dir, plan_out, theme, output_path)
+        deck_path = _run_render(run_dir, plan_out, theme, output_path)
     except Exception as e:  # noqa: BLE001
         _stage_failed(run_dir, manifest, "render")
         _write_error(
@@ -872,6 +914,18 @@ def _resume_plan_gate(
         )
         return EXIT_FAIL
     _stage_done(run_dir, manifest, "render")
+
+    # 4. taste 可选末阶段 (S3-P1 档位 B): render 完成后接入
+    if manifest.get("taste_requested"):
+        if taste_fixture is not None:
+            # replay: 确定性回放, 拷 fixture 校验后落到 done (失败 exit 1, 优雅跳过 exit 0)
+            rc = _replay_taste(run_dir, manifest, taste_fixture)
+            if rc != EXIT_OK:
+                return rc
+            # 成功 / 优雅跳过 -> 继续走 done
+        else:
+            # bridge: 转 taste gate, done 推迟到 taste resume (exit 3 NEED_LLM)
+            return _enter_taste_gate(run_dir, manifest, deck_path, report.total_slides)
 
     # state: done
     _write_state(
@@ -884,6 +938,159 @@ def _resume_plan_gate(
     )
     print(f"[orchestrator] 完成. deck: {output_path} ({report.total_slides} slides)")
     print(f"[orchestrator] run 目录: {run_dir}")
+    return EXIT_OK
+
+
+# =====================================================================
+# taste gate (任务: S3-P1 档位 B 可选末阶段)
+# =====================================================================
+
+
+def _enter_taste_gate(run_dir: Path, manifest: dict, deck_path: Path, total_slides: int) -> int:
+    """bridge mode: render 完成后转 taste gate. 写 prompt-context + state, exit 3 NEED_LLM.
+
+    LLM 视觉评分留会话层 (orchestrator 零 LLM 逻辑): 会话用 ppt:taste 评审 deck,
+    把结构化 JSON 落 05-taste/taste-report.json, 再 resume 由 orchestrator 校验契约.
+    """
+    _ensure_taste_stage(manifest)
+    _stage_start(run_dir, manifest, "taste")
+
+    taste_json = run_dir / "05-taste" / "taste-report.json"
+    ctx = _TASTE_PROMPT_TEMPLATE.format(
+        deck_path=str(deck_path),
+        taste_json_path=str(taste_json),
+        plugin_root=str(PLUGIN_ROOT),
+        run_dir=str(run_dir),
+        total_slides=total_slides,
+    )
+    (run_dir / "05-taste" / "prompt-context.md").write_text(ctx, encoding="utf-8")
+
+    _write_state(
+        run_dir,
+        current_stage="taste",
+        awaiting="05-taste/taste-report.json",
+        mode=manifest.get("mode", "bridge"),
+        next_action="resume",
+        expected_schema="taste-report",
+    )
+    print(f"[orchestrator] render 完成, deck: {deck_path}")
+    print(f"[orchestrator] NEED_LLM (taste): 会话请按 05-taste/prompt-context.md 用 ppt:taste 产出 {taste_json}")
+    print(f"[orchestrator] 产出后: uv run --script {PLUGIN_ROOT}/engine/orchestrator.py resume {run_dir}")
+    return EXIT_NEED_LLM
+
+
+def _resume_taste_gate(run_dir: Path, manifest: dict) -> int:
+    """taste gate: 校验 05-taste/taste-report.json 符合 TasteReport 契约 -> done; 失败 exit 1.
+
+    两层语义同 architect/plan gate:
+    1. 协议层硬门: JSON 缺失/空/非法 JSON -> error.json (rule=protocol.*) + exit 1.
+    2. schema 层: 不符合 TasteReport (内部一致性护栏失败等) -> error.json (rule=schema.taste_report) + exit 1.
+    deck 已渲染完成 (在 output / 04-render/deck.pptx), taste 失败不丢 deck — 修 JSON 后再 resume 即可.
+    """
+    taste_json = run_dir / "05-taste" / "taste-report.json"
+    _ensure_taste_stage(manifest)
+
+    # --- 协议层硬门 (缺失/空/非法 JSON) ---
+    if not taste_json.exists():
+        _stage_failed(run_dir, manifest, "taste")
+        _write_error(
+            run_dir, stage="taste", slide_no=None, rule="protocol.missing_output",
+            message=f"会话未产出 05-taste/taste-report.json: {taste_json}",
+            remediation="按 05-taste/prompt-context.md 用 ppt:taste 产出 taste-report.json 后再 resume",
+        )
+        return EXIT_FAIL
+
+    raw = taste_json.read_text(encoding="utf-8").strip()
+    if not raw:
+        _stage_failed(run_dir, manifest, "taste")
+        _write_error(
+            run_dir, stage="taste", slide_no=None, rule="protocol.empty",
+            message=f"05-taste/taste-report.json 为空: {taste_json}",
+            remediation="按 schemas/taste_report.py 契约产出非空 JSON 后 resume",
+        )
+        return EXIT_FAIL
+    try:
+        json.loads(raw)
+    except json.JSONDecodeError as e:
+        _stage_failed(run_dir, manifest, "taste")
+        _write_error(
+            run_dir, stage="taste", slide_no=None, rule="protocol.invalid_json",
+            message=f"05-taste/taste-report.json 非法 JSON: {e}",
+            remediation="修复 JSON 语法后 resume",
+        )
+        return EXIT_FAIL
+
+    # --- schema 层 (TasteReport 契约 + 内部一致性护栏) ---
+    _stage_start(run_dir, manifest, "taste")
+    try:
+        from schemas.taste_report import validate_taste_report_file  # noqa: PLC0415
+
+        report = validate_taste_report_file(str(taste_json))
+    except Exception as e:  # noqa: BLE001
+        _stage_failed(run_dir, manifest, "taste")
+        _write_error(
+            run_dir, stage="taste", slide_no=None, rule="schema.taste_report",
+            message=f"taste-report.json 不符合 TasteReport schema: {e}",
+            remediation="按 schemas/taste_report.py 的 6 条硬约束修正 JSON (Step 4c 自校验 OK) 后 resume",
+        )
+        return EXIT_FAIL
+
+    _record_taste_result(run_dir, manifest, report)
+    _stage_done(run_dir, manifest, "taste")
+    _write_state(
+        run_dir,
+        current_stage="done",
+        awaiting=None,
+        mode=manifest.get("mode", "bridge"),
+        next_action="done",
+        expected_schema=None,
+    )
+    print(
+        f"[orchestrator] taste 完成. layout_avg={report.summary.layout_avg} "
+        f"palette_avg={report.summary.palette_avg} (AP 命中 {len(report.antipattern_hits)} 处). "
+        f"报告: {taste_json}"
+    )
+    return EXIT_OK
+
+
+def _replay_taste(run_dir: Path, manifest: dict, taste_fixture: Path) -> int:
+    """replay mode: 确定性回放 taste. 拷 fixture taste-report.json -> 05-taste/ -> 校验.
+
+    replay 是 CI 0-LLM 路径, 无法真做视觉评审:
+    - fixture 有 recorded/taste-report.json: 拷入 + 校验契约 + 落 manifest.taste_result (exit 0); 不合规 exit 1.
+    - fixture 无: 优雅跳过 (打 notice, exit 0) — 不强制 CI 提供 taste fixture.
+    """
+    taste_json = run_dir / "05-taste" / "taste-report.json"
+    if not taste_fixture.exists():
+        print(
+            "[orchestrator] replay --with-taste: fixture 无 recorded/taste-report.json, "
+            "跳过 taste (CI 无 LLM 不能真做视觉评审, 优雅降级)",
+            file=sys.stderr,
+        )
+        return EXIT_OK
+
+    _ensure_taste_stage(manifest)
+    _stage_start(run_dir, manifest, "taste")
+    shutil.copyfile(taste_fixture, taste_json)
+    try:
+        from schemas.taste_report import validate_taste_report_file  # noqa: PLC0415
+
+        report = validate_taste_report_file(str(taste_json))
+    except Exception as e:  # noqa: BLE001
+        _stage_failed(run_dir, manifest, "taste")
+        _write_error(
+            run_dir, stage="taste", slide_no=None, rule="fixture.invalid_taste_report",
+            message=f"fixture recorded/taste-report.json 不符合 TasteReport schema: {e}",
+            remediation="检查 --fixture 目录 recorded/taste-report.json 结构",
+        )
+        return EXIT_FAIL
+
+    _record_taste_result(run_dir, manifest, report)
+    _stage_done(run_dir, manifest, "taste")
+    print(
+        f"[orchestrator] replay taste 回放完成. layout_avg={report.summary.layout_avg} "
+        f"palette_avg={report.summary.palette_avg}. 报告: {taste_json}"
+    )
     return EXIT_OK
 
 
@@ -1074,6 +1281,35 @@ slide-plan.yaml, schema 由 schemas/slide_plan.py 定义 (顶层 meta + narrativ
 3. orchestrator resume 时: (1) SlidePlan.from_yaml(output.yaml) pydantic 校验 (2) validate_plan(output.yaml) 内容量 + 应用率门禁 (3) 通过则 render -> exit 0; 失败写 error.json:
    - 内容量 FAIL (exit 1, rule=content_volume.*): 读 error.json 的 message, 从 architecture source_refs 回溯源材料补充 body, 覆写 output.yaml 后再 resume. **连续 3 轮无法通过 -> AskUserQuestion 让用户决策**
    - 应用率 FAIL (exit 1, rule=application_rate.fail_below_30): 按 theme-prompt.md 重选 visual_type (cards-N -> kpi-stats / architecture-layered 等). **连续 2 轮未达阈值 -> AskUserQuestion**
+"""
+
+
+_TASTE_PROMPT_TEMPLATE = """# Stage 5 (可选): 视觉评审 taste (orchestrator 桥接上下文)
+
+> 本文件由 orchestrator 在 render 完成后生成 (run 时传了 --with-taste). 你 (会话 Claude) 用 **ppt:taste** skill 对已渲染的 deck 做视觉评审, 把结构化 JSON 落到指定路径后 resume.
+
+## 已渲染产物
+
+- deck (pptx): `{deck_path}` (共 {total_slides} 页, 已渲染完成)
+- 评审报告 JSON 落点 (**orchestrator 等待此文件**): `{taste_json_path}`
+
+## 你的任务
+
+1. 调用 **ppt:taste** skill 评审 `{deck_path}` (双轴评分 layout / palette 解耦, 逐页 + deck 级).
+2. 把结构化 JSON 产出**落到 `{taste_json_path}`** (ppt:taste 默认落在 deck 同目录, 评审后请确保 JSON 在该路径; 可直接 Write 或 copy 过去).
+3. JSON 字段契约**单一来源**: `{plugin_root}/schemas/taste_report.py` (pydantic TasteReport). 写完用 Step 4c 自校验:
+   `uv run --script {plugin_root}/schemas/taste_report.py {taste_json_path}`
+   输出 `OK:` 才算合格; `FAIL:` 则按报错修正重写 (不要把不合规 JSON 留给 resume).
+
+## 完成协议 (会话桥接)
+
+1. 写完并自校验 `{taste_json_path}` (Step 4c 输出 OK)
+2. `uv run --script {plugin_root}/engine/orchestrator.py resume {run_dir}`
+3. orchestrator resume 校验该 JSON 符合 TasteReport 契约 -> 通过则 state=done (exit 0) + manifest.taste_result 记双轴均分 + AP 计数; 不合规写 error.json (stage=taste, rule=protocol.* / schema.taste_report) + exit 1, 按 message 修正后再 resume.
+
+## 说明
+
+taste 是**可选末阶段**: deck 已渲染完成 (在 `{deck_path}` 与最终 output). taste 评分是质量参考, **不影响 deck 本身** — 即使分数低, deck 仍可用. taste 失败 (JSON 不合规) 也不丢 deck, 修 JSON 重 resume 即可.
 """
 
 

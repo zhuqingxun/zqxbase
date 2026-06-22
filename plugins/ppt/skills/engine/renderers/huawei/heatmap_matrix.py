@@ -18,7 +18,7 @@ from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
 
 from engine.renderer_kit import (
-    register_renderer, _RENDERERS,
+    register_renderer, _RENDERERS, RendererContext,
     hex_to_rgb, add_textbox, add_textbox_rich, add_rounded_rect, set_slide_background,
     render_title_zone, render_footer, get_content_zone, get_points, get_point_bodies,
     _render_cards, _resolve_accent, _resolve_title_color, _resolve_body_color, _ve,
@@ -38,10 +38,7 @@ def render_heatmap_matrix(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
     Unicode 方案 A：score_chars = 5 个 U+2588 Full Block，按 score 截取前 N 个显示为红色。
     末列为 total 合计。
     """
-    sw, sh = _slide_dims_in()
-    set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
-    render_title_zone(slide, spec, theme, safe)
-    render_footer(slide, spec, theme, safe, total_slides)
+    ctx = RendererContext.build(slide, spec, theme, safe, total_slides)
 
     cfg = _layout(theme, "heatmap_matrix")
     row_label_col_px = cfg.get("row_label_column_px", 220)
@@ -51,13 +48,8 @@ def render_heatmap_matrix(slide, spec: SlideSpec, theme: dict, safe: SafeArea, t
     # 0.5 档精度: 小数部分 >= 0.5 时用 U+258C Left Half Block 占一格 (如 3.5 → ███▌░)。
     half_char = cfg.get("half_block_char") or "▌"
 
-    top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
-    font = _font_family(spec, theme)
-
-    area_left = left_pad
-    area_top = top_pad + 1.4
-    area_w = sw - area_left - right_pad
-    area_h = sh - area_top - bottom_pad - 0.5
+    font = ctx.font
+    area_left, area_top, area_w, area_h = ctx.area_left, ctx.area_top, ctx.area_w, ctx.area_h
 
     rows_data = _extra(spec, "rows", default=None) or []
     columns = _extra(spec, "columns", default=None) or []

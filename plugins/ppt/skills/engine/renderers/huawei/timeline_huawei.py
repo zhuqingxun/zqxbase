@@ -18,40 +18,32 @@ from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
 
 from engine.renderer_kit import (
-    register_renderer, _RENDERERS,
+    register_renderer, _RENDERERS, RendererContext,
     hex_to_rgb, add_textbox, add_textbox_rich, add_rounded_rect, set_slide_background,
     render_title_zone, render_footer, get_content_zone, get_points, get_point_bodies,
     _render_cards, _resolve_accent, _resolve_title_color, _resolve_body_color, _ve,
     compute_card_height, estimate_content_height, normalize_point,
     render_card_header, render_card_number_badge, _get_card_accent,
     _truncate_for_single_line, _add_textbox_no_wrap, safe_h,
-    _px_pt, _px_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
+    _px_pt, _px_in, _resolve_gap_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
     _extra, _extra_list_merge, _estimate_text_height_in, _dget, _add_rect,
     _canvas_dims_in, _canvas_padding_in, _slide_dims_in, _font_family, TREND_COLOR_TOKEN,
 )
+from engine.layout_engine import split_columns, region_from_area
 
 
 @register_renderer("timeline-huawei")
 def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int) -> None:
     """华为时间轴：顶部年份大字 48px + 阶段连接线 + 阶段标题 22px + 描述 16px。"""
-    sw, sh = _slide_dims_in()
-    set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
-    render_title_zone(slide, spec, theme, safe)
-    render_footer(slide, spec, theme, safe, total_slides)
+    ctx = RendererContext.build(slide, spec, theme, safe, total_slides)
 
     cfg = _layout(theme, "timeline_huawei")
-    phase_col_px = cfg.get("phase_column_px", 180)
     year_px = cfg.get("year_size_px", 48)
     title_px = cfg.get("title_size_px", 22)
     desc_px = cfg.get("desc_size_px", 16)
 
-    top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
-    font = _font_family(spec, theme)
-
-    area_left = left_pad
-    area_top = top_pad + 1.4
-    area_w = sw - area_left - right_pad
-    area_h = sh - area_top - bottom_pad - 0.5
+    font = ctx.font
+    area_left, area_top, area_w, area_h = ctx.area_left, ctx.area_top, ctx.area_w, ctx.area_h
 
     phases = _extra(spec, "phases", default=None) or _extra(spec, "timeline", default=None) or []
     if not phases:
@@ -63,6 +55,14 @@ def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, 
             })
     n = max(len(phases), 1)
     col_w = area_w / n
+
+    # S4 阶段3: 横向等宽分栏交给 LayoutEngine (无 layout: 子节走原 col_w 路径)。
+    # gap=0 时 cols[i].left == area_left+i*col_w、cols[i].width == col_w 逐 EMU 恒等。
+    layout_spec = cfg.get("layout")
+    cols = (
+        split_columns(region_from_area(ctx), n, _resolve_gap_in(layout_spec, cfg))
+        if layout_spec is not None else None
+    )
 
     year_pt = _px_pt(year_px)
     title_pt = _px_pt(title_px)
@@ -83,12 +83,15 @@ def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, 
     for i, phase in enumerate(phases):
         if isinstance(phase, str):
             phase = {"year": "", "title": phase, "desc": ""}
-        x = area_left + i * col_w
+        if cols is not None:
+            x, cw = cols[i].left, cols[i].width
+        else:
+            x, cw = area_left + i * col_w, col_w
         cy = area_top
 
         year_text = str(_dget(phase, "year", default=""))
         add_textbox(
-            slide, x, cy, col_w, year_pt / 72 * 1.3 + 0.2,
+            slide, x, cy, cw, year_pt / 72 * 1.3 + 0.2,
             year_text, font, year_pt,
             primary, bold=True,
         )
@@ -97,7 +100,7 @@ def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, 
         node_d = 0.25
         node_shape = slide.shapes.add_shape(
             MSO_SHAPE.OVAL,
-            Inches(x + col_w / 2 - node_d / 2),
+            Inches(x + cw / 2 - node_d / 2),
             Inches(line_y - node_d / 2 + 0.015),
             Inches(node_d), Inches(node_d),
         )
@@ -109,7 +112,7 @@ def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, 
         # schemas: TimelinePhase.label/items[]; legacy: title/desc/description
         title_text = _dget(phase, "title", "label", default="")
         add_textbox(
-            slide, x + 0.1, body_top, col_w - 0.2, title_pt / 72 * 1.4 + 0.15,
+            slide, x + 0.1, body_top, cw - 0.2, title_pt / 72 * 1.4 + 0.15,
             title_text, font, title_pt,
             ink, bold=True,
         )
@@ -123,7 +126,7 @@ def render_timeline_huawei(slide, spec: SlideSpec, theme: dict, safe: SafeArea, 
             add_textbox(
                 slide, x + 0.1,
                 body_top + title_pt / 72 * 1.4 + 0.1,
-                col_w - 0.2,
+                cw - 0.2,
                 safe_h(area_top + area_h - body_top - title_pt / 72 * 1.4 - 0.1),
                 desc_text, font, desc_pt,
                 ink_soft,

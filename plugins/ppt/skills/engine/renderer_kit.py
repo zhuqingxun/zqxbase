@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import sys
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,10 @@ from lib.pptx_compat import qn, etree
 from lib.font_fallback import resolve_font_for_pptx
 from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
+
+# LayoutEngine (S4 阶段3): 更底层叶子 (仅依赖 dataclasses, 不反向 import 本模块), 供
+# _render_cards 的 cards_6 列轴切分用。符合 renderer_kit "单向叶子" 设计 (只 import 更底层)。
+from engine.layout_engine import Region, split_columns
 
 logger = logging.getLogger(__name__)
 
@@ -547,7 +552,8 @@ def render_card_number_badge(slide, x, y, theme: dict, spec: SlideSpec, index: i
 # CARDS RENDERER (从 render.py 迁入; legacy cards-2..5 + huawei cards-6 共享底座)
 # ===========================================================================
 
-def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: int, total_slides: int):
+def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: int, total_slides: int,
+                  layout_spec: dict | None = None):
     """N-card layout with optional card headers.
 
     Layout 选择:
@@ -569,13 +575,25 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
     #   n == 4:      双行 2x2
     #   n in {5, 6}: 3 列 x 2 行网格 (n=5 时末格留空, 复用 cards-6 网格底座)
     # 视觉统一会改变旧 cards-4 (4 列单行→2x2) / cards-5 (5 列单行→3x2) 外观 = 蓝图决策2 拍板接受。
-    if n_cards <= 3:
+    if layout_spec is not None:
+        # S4 阶段3: cards_6 维度从 layout 子节读 (死配置对齐: 原硬编码 3,2 与之等值)。
+        n_cols = layout_spec.get("cols", 3)
+        n_rows = layout_spec.get("rows", 2)
+    elif n_cards <= 3:
         n_cols, n_rows = n_cards, 1
     elif n_cards == 4:
         n_cols, n_rows = 2, 2
     else:  # 5, 6
         n_cols, n_rows = 3, 2
     card_width = (safe.width - gap * (n_cols - 1)) / n_cols
+    # S4 阶段3: 仅 cards_6 (有 layout_spec) 列轴经 LayoutEngine; cards-2/3/4/5 (layout_spec=None)
+    # 保持原硬编码路径 (爆炸半径控制)。**行轴保持 row_pitch 语义不动** (gap 靠缩 card_height 吸收,
+    # 与 split_grid 的 cell 间距模型不同, 强行 split_grid 会破回归)。col_regions[c].left/width 与
+    # 原 safe.left+c*(card_width+gap) / card_width 用同一 gap, 逐 EMU 恒等。
+    col_regions = (
+        split_columns(Region(safe.left, content_top, safe.width, content_h), n_cols, gap)
+        if layout_spec is not None else None
+    )
 
     points = get_points(spec)
     # path X: content.key_points 为空时, 从 variant.cards (Cards6Content.cards: heading/body)
@@ -629,7 +647,7 @@ def _render_cards(slide, spec: SlideSpec, theme: dict, safe: SafeArea, n_cards: 
     for i in range(n_cards):
         r = i // n_cols
         c = i % n_cols
-        x = safe.left + c * (card_width + gap)
+        x = col_regions[c].left if col_regions is not None else safe.left + c * (card_width + gap)
         card_top = grid_top + r * row_pitch
         fill = colors[i % len(colors)]
         use_rounded = theme.get("visual_preferences", {}).get("rounded_corners", True)
@@ -685,6 +703,20 @@ def _px_pt(px: int | float) -> float:
 # 为兼容研究报告 "/96" 的 Web DPI 表述，此处保留 96 DPI 换算便于对照。
 def _px_in(px: int | float) -> float:
     return float(px) / 96.0
+
+
+def _resolve_gap_in(layout_spec: dict, cfg: dict) -> float:
+    """解析 layout 子节的 gap_in (S4 阶段3 LayoutEngine 接缝)。
+
+    - 数值 (int/float): 直接当 inch 用 (如 swot gap_in:0.0 / personas gap_in:0.25)。
+    - 'from_px:<param>' 哨兵: 取本 section 的 <param> 经 _px_in 换算 (如 process_flow
+      gap_in:from_px:arrow_gap_px → _px_in(cfg['arrow_gap_px'])), 与原 renderer 同源恒等。
+    """
+    g = layout_spec.get("gap_in", 0.0)
+    if isinstance(g, str) and g.startswith("from_px:"):
+        param = g[len("from_px:"):]
+        return _px_in(cfg.get(param, 0))
+    return float(g)
 
 
 def _tokens(theme: dict) -> dict:
@@ -951,3 +983,75 @@ def _font_family(spec: SlideSpec, theme: dict) -> str:
     sans = _tokens(theme).get("fonts", {}).get("sans", [])
     preferred = sans[0] if sans else (spec.design.font_family or "Microsoft YaHei")
     return resolve_font_for_pptx(preferred)
+
+
+# ===========================================================================
+# RENDERER CONTEXT (S4 阶段2: 13 个标准 renderer 序章 + 内容区几何单一来源)
+# ===========================================================================
+
+@dataclass(frozen=True)
+class RendererContext:
+    """13 个标准 huawei renderer 的共享序章 + 内容区几何 (S4 阶段2 god-module 拆分).
+
+    阶段1 把 helper 收口到 renderer_kit 后, 18 个 renderer 中有 13 个头部仍各自重复
+    "序章三连 (paper 背景 + 标题区 + 页脚) + canvas padding/font + 内容区 area 计算"
+    共约 10 行样板。本 dataclass 把它收口为单一来源: 调一次 build() 完成全部副作用与几何,
+    renderer 头部解构回原同名局部变量, 函数体零改动。
+
+    area_* 字段数值与原各 renderer 头部逐字符恒等 (area_top = top_pad + 1.4,
+    area_h = sh - area_top - bottom_pad - 0.5), 故对默认 huawei 主题零视觉变化。
+    frozen=True: 内容区几何构造后不可变, 防止 renderer 函数体误改共享几何。
+    """
+
+    sw: float
+    sh: float
+    top_pad: float
+    right_pad: float
+    bottom_pad: float
+    left_pad: float
+    font: str
+    area_left: float
+    area_top: float
+    area_w: float
+    area_h: float
+
+    @classmethod
+    def build(
+        cls,
+        slide,
+        spec: SlideSpec,
+        theme: dict,
+        safe: SafeArea,
+        total_slides: int,
+    ) -> "RendererContext":
+        """绘制 13 个标准 renderer 的共享序章 (副作用) 并返回内容区几何。
+
+        副作用 (顺序与原各 renderer 头部一致):
+          1. paper 背景填充 (set_slide_background)
+          2. 标题区 (render_title_zone; 其返回值原本就被各 renderer 丢弃, area_top 用硬编码 +1.4)
+          3. 页脚 (render_footer)
+        随后计算 canvas padding / font / 内容区 area 几何并打包返回。
+        """
+        sw, sh = _slide_dims_in()
+        set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
+        render_title_zone(slide, spec, theme, safe)
+        render_footer(slide, spec, theme, safe, total_slides)
+        top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
+        font = _font_family(spec, theme)
+        area_left = left_pad
+        area_top = top_pad + 1.4
+        area_w = sw - area_left - right_pad
+        area_h = sh - area_top - bottom_pad - 0.5
+        return cls(
+            sw=sw,
+            sh=sh,
+            top_pad=top_pad,
+            right_pad=right_pad,
+            bottom_pad=bottom_pad,
+            left_pad=left_pad,
+            font=font,
+            area_left=area_left,
+            area_top=area_top,
+            area_w=area_w,
+            area_h=area_h,
+        )

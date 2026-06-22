@@ -1,0 +1,248 @@
+{
+  "deck": "renderer-deck.pptx",
+  "timestamp": "2026-06-12T11:25:33+08:00",
+  "pages": 19,
+  "mode": "anchor",
+  "anchor_library_version": "2.0 (plugin scope)",
+  "verdict": "整体调性高度贴合 golden 锚点语言 (白底 + 红色强调 + 黑色粗标题 + 浅灰卡片 + 底部来源标注), palette 轴稳定在 4 分专业水平, closing 页 (slide-18) 调性达到 banking-p043 golden 水准。layout 轴的拖累点集中在: slide-03 命中 AP4 (红色巨字补位), 三张 section 页 (4/14/19) 下半页 50% 空白导致视觉重量失衡, slide-17 标题承诺 5 项却只渲染 4 张卡片 (内容截断)。结构化内容页 (5/6/8/9/12/16) 是本 deck 最强部分, 卡片对齐与关联可视化 (P4) 执行扎实。",
+  "summary": {
+    "layout_avg": 3.58,
+    "layout_max": 4,
+    "layout_min": 2,
+    "palette_avg": 3.95,
+    "palette_max": 5,
+    "palette_min": 3
+  },
+  "slides": [
+    {
+      "index": 1,
+      "slide_type": "cover",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "红色 kicker + 大黑标题 + 底部三列元数据栏 (受众/深度/版本) 对齐工整, 分隔线干净; 对照 wifi7-p001 缺一个视觉锚物 (golden 用自然摄影), 上半页留白偏多。白底 + 红黑双色符合 P1",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 2,
+      "slide_type": "toc",
+      "layout_score": 3,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "左列红色编号 01-06 + 黑色条目纵向对齐良好, 间距均匀; 但全部内容挤在左侧 60%, 右半画面完全空白, 视觉重量整体左倾。标题字高约为条目 2.5 倍、未达 AP3 阈值。白底红黑, 红色用量节制",
+      "top_issue": "内容挤在左侧 60%, 右半画面完全空白, 视觉重量整体左倾",
+      "suggestion": "目录页右半可加章节缩略结构平衡左倾"
+    },
+    {
+      "index": 3,
+      "slide_type": "content",
+      "layout_score": 2,
+      "palette_score": 3,
+      "antipatterns": ["AP4"],
+      "observation": "不匹配/被绑架/成本高 三个红色巨字 (约为右侧注释小字 4-5 倍) 是画面主导, 每行信息量 = 1 个词 + 1 句 14px 灰色短注, 信息密度过低, 与 anchors.yaml AP4 evidence 同源同构。三处红色巨字让红色用量压过强调色定位",
+      "top_issue": "三个红色巨字 + 每行仅 1 词 + 1 短注, 信息密度过低 (AP4)",
+      "suggestion": "巨词降为正文 1.5 倍的红色加粗强调, 每层扩为 约束机制→具体表现→量化影响 三段卡片, 参考 banking-p004 三阶段浅灰卡 + 红色箭头递进"
+    },
+    {
+      "index": 4,
+      "slide_type": "section",
+      "layout_score": 3,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "红 kicker + 大标题 + 单段正文集中在上半部, 下半页约 50% 完全空白, 垂直重心失衡; 正文块左对齐宽度舒适。白底黑字红 kicker 符合 P1",
+      "top_issue": "内容集中上半部, 下半页约 50% 空白, 垂直重心失衡",
+      "suggestion": "标题 + 正文块整体移至垂直居中, 或下半部加引文卡/单个数据点作视觉锚, 参考 wifi7-p001 封面画面重量平衡"
+    },
+    {
+      "index": 5,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "HRC 红色母卡 → D1/D2/D3 三张浅灰子卡, 连接线明确 (P4 关联可视化), 卡片等宽对齐, 留白舒适; D1 卡内 bullet 缩进首行与后两行不一致。红色块作单一焦点 + 浅灰层次, 贴近 banking-p026 的架构表达",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 6,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "5 层金字塔与右侧 5 条 bullet 垂直一一对位, 关联通过水平对齐表达; 注释单行简洁。红色深→浅粉渐变梯度自然, 白底, 红色面积大但承担数据结构角色",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 7,
+      "slide_type": "data",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "4 个红色巨号 KPI (15,000/50%+/80%/21天) 等距分列 + 竖分隔线 + 灰色小标签, 数字基线对齐; 标题与数字区之间约 200px 空白略多。红色数字作视觉焦点符合 P3, 绿色增量箭头 (+10pp) 点缀克制, 底部含 Army Times/Eightfold.ai 来源 (P5)",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 8,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "5 张浅粉流程卡 + 红色箭头 (T-11月→T-8月), 卡片等宽等高、编号统一左上, 箭头垂直居中 (P4); 标题下方约 180px 空白使重心偏下。浅粉是主题红的浅化, 调性统一",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 9,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "L1-L4 四行分层结构, 左侧深灰标签卡 + 右侧内容卡行列严整, 每行卡数不同但右缘对齐, 信息密度高且舒展 (P4 结构化标签); palette 全灰阶无红色 accent, 与 deck 红色语言脱节, 焦点偏弱但浅色干净",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 10,
+      "slide_type": "content",
+      "layout_score": 3,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "2×2 矩阵四格等大, 但格子为 2.4:1 宽矩形且内容只占左上角 (每格标题 + 一行小字), 格内留白失衡; 左下 KD 关键岗位时间 小字孤立悬置, 轴刻度含义不明; 深黑边框 + 阴影偏重。浅粉高亮目标象限 (Pentathlete Leader) 焦点明确, 白底",
+      "top_issue": "2×2 格子为宽矩形且内容只占左上角, 格内留白失衡; KD 标注孤立悬置",
+      "suggestion": "2×2 格子压缩高度或内容垂直居中, KD 关键岗位时间 标注明确为纵轴低端刻度"
+    },
+    {
+      "index": 11,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "水平时间线 5 节点等距, 红色年份大字-红点-黑小标-bullet 四层对齐工整; 下半页约 40% 空白但时间线页可接受。年份属数据焦点 (P3 允许红色加粗), 非装饰字",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 12,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "2×3 卡片网格等大对齐, 红色 header 条 + 浅灰 body 统一, 卡内行距舒适, 密度贴近 banking-p021 的四范式卡; 6 条红 header 红色用量偏多但作分类标签统一不刺眼",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 13,
+      "slide_type": "data",
+      "layout_score": 4,
+      "palette_score": 3,
+      "antipatterns": [],
+      "observation": "6 行评分表行列对齐, 红色方块计分条 + 斜线纹理表缺口是有效的可视化 (P4), 表头清晰; 交替行底色为淡蓝紫灰调, 与全 deck 暖红色系冲突, 是调性杂音。底部含对照框架来源 (P5)",
+      "top_issue": "交替行底色淡蓝紫灰与全 deck 暖红色系冲突, 调性杂音",
+      "suggestion": "改纯浅灰 (#F2F2F2) 交替即净归位"
+    },
+    {
+      "index": 14,
+      "slide_type": "section",
+      "layout_score": 3,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "与 slide-04 同版式: 内容集中上半部, 下半页 50% 空白, 重心失衡。白底红 kicker 调性符合 P1",
+      "top_issue": "与 slide-04 同版式: 下半页 50% 空白, 重心失衡",
+      "suggestion": "同 section 页: 标题 + 正文整体垂直居中, 或下半部加视觉锚"
+    },
+    {
+      "index": 15,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "金字塔复用 slide-06 版式, 右侧注释升为 2 行段落仍与层级垂直对位; 标题 给 一把手 的 存在变量拼接式多余空格 (文本层瑕疵, 未达 AP5 字面值泄露)。红色渐变 + 白底同 slide-06",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 16,
+      "slide_type": "content",
+      "layout_score": 4,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "4 行 (治理/数据/制度/文化) × 3 列 (打底座/立制度/塑文化) 胶囊矩阵, 行列对齐严整, 列头时间注释清晰 (P4 递进); 红/橙/浅灰三档色编码无图例, 语义靠猜。三色均浅色系且红橙相邻和谐",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 17,
+      "slide_type": "content",
+      "layout_score": 3,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "标题承诺 5 个高概率陷阱 但只渲染 R01-R04 四张卡, R05 缺失, 标题与内容数量不符, 属内容截断缺陷; 2×2 卡片本身等大对齐, 左侧 HIGH 红 / MED 橙色条等级编码清晰。红橙等级色 + 白底浅灰卡层次干净",
+      "top_issue": "标题承诺 5 个高概率陷阱 但只渲染 R01-R04 四张卡, R05 缺失, 内容截断",
+      "suggestion": "补第 5 张卡 (改 2+3 或 1×5 布局) 或核对 slide-plan 数据源修正标题计数"
+    },
+    {
+      "index": 18,
+      "slide_type": "closing",
+      "layout_score": 4,
+      "palette_score": 5,
+      "antipatterns": [],
+      "observation": "与 golden banking-p043 同构: 左侧巨号 谢谢 + 红色短下划线, 右侧 colophon 列 (灰标签 + 黑值四组) 层级清晰; 右列首段与下方列表间距略大, golden 有 logo 收尾本页无。白底 + 黑大字 + 单条红线, 调性与 golden closing 等同",
+      "top_issue": null,
+      "suggestion": null
+    },
+    {
+      "index": 19,
+      "slide_type": "section",
+      "layout_score": 3,
+      "palette_score": 4,
+      "antipatterns": [],
+      "observation": "复用 section 版式: 两行大标题 + 三行正文后下半页全空, 密度低重心上偏; 页码 19/19 在 下一步 页而谢谢页在 18, 收尾顺序反常 (内容序问题, 不计轴分)。白底红 kicker 符合 P1",
+      "top_issue": "复用 section 版式, 下半页全空, 密度低重心上偏; 页码收尾顺序反常",
+      "suggestion": "同 section 页: 垂直居中或加视觉锚; 核对页码与谢谢页收尾顺序"
+    }
+  ],
+  "antipattern_hits": [
+    {
+      "slide": 3,
+      "ap": "AP4",
+      "description": "内容稀疏 + 巨字补位: 不匹配/被绑架/成本高 三个红色巨字主导画面, 每行仅 1 词 + 1 短注, 与 anchors.yaml AP4 evidence (同输入原版 slide 3 用户评 0/1/2) 同构",
+      "fix": "巨词降为正文 1.5 倍的红色加粗强调, 每层扩为 约束机制→具体表现→量化影响 三段卡片, 参考 banking-p004 三阶段浅灰卡 + 红色箭头递进"
+    }
+  ],
+  "improvements": [
+    {
+      "rank": 1,
+      "title": "slide-03 AP4 巨字补位",
+      "detail": "把 不匹配/被绑架/成本高 从约 48px 红色巨字降为正文 1.5 倍的红色加粗关键词, 每层补充结构化内容 (机制/表现/影响) 形成三张横向卡片, 参考 banking-p004 的浅灰卡 + 红色箭头三阶段递进版式",
+      "slides": [3]
+    },
+    {
+      "rank": 2,
+      "title": "slide-17 内容截断",
+      "detail": "标题写 5 个高概率陷阱 但只渲染 4 张风险卡 (R05 缺失), 需补第 5 张卡 (改 2+3 或 1×5 布局) 或核对 slide-plan 数据源修正标题计数, 标题-内容数量不符是 C-level 观众最易察觉的可信度伤害",
+      "slides": [17]
+    },
+    {
+      "rank": 3,
+      "title": "section 页 (4/14/19) 下半页 50% 空白",
+      "detail": "三张认知转换/延展页内容全部压在上半部, 垂直重心失衡; 将标题 + 正文块整体移至垂直居中, 或在下半部加一个引文卡/单个数据点作视觉锚, 参考 wifi7-p001 封面的画面重量平衡",
+      "slides": [4, 14, 19]
+    },
+    {
+      "rank": 4,
+      "title": "slide-13 交替行底色去蓝紫调",
+      "detail": "评分表淡蓝紫灰条纹与全 deck 暖红色系冲突, 改纯浅灰交替即可归位",
+      "slides": [13]
+    },
+    {
+      "rank": 5,
+      "title": "slide-10 矩阵格内容失衡 + slide-02 右半空白",
+      "detail": "2×2 格子压缩高度或内容垂直居中, KD 关键岗位时间 标注明确为纵轴低端刻度; 目录页右半可加章节缩略结构平衡左倾",
+      "slides": [10, 2]
+    }
+  ]
+}

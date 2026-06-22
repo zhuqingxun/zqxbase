@@ -230,8 +230,8 @@ class TestRunSubcommand:
             f"input_sha256 应为 64 hex 小写, 实际 {manifest.get('input_sha256')!r}"
         )
         assert manifest["input_kind"] in ("dir", "file")
-        assert manifest["plugin_version"] == "3.7.0", (
-            f"plugin_version 应为 3.7.0, 实际 {manifest.get('plugin_version')!r}"
+        assert re.fullmatch(r"\d+\.\d+\.\d+", manifest["plugin_version"]), (
+            f"plugin_version 应为 semver 格式, 实际 {manifest.get('plugin_version')!r}"
         )
         assert manifest["taste_requested"] is False
         # stages: parse 已 completed
@@ -425,12 +425,17 @@ class TestResumePlanContentVolume:
 
 
 # ============================================================
-# TC-A8: --with-taste 占位 (P0 不接入)
+# TC-A8: --with-taste 在 run 阶段 (S3-P1 档位 B 接入后: 记 flag + 推迟到 render 后)
 # ============================================================
 
 @_fixture_skip
-class TestWithTastePlaceholder:
-    """TC-A8: --with-taste 不报错 + 提示 S3-P1 + manifest.taste_requested=true。"""
+class TestWithTasteRun:
+    """--with-taste 在 run 阶段: 不报错 + manifest.taste_requested=true + 仍停在 architect gate。
+
+    S3-P1 档位 B 接入后, taste 是 render 完成后的可选末阶段; run 阶段只记 flag,
+    流程不变 (仍停 architect gate, exit 3), taste gate 要等 plan resume render 完才触发。
+    (替换 P0 期 'stdout 含 S3-P1 占位提示' 旧断言 — 占位已移除。)
+    """
 
     @pytest.fixture
     def run_result(self, tmp_path):
@@ -449,13 +454,21 @@ class TestWithTastePlaceholder:
             f"stderr={result.stderr}"
         )
 
-    def test_with_taste_prints_s3p1_hint(self, run_result):
-        """stdout 含 'S3-P1' 提示 (PRD §7.1)。"""
-        result, _ = run_result
-        combined = result.stdout + result.stderr
-        assert "S3-P1" in combined, (
-            f"--with-taste 应提示 S3-P1, 实际输出未含该字样\nstdout={result.stdout}"
+    def test_with_taste_run_still_pauses_at_architect(self, run_result):
+        """run --with-taste 仍停在 architect gate (exit 3); taste 推迟到 render 后, 不在 run 阶段触发。"""
+        result, out_dir = run_result
+        assert result.returncode == 3, (
+            f"run --with-taste 应仍 exit 3 (停 architect gate), 实际 {result.returncode}\n"
+            f"stdout={result.stdout}\nstderr={result.stderr}"
         )
+        # 旧 S3-P1 占位提示已移除
+        combined = result.stdout + result.stderr
+        assert "占位" not in combined, "S3-P1 占位提示应已移除 (taste 已真接入)"
+        # taste 产物此刻不应存在 (要等 render 后)
+        run_dir = _latest_run_dir(out_dir)
+        assert not (run_dir / "05-taste" / "taste-report.json").exists()
+        state = _read_json(run_dir / "state.json")
+        assert state["current_stage"] == "architect"
 
     def test_with_taste_manifest_flag_true(self, run_result):
         """manifest.taste_requested == true。"""
@@ -463,6 +476,165 @@ class TestWithTastePlaceholder:
         run_dir = _latest_run_dir(out_dir)
         manifest = _read_json(run_dir / "manifest.json")
         assert manifest["taste_requested"] is True
+
+
+# ============================================================
+# S3-P1 档位 B: taste 可选末阶段接入 (bridge taste gate + replay taste)
+# ============================================================
+
+# 真实 deck taste 基线 fixture (v3.8.0 交付, 合法 TasteReport), 复用作 taste 产出样本
+TASTE_FIXTURE_JSON = PLUGIN_ROOT / "tests" / "fixtures" / "taste" / "renderer-deck.taste-report.json"
+
+
+@_fixture_skip
+@pytest.mark.skipif(
+    not TASTE_FIXTURE_JSON.exists(),
+    reason=f"taste baseline fixture 未就位: {TASTE_FIXTURE_JSON}",
+)
+class TestTasteGateBridge:
+    """bridge mode: run/resume 流程 render 完成后转 taste gate (exit 3), resume 校验 JSON 契约。
+
+    LLM 视觉评分留会话层 (orchestrator 零 LLM): orchestrator 只在 render 后暂停 NEED_LLM,
+    会话产出 05-taste/taste-report.json 后 resume 校验契约 -> done。
+    """
+
+    @pytest.fixture
+    def run_dir_at_taste_gate(self, tmp_path):
+        """跑完整 bridge 流程到 taste gate (render 已完成, exit 3 等 taste JSON), 返回 (run_dir, resume_result)。"""
+        out = tmp_path / "deck.pptx"
+        _run_orchestrator(
+            "run", str(FIXTURE_INPUT), "--theme", "huawei", "--output", str(out), "--with-taste",
+        )
+        run_dir = _latest_run_dir(tmp_path)
+        # architect gate
+        shutil.copyfile(
+            FIXTURE_RECORDED / "architect-output.yaml",
+            run_dir / "02-architect" / "output.yaml",
+        )
+        _run_orchestrator("resume", str(run_dir))  # -> plan gate
+        # plan gate -> render -> taste gate
+        shutil.copyfile(
+            FIXTURE_RECORDED / "plan-output.yaml",
+            run_dir / "03-plan" / "output.yaml",
+        )
+        result = _run_orchestrator("resume", str(run_dir))
+        return run_dir, result
+
+    def test_render_done_pauses_at_taste_gate(self, run_dir_at_taste_gate):
+        """render 完成后转 taste gate: exit 3 + state=taste + prompt-context + deck 已渲染。"""
+        run_dir, result = run_dir_at_taste_gate
+        assert result.returncode == 3, (
+            f"render 完成 + taste_requested 应转 taste gate (exit 3), 实际 {result.returncode}\n"
+            f"stdout={result.stdout}\nstderr={result.stderr}"
+        )
+        state = _read_json(run_dir / "state.json")
+        assert state["current_stage"] == "taste"
+        assert state["awaiting"] == "05-taste/taste-report.json"
+        assert (run_dir / "05-taste" / "prompt-context.md").exists()
+        # deck 已渲染 (taste 在 render 之后)
+        assert (run_dir / "04-render" / "deck.pptx").exists()
+
+    def test_taste_resume_valid_json_done(self, run_dir_at_taste_gate):
+        """taste gate 写合法 taste-report.json -> resume -> exit 0 + state=done + manifest.taste_result。"""
+        run_dir, _ = run_dir_at_taste_gate
+        shutil.copyfile(TASTE_FIXTURE_JSON, run_dir / "05-taste" / "taste-report.json")
+        result = _run_orchestrator("resume", str(run_dir))
+        assert result.returncode == 0, (
+            f"合法 taste JSON 应 exit 0 (done), 实际 {result.returncode}\n"
+            f"stdout={result.stdout}\nstderr={result.stderr}"
+        )
+        state = _read_json(run_dir / "state.json")
+        assert state["current_stage"] == "done"
+        manifest = _read_json(run_dir / "manifest.json")
+        assert "taste_result" in manifest, "manifest 应记 taste_result"
+        tr = manifest["taste_result"]
+        assert tr["report_path"] == "05-taste/taste-report.json"
+        assert isinstance(tr["layout_avg"], (int, float))
+        assert isinstance(tr["palette_avg"], (int, float))
+        assert manifest["stages"]["taste"]["status"] == "completed"
+
+    def test_taste_resume_missing_json_fails(self, run_dir_at_taste_gate):
+        """taste gate 未产出 JSON -> resume 协议层 exit 1 + error.json(stage=taste, rule=protocol.*)。"""
+        run_dir, _ = run_dir_at_taste_gate
+        # 不写 taste-report.json
+        result = _run_orchestrator("resume", str(run_dir))
+        assert result.returncode == 1, (
+            f"缺 taste JSON 应 exit 1 (协议层), 实际 {result.returncode}"
+        )
+        err = _read_json(run_dir / "error.json")
+        assert err["stage"] == "taste"
+        assert "protocol" in (err.get("rule") or ""), (
+            f"协议层失败 rule 应含 protocol, 实际 {err.get('rule')!r}"
+        )
+
+    def test_taste_resume_invalid_schema_fails(self, run_dir_at_taste_gate):
+        """taste gate 写不合契约的 JSON (avg 与 slides 不自洽) -> exit 1 + error.json(rule=schema.taste_report)。"""
+        run_dir, _ = run_dir_at_taste_gate
+        # 取合法 fixture, 破坏内部一致性 (layout_avg 改成明显错的值) -> 触发 model_validator
+        data = json.loads(TASTE_FIXTURE_JSON.read_text(encoding="utf-8"))
+        data["summary"]["layout_avg"] = 1.01  # 与 slides 实际平均不符 (容差 0.01 外)
+        (run_dir / "05-taste" / "taste-report.json").write_text(
+            json.dumps(data, ensure_ascii=False), encoding="utf-8",
+        )
+        result = _run_orchestrator("resume", str(run_dir))
+        assert result.returncode == 1, (
+            f"不合契约 taste JSON 应 exit 1 (schema 层), 实际 {result.returncode}\n"
+            f"stdout={result.stdout}\nstderr={result.stderr}"
+        )
+        err = _read_json(run_dir / "error.json")
+        assert err["stage"] == "taste"
+        assert err.get("rule") == "schema.taste_report", (
+            f"schema 层失败 rule 应为 schema.taste_report, 实际 {err.get('rule')!r}"
+        )
+
+
+@_fixture_skip
+@pytest.mark.skipif(
+    not TASTE_FIXTURE_JSON.exists(),
+    reason=f"taste baseline fixture 未就位: {TASTE_FIXTURE_JSON}",
+)
+class TestReplayTaste:
+    """replay mode: --with-taste 确定性回放 (有 fixture 校验 / 无 fixture 优雅跳过)。"""
+
+    def test_replay_with_taste_fixture_validates(self, tmp_path):
+        """fixture 含 recorded/taste-report.json -> replay --with-taste 拷入 + 校验 + 落 manifest, exit 0。"""
+        # copytree us-military fixture 到临时目录, 补一份 recorded/taste-report.json
+        fx = tmp_path / "fx"
+        shutil.copytree(FIXTURE_DIR, fx)
+        shutil.copyfile(TASTE_FIXTURE_JSON, fx / "recorded" / "taste-report.json")
+        out = tmp_path / "deck.pptx"
+        result = _run_orchestrator(
+            "replay", str(fx / "input"), "--fixture", str(fx),
+            "--theme", "huawei", "--output", str(out), "--with-taste",
+        )
+        assert result.returncode == 0, (
+            f"replay --with-taste (有 fixture) 应 exit 0, 实际 {result.returncode}\n"
+            f"stdout={result.stdout}\nstderr={result.stderr}"
+        )
+        run_dir = _latest_run_dir(tmp_path)
+        assert (run_dir / "05-taste" / "taste-report.json").exists(), "05-taste 应有回放的 taste JSON"
+        manifest = _read_json(run_dir / "manifest.json")
+        assert "taste_result" in manifest, "manifest 应记 taste_result"
+        assert manifest["stages"]["taste"]["status"] == "completed"
+
+    def test_replay_with_taste_no_fixture_skips_gracefully(self, tmp_path):
+        """fixture 无 recorded/taste-report.json -> replay --with-taste 优雅跳过 (exit 0, 无 taste 产物)。"""
+        out = tmp_path / "deck.pptx"
+        # 真实 us-military fixture 不含 recorded/taste-report.json
+        result = _run_orchestrator(
+            "replay", str(FIXTURE_INPUT), "--fixture", str(FIXTURE_DIR),
+            "--theme", "huawei", "--output", str(out), "--with-taste",
+        )
+        assert result.returncode == 0, (
+            f"replay --with-taste (无 fixture) 应优雅跳过 exit 0, 实际 {result.returncode}\n"
+            f"stdout={result.stdout}\nstderr={result.stderr}"
+        )
+        run_dir = _latest_run_dir(tmp_path)
+        assert not (run_dir / "05-taste" / "taste-report.json").exists(), (
+            "无 fixture 时不应产出 taste JSON (优雅跳过)"
+        )
+        manifest = _read_json(run_dir / "manifest.json")
+        assert "taste_result" not in manifest, "优雅跳过时 manifest 不应有 taste_result"
 
 
 # ============================================================

@@ -3,7 +3,7 @@ name: rpiv-loop:code-review
 description: >-
   在提交前运行的技术代码审查，用于质量和错误检查
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.1.12
+version: 2.1.13
 ---
 
 对最近更改的文件执行技术代码审查。
@@ -138,6 +138,15 @@ suggestion: [如何修复]
 > `status` 字段取值：`open`（新建时固定）、`fixed`（已修复）、`skipped`（有意跳过，需附理由）。由 code-review-fix 流程在修复完成后回写。
 
 如果未发现问题："代码审查通过。未检测到技术问题。"
+
+## 完成后续
+
+审查产出后，按结论闭合**本审查文件**的 frontmatter `status`（填补干净审查的状态闭合路径——干净审查不会触发 `code-review-fix`，必须由本技能自闭合，否则文件永久卡在 `pending`）：
+
+- **干净通过**（输出"代码审查通过。未检测到技术问题。"，或仅余 low / by-design 等**无需 `code-review-fix` 介入**的观察）：不会有后续修复流程被触发，**由本技能直接闭合**——将审查文件 `status` 改为 `completed`，同步 `updated_at`。
+- **发现需修复的问题**（存在 `status: open` 的 critical / high / medium）：保持 `status: pending`，提示用户运行 `/rpiv-loop:code-review-fix <审查文件路径>`，由该流程修复后翻 `completed`（见 code-review-fix SKILL step 4 闭环校验）。
+
+> 单一职责说明：两条路径**互斥**（一次审查要么干净、要么有问题），不会双写 status，与 `references/frontmatter-spec.md` 职责表 code-review 行一致。
 
 ## 重要提示
 

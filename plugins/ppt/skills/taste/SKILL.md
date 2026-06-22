@@ -8,12 +8,12 @@ description: >-
   当用户提到 "评审 PPT" "ppt:taste" "看一下 deck 质量" "审美评分" "找问题" 时触发.
 argument-hint: "<pptx 路径> 或 <png 目录> [--mode anchor|general]"
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
-version: 3.0.6
+version: 3.0.7
 ---
 
 # PPT:Taste — 视觉评审
 
-视觉评审 .pptx 或 PNG 目录, 输出 markdown 报告. **核心设计: 双轴评分 (layout / palette 解耦)**, 引用 plugin 共享锚点库做视觉对照.
+视觉评审 .pptx 或 PNG 目录, 输出 markdown 报告 + 结构化 JSON (机读, 供产线下游). **核心设计: 双轴评分 (layout / palette 解耦)**, 引用 plugin 共享锚点库做视觉对照.
 
 ## 路径约定
 
@@ -173,10 +173,67 @@ version: 3.0.6
 
 (general 模式下「锚点参考来源」节替换为: `## 评分依据` + 一行 `anchors.yaml P1-P5 + AP1-AP5`)
 
+### Step 4b: 输出结构化 JSON 报告
+
+除 markdown 外, **同一次评审**额外落一份 `<deck-stem>.taste-report.json` (与 .md 同目录同 stem), 供产线下游 (orchestrator run 目录 / CI 门 / 趋势对比) 机读. JSON 与 markdown 必须**同源同值** (同一组评分, 不要重新评).
+
+字段契约**单一来源**: `<plugin-root>/schemas/taste_report.py` (pydantic `TasteReport`). 骨架:
+
+```json
+{
+  "deck": "<deck 文件名>",
+  "timestamp": "<ISO 8601>",
+  "pages": 19,
+  "mode": "anchor",
+  "anchor_library_version": "2.0 (plugin scope)",
+  "verdict": "<综合判断 2-3 句, 同 markdown>",
+  "summary": {
+    "layout_avg": 3.58, "layout_max": 4, "layout_min": 2,
+    "palette_avg": 3.95, "palette_max": 5, "palette_min": 3
+  },
+  "slides": [
+    {
+      "index": 1, "slide_type": "cover",
+      "layout_score": 4, "palette_score": 4,
+      "antipatterns": [],
+      "observation": "<该页 1-2 句具体观察>",
+      "top_issue": null,
+      "suggestion": null
+    }
+  ],
+  "antipattern_hits": [
+    {"slide": 3, "ap": "AP4", "description": "<描述>", "fix": "<修复方向>"}
+  ],
+  "improvements": [
+    {"rank": 1, "title": "<核心问题>", "detail": "<修复方向, 引用 golden 锚点或原则编号>", "slides": [3]}
+  ]
+}
+```
+
+**硬约束** (Step 4c 校验器逐条强制, 违反报错):
+1. `summary.layout_avg` / `palette_avg` = slides 各自实际平均 (保留 2 位小数, 容差 0.01); max/min 取 slides 实际极值.
+2. `pages` == slides 条数; `slides[].index` 连续 1..N, 无跳号/重复.
+3. 命中 AP 的页 (`slides[].antipatterns` 非空), 对应轴自动 <= 2 (与逐页评分一致).
+4. `antipattern_hits` 每条的 (slide, ap) 必须在该页 `slides[].antipatterns` 声明过.
+5. `slides[].antipatterns` 无命中时写 `[]` (**绝不写** `["—"]`); `top_issue`/`suggestion` 仅任一轴 <= 3 或命中 AP 时填, 否则 `null`.
+6. `mode` 仅 `"anchor"` 或 `"general-principles"` (general 模式含 marketplace 锚点缺失 fallback); 无多余字段 (extra=forbid).
+
+### Step 4c: JSON 自校验 (fail-loud)
+
+写完 JSON 后用契约校验器验证结构合规:
+
+```bash
+uv run --script <plugin-root>/schemas/taste_report.py <deck-stem>.taste-report.json
+```
+
+- 输出 `OK: ...` -> 通过, 进 Step 5.
+- 输出 `FAIL: ...` (exit 1) -> 按报错信息修正 JSON 重写, 重跑直到 OK. **不要**把不合规 JSON 留给用户.
+- 若环境无 uv / pydantic 无法运行校验器 (极少数离线场景), 跳过自动校验, 但仍须人工对照上方 6 条硬约束确保结构正确.
+
 ### Step 5: 输出确认
 
-完成报告后:
-1. 输出报告路径让用户打开
+完成 markdown + JSON 两份报告后:
+1. 输出两份报告路径 (`.taste-report.md` + `.taste-report.json`) 让用户打开
 2. 简短总结 deck 级别 layout / palette 双轴分数 + Top 3 改进项
 3. 询问用户是否需要对某些页深入分析 / 或对建议提问
 
@@ -233,7 +290,7 @@ general 模式复用上述执行流程骨架 (Step 1 PNG 准备 / Step 4 报告 
 
 ## 输出位置
 
-`<deck-stem>.taste-report.md` 跟输入 deck 同目录.
+两份报告 `<deck-stem>.taste-report.md` + `<deck-stem>.taste-report.json` 跟输入 deck 同目录, 同 stem.
 
-输入是 PPTX → 报告落到 `.taste-report.md` (替换 `.pptx`)  
+输入是 PPTX → 两份落到 `.taste-report.md` / `.taste-report.json` (替换 `.pptx`)  
 输入是 PNG 目录 → 报告落到 PNG 目录的父目录 (用户期望与 deck 同级)

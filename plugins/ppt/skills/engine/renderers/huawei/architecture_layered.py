@@ -18,26 +18,24 @@ from lib.margins import SafeArea
 from schemas.slide_plan import SlideSpec, StructuredPoint
 
 from engine.renderer_kit import (
-    register_renderer, _RENDERERS,
+    register_renderer, _RENDERERS, RendererContext,
     hex_to_rgb, add_textbox, add_textbox_rich, add_rounded_rect, set_slide_background,
     render_title_zone, render_footer, get_content_zone, get_points, get_point_bodies,
     _render_cards, _resolve_accent, _resolve_title_color, _resolve_body_color, _ve,
     compute_card_height, estimate_content_height, normalize_point,
     render_card_header, render_card_number_badge, _get_card_accent,
     _truncate_for_single_line, _add_textbox_no_wrap,
-    _px_pt, _px_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
+    _px_pt, _px_in, _resolve_gap_in, _tokens, _layouts, _color, _lerp_hex, _is_dark, _type_px, _layout,
     _extra, _extra_list_merge, _estimate_text_height_in, _dget, _add_rect,
     _canvas_dims_in, _canvas_padding_in, _slide_dims_in, _font_family, TREND_COLOR_TOKEN,
 )
+from engine.layout_engine import Region, split_rows, split_columns, region_from_area
 
 
 @register_renderer("architecture-layered")
 def render_architecture_layered(slide, spec: SlideSpec, theme: dict, safe: SafeArea, total_slides: int) -> None:
     """分层架构图：每层一行，左侧 header 列 + 右侧 N 个 cell；支持 highlight cell 红底白字。"""
-    sw, sh = _slide_dims_in()
-    set_slide_background(slide, _color(theme, "paper", "#FFFFFF"))
-    render_title_zone(slide, spec, theme, safe)
-    render_footer(slide, spec, theme, safe, total_slides)
+    ctx = RendererContext.build(slide, spec, theme, safe, total_slides)
 
     cfg = _layout(theme, "architecture_layered")
     header_col_px = cfg.get("header_column_px", 260)
@@ -49,13 +47,8 @@ def render_architecture_layered(slide, spec: SlideSpec, theme: dict, safe: SafeA
     cell_title_px = cfg.get("cell_title_size_px", 16)
     cell_desc_px = cfg.get("cell_desc_size_px", 14)
 
-    top_pad, right_pad, bottom_pad, left_pad = _canvas_padding_in(theme)
-    font = _font_family(spec, theme)
-
-    area_left = left_pad
-    area_top = top_pad + 1.4
-    area_w = sw - area_left - right_pad
-    area_h = sh - area_top - bottom_pad - 0.5
+    font = ctx.font
+    area_left, area_top, area_w, area_h = ctx.area_left, ctx.area_top, ctx.area_w, ctx.area_h
 
     layers = _extra(spec, "layers", default=None) or []
     if not layers:
@@ -79,6 +72,16 @@ def render_architecture_layered(slide, spec: SlideSpec, theme: dict, safe: SafeA
     layer_h = (area_h - gap_in * (n_layers - 1)) / n_layers
     cell_area_w = area_w - header_w - 0.15
 
+    # S4 阶段3: 层级纵向等高分行交给 LayoutEngine (无 layout: 子节走原 layer_h 路径)。
+    # gap_in:from_px:layer_gap_px → _px_in(layer_gap_px)==gap_in, layer_regions[li].top 与原
+    # area_top+li*(layer_h+gap_in) 逐 EMU 恒等; layer_regions[li].height==layer_h (等分恒同高)。
+    # cell 横向分栏在 header 列右侧剩余区 (fixed-leading-column 留 renderer) carve 子 region 后分。
+    layout_spec = cfg.get("layout")
+    layer_regions = (
+        split_rows(region_from_area(ctx), n_layers, _resolve_gap_in(layout_spec, cfg))
+        if layout_spec is not None else None
+    )
+
     header_name_pt = _px_pt(header_name_px)
     header_label_pt = _px_pt(header_label_px)
     cell_title_pt = _px_pt(cell_title_px)
@@ -95,7 +98,7 @@ def render_architecture_layered(slide, spec: SlideSpec, theme: dict, safe: SafeA
     for li, layer in enumerate(layers):
         if isinstance(layer, str):
             layer = {"name": layer, "cells": []}
-        y = area_top + li * (layer_h + gap_in)
+        y = layer_regions[li].top if layer_regions is not None else area_top + li * (layer_h + gap_in)
 
         # Header 格
         _add_rect(slide, area_left, y, header_w, layer_h, header_bg)
@@ -124,12 +127,21 @@ def render_architecture_layered(slide, spec: SlideSpec, theme: dict, safe: SafeA
         # 右侧 cells (schemas 与 legacy 字段名一致)
         cells = _dget(layer, "cells", default=None) or []
         n_cells = len(cells) if cells else cell_columns
-        cw = cell_area_w / max(n_cells, 1)
+        # 每层 n_cells 独立 (jagged): split_columns 每层在 header 右侧剩余区按各自 n_cells 调用。
+        if layer_regions is not None:
+            cell_region = Region(area_left + header_w + 0.15, y, cell_area_w, layer_h)
+            cell_regions = split_columns(cell_region, max(n_cells, 1), 0.0)
+        else:
+            cell_regions = None
+            cw = cell_area_w / max(n_cells, 1)
         for ci in range(n_cells):
             cell = cells[ci] if ci < len(cells) else {}
             if isinstance(cell, str):
                 cell = {"title": cell}
-            cx = area_left + header_w + 0.15 + ci * cw
+            if cell_regions is not None:
+                cx, cw = cell_regions[ci].left, cell_regions[ci].width
+            else:
+                cx = area_left + header_w + 0.15 + ci * cw
             highlight = bool(_dget(cell, "highlight", default=False))
             fill = primary if highlight else paper_2
             _add_rect(slide, cx, y, cw - 0.05, layer_h, fill)

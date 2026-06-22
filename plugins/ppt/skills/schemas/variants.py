@@ -110,6 +110,7 @@ class ArchCell(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str
     desc: str | None = None
+    highlight: bool = False
 
 
 class ArchLayer(BaseModel):
@@ -223,6 +224,17 @@ class Contact(BaseModel):
     model_config = ConfigDict(extra="forbid")
     label: str
     value: str
+
+    @model_validator(mode="after")
+    def _check_at_least_one_non_empty(self) -> "Contact":
+        """label / value 至少一个有实际内容 (非纯空白)。
+
+        两者皆空 (含纯空白) 时, 致谢页 renderer (engine/renderers/huawei/thankyou.py)
+        仍无条件 `cy += 0.78` 推进光标, 渲染出占 0.78" 垂直位却无任何文字的幽灵间隙。
+        """
+        if not (self.label.strip() or self.value.strip()):
+            raise ValueError("Contact 的 label 与 value 不能同时为空 (至少一个需非空白)")
+        return self
 
 
 class Card(BaseModel):

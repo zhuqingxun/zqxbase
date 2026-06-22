@@ -19,10 +19,11 @@ from pydantic import TypeAdapter, ValidationError
 
 # Dev-2 T2 尚未交付时整个测试文件优雅 skip，不让 collection 阶段 ERROR
 try:
-    from schemas.variants import VariantUnion, VARIANT_TYPES  # type: ignore
+    from schemas.variants import VariantUnion, VARIANT_TYPES, Contact  # type: ignore
 except ImportError:
     VariantUnion = None  # type: ignore
     VARIANT_TYPES = None  # type: ignore
+    Contact = None  # type: ignore
 
 pytestmark = pytest.mark.skipif(
     VariantUnion is None,
@@ -385,3 +386,39 @@ def test_architecture_cells_bounded():
     }
     with pytest.raises(ValidationError):
         ta.validate_python(bad_payload)
+
+
+def test_contact_requires_at_least_one_non_empty():
+    """misc §2: Contact label/value 至少一个非空。
+
+    两者皆空 (含纯空白) 时致谢页 renderer 仍占 0.78" 垂直位却无文字 (幽灵间隙)。
+    validator 在 schema 层堵住, 避免无内容联系人进入渲染。
+    """
+    # 正例: 任一非空 / 双非空 均通过
+    assert Contact.model_validate({"label": "邮箱", "value": "a@b.com"}).label == "邮箱"
+    Contact.model_validate({"label": "邮箱", "value": ""})        # 仅 label
+    Contact.model_validate({"label": "", "value": "a@b.com"})     # 仅 value
+
+    # 负例: 双空 / 双纯空白 均被拒
+    with pytest.raises(ValidationError):
+        Contact.model_validate({"label": "", "value": ""})
+    with pytest.raises(ValidationError):
+        Contact.model_validate({"label": "  ", "value": "\t"})
+
+
+def test_thankyou_rejects_fully_empty_contact():
+    """双空 Contact 经 thankyou path X (typed union) 同样被拒, 验证 validator 在 union 下生效。"""
+    bad_payload = {
+        "visual_type": "thankyou",
+        "contacts": [{"label": "", "value": ""}],
+    }
+    with pytest.raises(ValidationError):
+        ta.validate_python(bad_payload)
+
+    # 正例对照: 联系人含非空字段时 thankyou 正常通过
+    ok_payload = {
+        "visual_type": "thankyou",
+        "contacts": [{"label": "研究团队", "value": "洞察项目组"}],
+    }
+    result = ta.validate_python(ok_payload)
+    assert result.contacts[0].value == "洞察项目组"

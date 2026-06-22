@@ -23,7 +23,7 @@ PLUGIN_JSON = PLUGIN_ROOT / ".claude-plugin" / "plugin.json"
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 
 # 目标版本; 后续 PRD 推进时同步刷新
-EXPECTED_VERSION = "3.7.1"
+EXPECTED_VERSION = "3.9.0"
 
 # 所有 plugin 内 SKILL.md 子目录 (theme 可能在 v3.4.0+ 被删, 设 optional)
 _REQUIRED_SKILLS = ("create", "refine", "taste")

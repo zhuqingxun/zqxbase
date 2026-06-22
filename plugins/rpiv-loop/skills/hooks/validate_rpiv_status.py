@@ -17,29 +17,46 @@ LEGAL_STATUS = {
     "process": {"pending", "in-progress", "completed", "superseded", "archived"},
     "todo": {"open", "in-progress", "completed", "archived"},
     "aux": {"pending", "completed", "archived"},
+    # handoff 是跨会话交接票据，状态机仅 pending→archived（见 frontmatter-spec.md「Handoff 文件」）。
+    # 它常物理落在 rpiv/todo/ 下，但语义不是 todo，必须独立枚举，否则 pending 被误判非法。
+    "handoff": {"pending", "archived"},
 }
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 STATUS_RE = re.compile(r"^status:\s*([^\s#]+)\s*$", re.MULTILINE)
+TYPE_RE = re.compile(r"^type:\s*([^\s#]+)\s*$", re.MULTILINE)
 
 
-def classify(posix_path: str) -> str:
+def classify(posix_path: str, file_type: str | None = None) -> str:
+    name = Path(posix_path).name
+    # handoff 优先于 todo 判定：handoff 文件常落在 rpiv/todo/，先按 frontmatter type
+    # 或文件名（标准 handoff-* 前缀 / 历史 *-HANDOFF 后缀，均含 "handoff"）识别，
+    # 避免被路径规则归成 todo（todo 枚举无 pending，会误拒 handoff 的合法 pending）。
+    if file_type == "handoff" or "handoff" in name.lower():
+        return "handoff"
     if "/rpiv/todo/" in posix_path:
         return "todo"
-    name = Path(posix_path).name
     if name.startswith(("brainstorm-summary-", "research-")):
         return "aux"
     return "process"
 
 
-def extract_status(text: str) -> str | None:
+def _search_frontmatter(text: str, pattern: re.Pattern[str]) -> str | None:
     m = FRONTMATTER_RE.match(text)
     if not m:
         return None
-    sm = STATUS_RE.search(m.group(1))
+    sm = pattern.search(m.group(1))
     if not sm:
         return None
     return sm.group(1).strip().strip("\"'")
+
+
+def extract_status(text: str) -> str | None:
+    return _search_frontmatter(text, STATUS_RE)
+
+
+def extract_type(text: str) -> str | None:
+    return _search_frontmatter(text, TYPE_RE)
 
 
 def main() -> int:
@@ -70,7 +87,7 @@ def main() -> int:
     if status is None:
         return 0
 
-    category = classify(posix)
+    category = classify(posix, extract_type(text))
     legal = LEGAL_STATUS[category]
     if status in legal:
         return 0
