@@ -34,7 +34,7 @@ PROCESS_PREFIXES = [
     ("plan-", "Plan"),
     ("code-review-", "Code Review"),
     ("exec-report-", "Exec Report"),
-    ("system-review-", "System Review"),
+    ("system-review-", "System Review"),  # 历史兼容：system-review 命令已删除，保留以识别旧文件
     ("delivery-report-", "Delivery"),
     ("test-strategy-", "Test Strategy"),
     ("test-specs-", "Test Specs"),
@@ -54,7 +54,7 @@ TODO_PREFIXES = [
 ]
 
 # 精简摘要里 completed 区块展示这几个 phase 的 ✓/-
-SUMMARY_PHASES = ["PRD", "Plan", "Code Review", "Exec Report", "System Review", "Delivery"]
+SUMMARY_PHASES = ["PRD", "Plan", "Code Review", "Exec Report", "Delivery"]
 
 # all 表格展示的 phase（精简版 6 个）
 ALL_TABLE_PHASES = ["PRD", "Plan", "Code Review", "Exec Report", "System Review", "Delivery"]
