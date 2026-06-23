@@ -2,7 +2,7 @@
 name: rpiv-loop:flow-status
 description: 查看过程文件的状态
 allowed-tools: Bash, Edit, AskUserQuestion
-version: 2.1.14
+version: 2.1.15
 ---
 
 # /rpiv-loop:flow-status
@@ -23,3 +23,13 @@ uv run --no-project python D:/CODE/plugins/rpiv-loop/tools/flow_status.py $ARGUM
 ```
 留空 | all | pending | in-progress | completed | <feature> | check | fix
 ```
+
+## 多子项目聚合（伞目录场景）
+
+工具默认只扫 `cwd/rpiv` 的 `.md`。在**伞/monorepo 目录**（本目录 `rpiv/` 无 md，真实状态散在各子项目）下：
+
+- 若 `cwd/rpiv/subprojects.txt` 存在（每行一个子项目 rpiv 目录路径，`#`/空行忽略），工具**自动聚合**列出的子项目，按子项目分组展示，不再误显示全 0。
+- 也可手动 `--rpiv-dir A --rpiv-dir B`（可重复）做临时聚合。
+- 聚合模式下 `fix` 会拒绝执行（archive/原地改文件依赖子项目 cwd），需 `cd` 到具体子项目再 `fix`。
+
+输出规则不变：仍**原样复述** stdout，不加解读。

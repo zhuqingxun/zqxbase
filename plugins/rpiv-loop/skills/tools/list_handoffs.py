@@ -30,7 +30,12 @@ from handoff_detector import (  # noqa: E402
 
 def scan_dir(target_dir, statuses=("pending",)):
     results = []
-    for subdir_name in ("rpiv", "handoff"):
+    subdir_names = ["rpiv", "handoff"]
+    # 已消费 handoff 在 mark-consumed 时即挪进 <handoff_dir>/archive/,
+    # 故查 archived 须额外扫归档子目录;pending 永远在根目录,无需扫 archive/.
+    if "archived" in statuses:
+        subdir_names += ["rpiv/archive", "handoff/archive"]
+    for subdir_name in subdir_names:
         subdir = target_dir / subdir_name
         if not subdir.is_dir():
             continue

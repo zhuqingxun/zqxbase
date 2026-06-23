@@ -3,7 +3,7 @@ name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
 argument-hint: "<功能描述或 PRD 路径>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.1.14
+version: 2.1.15
 ---
 
 # 规划新任务
@@ -310,6 +310,7 @@ version: 2.1.14
 - **PATTERN**：{对现有模式的引用 - 文件:行号}
 - **IMPORTS**：{所需的导入和依赖项}
 - **GOTCHA**：{要避免的已知问题或约束}
+- **PROPAGATE**（可选，仅当存在强传导依赖时填）：{改动本任务 target_file 时必须同步检查/修改的下游文件——典型如配置常量、期望值表、测试断言（如改 `layouts.yaml` 须同步 `EXPECTED_LAYOUT_*` 常量 + 对应 test 断言行）。无强传导依赖则留空}
 - **VALIDATE**（必填）：`{该任务完成后的独立验证命令}`
 
 <按依赖顺序继续所有任务...>

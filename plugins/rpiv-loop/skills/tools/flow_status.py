@@ -244,6 +244,63 @@ def scan_rpiv(rpiv_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
     return live, archived, errors
 
 
+# ----- 多子项目聚合扫描 -----
+def read_subprojects_config(primary_rpiv: Path, cwd: Path) -> list[Path]:
+    """读取聚合清单 <primary_rpiv>/subprojects.txt。
+
+    每行一个 rpiv 目录路径（绝对或相对 cwd），`#` 开头与空行忽略。
+    用于伞目录场景：本目录 rpiv 无 md，但希望一条命令看到下属子项目的 rpiv。
+    文件不存在返回 []。
+    """
+    cfg = primary_rpiv / "subprojects.txt"
+    if not cfg.is_file():
+        return []
+    dirs: list[Path] = []
+    try:
+        lines = cfg.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return []
+    for line in lines:
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        p = Path(s)
+        if not p.is_absolute():
+            p = (cwd / p).resolve()
+        dirs.append(p)
+    return dirs
+
+
+def scan_many(rpiv_dirs: list[Path]) -> tuple[list[dict], list[dict], list[dict]]:
+    """聚合扫描多个 rpiv 目录。
+
+    给每条记录打 project 标签（= rpiv 目录的父目录名），并把 path 前缀成
+    `<project>/...`，使跨子项目的路径唯一、可读。abs_path 不变（fix 仍能定位）。
+    """
+    live_all: list[dict] = []
+    arch_all: list[dict] = []
+    err_all: list[dict] = []
+    for d in rpiv_dirs:
+        proj = d.parent.name
+        if not d.is_dir():
+            err_all.append({"path": str(d), "error": "rpiv 目录不存在", "project": proj})
+            continue
+        live, arch, errs = scan_rpiv(d)
+        for f in live:
+            f["project"] = proj
+            f["path"] = f"{proj}/{f['path']}"
+        for f in arch:
+            f["project"] = proj
+            f["path"] = f"{proj}/{f['path']}"
+        for e in errs:
+            e["project"] = proj
+            e["path"] = f"{proj}/{e['path']}"
+        live_all += live
+        arch_all += arch
+        err_all += errs
+    return live_all, arch_all, err_all
+
+
 # ----- 一致性检查 -----
 def _parse_ts(s: str | None) -> datetime.datetime | None:
     if not s:
@@ -262,11 +319,14 @@ def consistency_check(live: list[dict]) -> list[dict]:
     """返回异常项列表，每项含 path / kind / message / fixable / suggested_action."""
     anomalies: list[dict] = []
 
-    by_feature: dict[str, dict[str, dict]] = {}
+    # 按 (project, feature) 命名空间分组：聚合多子项目时 project 区分同名 feature，
+    # 单项目时 project 为 ""（不影响行为）。
+    by_feature: dict[tuple, dict[str, dict]] = {}
     for f in live:
         if f["category"] != "process" or f["phase"] == "Unknown":
             continue
-        by_feature.setdefault(f["feature"], {})[f["phase"]] = f
+        fkey = (f.get("project", ""), f["feature"])
+        by_feature.setdefault(fkey, {})[f["phase"]] = f
 
     # 1. status 合法性
     for f in live:
@@ -295,7 +355,7 @@ def consistency_check(live: list[dict]) -> list[dict]:
             })
 
     # 3. Plan completed/in-progress 但关联 PRD 不是 completed
-    for feature, phases in by_feature.items():
+    for (_proj, feature), phases in by_feature.items():
         prd = phases.get("PRD")
         plan = phases.get("Plan")
         if plan and prd:
@@ -313,7 +373,7 @@ def consistency_check(live: list[dict]) -> list[dict]:
 
     # 4. Validation 文件 completed 但 Plan 不是 completed
     validation_phases = {"Code Review", "Exec Report", "System Review", "Delivery", "Alignment"}
-    for feature, phases in by_feature.items():
+    for (_proj, feature), phases in by_feature.items():
         plan = phases.get("Plan")
         for vp in validation_phases:
             v = phases.get(vp)
@@ -378,10 +438,10 @@ def consistency_check(live: list[dict]) -> list[dict]:
             })
 
     # 8. brainstorm-summary 存在但无对应 PRD
-    aux_brainstorms = {f["feature"]: f for f in live if f["phase"] == "Brainstorm"}
-    for feature, bs in aux_brainstorms.items():
+    aux_brainstorms = {(f.get("project", ""), f["feature"]): f for f in live if f["phase"] == "Brainstorm"}
+    for (_proj, feature), bs in aux_brainstorms.items():
         if (bs["fm"].get("status") or "") in ("pending", "in-progress"):
-            phases = by_feature.get(feature, {})
+            phases = by_feature.get((_proj, feature), {})
             if "PRD" not in phases:
                 anomalies.append({
                     "path": bs["path"],
@@ -392,7 +452,7 @@ def consistency_check(live: list[dict]) -> list[dict]:
                 })
 
     # 9. exec-report 存在但 Plan 不是 completed
-    for feature, phases in by_feature.items():
+    for (_proj, feature), phases in by_feature.items():
         er = phases.get("Exec Report")
         plan = phases.get("Plan")
         if er and plan:
@@ -420,35 +480,84 @@ def _fmt_ts(s: str | None) -> str:
     return s[:16]
 
 
+def _fmt_date(s: str | None) -> str:
+    """创建日期格式：YYYY-MM-DD（含年份，避免跨年混淆，不显示时分）。"""
+    if not s:
+        return "—"
+    ts = _parse_ts(s)
+    if ts:
+        return ts.strftime("%Y-%m-%d")
+    return s[:10]
+
+
 def _short_desc(fm: dict) -> str:
     return fm.get("title") or fm.get("description") or ""
 
 
 # ----- mode: 精简摘要 -----
-def mode_summary(live: list[dict], archived: list[dict], errors: list[dict]) -> int:
+def mode_summary(live: list[dict], archived: list[dict], errors: list[dict],
+                 aggregated: bool = False) -> int:
     anomalies = consistency_check(live)
+
+    def _pp(f: dict) -> str:
+        """聚合模式下给明细行加 [project] 前缀；单项目模式返回空串（输出保持原样）。"""
+        return f"[{f.get('project')}] " if aggregated and f.get("project") else ""
 
     process_files = [f for f in live if f["category"] == "process"]
     todo_files = [f for f in live if f["category"] == "todo"]
     aux_files = [f for f in live if f["category"] == "aux"]
 
+    # archived 状态的 todo 不是活跃待办（理应已归位 rpiv/archive/）。
+    # 活跃表与计数仅含非 archived；滞留 todo/ 的 archived 单列告警，避免 silent 丢失。
+    active_todos = [f for f in todo_files if (f["fm"].get("status") or "") != "archived"]
+    misplaced_archived_todos = [f for f in todo_files if (f["fm"].get("status") or "") == "archived"]
+
     n_in_progress = sum(1 for f in process_files if (f["fm"].get("status") or "") == "in-progress")
     n_pending = sum(1 for f in process_files if (f["fm"].get("status") or "") == "pending")
     n_completed = sum(1 for f in process_files if (f["fm"].get("status") or "") == "completed")
 
-    todo_open = sum(1 for f in todo_files if (f["fm"].get("status") or "") == "open")
-    todo_in_prog = sum(1 for f in todo_files if (f["fm"].get("status") or "") == "in-progress")
-    todo_done = sum(1 for f in todo_files if (f["fm"].get("status") or "") == "completed")
+    todo_open = sum(1 for f in active_todos if (f["fm"].get("status") or "") == "open")
+    todo_in_prog = sum(1 for f in active_todos if (f["fm"].get("status") or "") == "in-progress")
+    todo_done = sum(1 for f in active_todos if (f["fm"].get("status") or "") == "completed")
 
-    print("## 流程状态\n")
+    print("## 流程状态（聚合）\n" if aggregated else "## 流程状态\n")
     parts = [f"⚠️ 异常 {len(anomalies)}" if anomalies else "",
              f"🔄 进行中 {n_in_progress}",
              f"⏳ 待处理 {n_pending}",
              f"✓ 已完成 {n_completed}",
              f"📦 已归档 {len(archived)}",
-             f"📋 Todo {len(todo_files)}"]
+             f"📋 Todo {len(active_todos)}"]
     print(" | ".join(p for p in parts if p))
     print()
+
+    if aggregated:
+        # 按子项目分组的计数表（仅展示有内容的子项目）
+        proj_stats: dict[str, dict[str, int]] = {}
+
+        def _slot(name: str) -> dict[str, int]:
+            return proj_stats.setdefault(name, {"in": 0, "pend": 0, "comp": 0, "todo": 0, "arch": 0})
+
+        for f in process_files:
+            st = (f["fm"].get("status") or "")
+            slot = _slot(f.get("project", "?"))
+            if st == "in-progress":
+                slot["in"] += 1
+            elif st == "pending":
+                slot["pend"] += 1
+            elif st == "completed":
+                slot["comp"] += 1
+        for f in active_todos:
+            _slot(f.get("project", "?"))["todo"] += 1
+        for f in archived:
+            _slot(f.get("project", "?"))["arch"] += 1
+        if proj_stats:
+            print("### 📦 按子项目\n")
+            print("| 子项目 | 🔄 | ⏳ | ✓ | 📋 Todo | 📦 |")
+            print("|--------|----|----|----|---------|----|")
+            for name in sorted(proj_stats):
+                d = proj_stats[name]
+                print(f"| {name} | {d['in']} | {d['pend']} | {d['comp']} | {d['todo']} | {d['arch']} |")
+            print()
 
     if errors:
         print(f"### ❓ 解析失败（{len(errors)} 个）\n")
@@ -467,7 +576,7 @@ def mode_summary(live: list[dict], archived: list[dict], errors: list[dict]) -> 
         print("### 🔄 进行中\n")
         for f in in_prog:
             desc = _short_desc(f["fm"])
-            print(f"- {f['filename']} — {desc} [{f['phase']}]")
+            print(f"- {_pp(f)}{f['filename']} — {desc} [{f['phase']}]")
         print()
 
     pending = [f for f in process_files if (f["fm"].get("status") or "") == "pending"]
@@ -475,25 +584,27 @@ def mode_summary(live: list[dict], archived: list[dict], errors: list[dict]) -> 
         print("### ⏳ 待处理\n")
         for f in pending:
             desc = _short_desc(f["fm"])
-            print(f"- {f['filename']} — {desc} [{f['phase']}]")
+            print(f"- {_pp(f)}{f['filename']} — {desc} [{f['phase']}]")
         print()
 
-    # 已完成：按 feature 聚合
-    completed_by_feature: dict[str, dict[str, dict]] = {}
+    # 已完成：按 (project, feature) 聚合（单项目时 project 为 ""，显示同原样）
+    completed_by_feature: dict[tuple, dict[str, dict]] = {}
     for f in process_files:
         if (f["fm"].get("status") or "") == "completed":
-            completed_by_feature.setdefault(f["feature"], {})[f["phase"]] = f
+            fkey = (f.get("project", "") if aggregated else "", f["feature"])
+            completed_by_feature.setdefault(fkey, {})[f["phase"]] = f
     if completed_by_feature:
         print("### ✓ 已完成（建议归档 → `/rpiv-loop:archive all`）\n")
-        for feature, phases in sorted(completed_by_feature.items()):
+        for (proj, feature), phases in sorted(completed_by_feature.items()):
             tags = " ".join(f"{p} ✓" for p in SUMMARY_PHASES if p in phases)
             extras = [p for p in phases if p not in SUMMARY_PHASES]
             if extras:
                 tags += " " + " ".join(f"{p} ✓" for p in extras)
-            print(f"- {feature} — {tags}")
+            label = f"[{proj}] {feature}" if proj else feature
+            print(f"- {label} — {tags}")
         print()
 
-    if todo_files:
+    if active_todos:
         print(f"### 📋 Todo (open: {todo_open} | in-progress: {todo_in_prog} | completed: {todo_done})\n")
         priority_rank = {"high": 0, "medium": 1, "low": 2}
         priority_icon = {"high": "🔴 high", "medium": "🟡 medium", "low": "🔵 low"}
@@ -504,19 +615,34 @@ def mode_summary(live: list[dict], archived: list[dict], errors: list[dict]) -> 
         def _todo_sort_key(f: dict) -> tuple:
             pri = (f["fm"].get("priority") or "").lower()
             typ = f["fm"].get("type") or ""
-            return (priority_rank.get(pri, 99), typ, f["feature"])
+            proj = f.get("project", "") if aggregated else ""
+            return (proj, priority_rank.get(pri, 99), typ, f["feature"])
 
-        print("| 优先级 | 类型 | 状态 | 标识 | 标题 |")
-        print("|--------|------|------|------|------|")
-        for f in sorted(todo_files, key=_todo_sort_key):
+        if aggregated:
+            print("| 子项目 | 优先级 | 类型 | 状态 | 创建 | 标识 | 标题 |")
+            print("|--------|--------|------|------|------|------|------|")
+        else:
+            print("| 优先级 | 类型 | 状态 | 创建 | 标识 | 标题 |")
+            print("|--------|------|------|------|------|------|")
+        for f in sorted(active_todos, key=_todo_sort_key):
             pri = (f["fm"].get("priority") or "").lower()
             pri_disp = priority_icon.get(pri, "—")
             typ = f["fm"].get("type") or ""
             typ_disp = f"{type_icon.get(typ, '📌')} {typ}" if typ else "—"
             status = f["fm"].get("status") or "?"
             st_disp = status_icon.get(status, status)
+            created = _fmt_date(f["fm"].get("created_at"))
             title = _short_desc(f["fm"]).replace("|", r"\|")
-            print(f"| {pri_disp} | {typ_disp} | {st_disp} | {f['feature']} | {title} |")
+            if aggregated:
+                print(f"| {f.get('project', '?')} | {pri_disp} | {typ_disp} | {st_disp} | {created} | {f['feature']} | {title} |")
+            else:
+                print(f"| {pri_disp} | {typ_disp} | {st_disp} | {created} | {f['feature']} | {title} |")
+        print()
+
+    if misplaced_archived_todos:
+        print(f"> ⚠️ {len(misplaced_archived_todos)} 个 archived 状态的 todo 仍滞留 `rpiv/todo/`，应移至 `rpiv/archive/`：")
+        for f in sorted(misplaced_archived_todos, key=lambda x: x["path"]):
+            print(f">   - `{f['path']}`")
         print()
 
     if aux_files:
@@ -535,19 +661,22 @@ def mode_summary(live: list[dict], archived: list[dict], errors: list[dict]) -> 
 
 
 # ----- mode: all (完整表格) -----
-def mode_all(live: list[dict], archived: list[dict], errors: list[dict]) -> int:
+def mode_all(live: list[dict], archived: list[dict], errors: list[dict],
+             aggregated: bool = False) -> int:
     process_files = [f for f in live if f["category"] == "process"]
-    by_feature: dict[str, dict[str, dict]] = {}
+    by_feature: dict[tuple, dict[str, dict]] = {}
     for f in process_files:
-        by_feature.setdefault(f["feature"], {})[f["phase"]] = f
+        fkey = (f.get("project", "") if aggregated else "", f["feature"])
+        by_feature.setdefault(fkey, {})[f["phase"]] = f
 
-    print("## 全部特性状态\n")
-    header = "| 特性 | " + " | ".join(ALL_TABLE_PHASES) + " | 状态 |"
+    print("## 全部特性状态（聚合）\n" if aggregated else "## 全部特性状态\n")
+    first_col = "子项目/特性" if aggregated else "特性"
+    header = f"| {first_col} | " + " | ".join(ALL_TABLE_PHASES) + " | 状态 |"
     sep = "|------|" + "|".join(["-----"] * len(ALL_TABLE_PHASES)) + "|------|"
     print(header)
     print(sep)
-    for feature in sorted(by_feature.keys()):
-        phases = by_feature[feature]
+    for (proj, feature) in sorted(by_feature.keys()):
+        phases = by_feature[(proj, feature)]
         cells = []
         all_statuses = []
         for p in ALL_TABLE_PHASES:
@@ -566,7 +695,8 @@ def mode_all(live: list[dict], archived: list[dict], errors: list[dict]) -> int:
             overall = "待处理"
         else:
             overall = "—"
-        print(f"| {feature} | " + " | ".join(cells) + f" | {overall} |")
+        label = f"[{proj}] {feature}" if proj else feature
+        print(f"| {label} | " + " | ".join(cells) + f" | {overall} |")
     print()
 
     if archived:
@@ -772,25 +902,17 @@ def mode_fix(live: list[dict], errors: list[dict], rpiv_dir: Path) -> int:
 
 
 # ----- main -----
-def main() -> int:
-    parser = argparse.ArgumentParser(description="rpiv-loop:flow-status (Python)")
-    parser.add_argument("mode", nargs="?", default="", help="模式: 留空=精简摘要 | all | pending | in-progress | completed | <feature> | check | fix")
-    parser.add_argument("--rpiv-dir", default=None, help="rpiv 目录绝对路径,默认 ./rpiv")
-    args = parser.parse_args()
-
-    cwd = Path.cwd()
-    rpiv_dir = Path(args.rpiv_dir) if args.rpiv_dir else cwd / "rpiv"
+def _run_single(mode: str, rpiv_dir: Path) -> int:
+    """单 rpiv 目录：保持原行为，输出与改造前一致。"""
     if not rpiv_dir.is_dir():
         print(f"❌ rpiv/ 目录不存在: {rpiv_dir}", file=sys.stderr)
         return 2
-
     try:
         live, archived, errors = scan_rpiv(rpiv_dir)
     except Exception as exc:
         print(f"❌ 扫描失败: {exc}", file=sys.stderr)
         return 2
 
-    mode = args.mode.strip()
     if mode == "":
         return mode_summary(live, archived, errors)
     if mode == "all":
@@ -801,8 +923,68 @@ def main() -> int:
         return mode_check(live, errors)
     if mode == "fix":
         return mode_fix(live, errors, rpiv_dir)
-    # 否则当作 feature name
     return mode_feature(live, archived, mode)
+
+
+def _run_aggregated(mode: str, rpiv_dirs: list[Path]) -> int:
+    """多 rpiv 目录聚合：用于伞目录一条命令看全部子项目。"""
+    try:
+        live, archived, errors = scan_many(rpiv_dirs)
+    except Exception as exc:
+        print(f"❌ 聚合扫描失败: {exc}", file=sys.stderr)
+        return 2
+
+    if mode == "":
+        return mode_summary(live, archived, errors, aggregated=True)
+    if mode == "all":
+        return mode_all(live, archived, errors, aggregated=True)
+    if mode in ("pending", "in-progress", "completed", "open", "superseded", "archived"):
+        return mode_filter(live + archived, mode)
+    if mode == "check":
+        return mode_check(live, errors)
+    if mode == "fix":
+        # 聚合模式不安全做 fix：archive 提示依赖子项目 cwd，原地改文件易出错。
+        anomalies = consistency_check(live)
+        print("## ⚠️ 聚合模式不支持 fix\n")
+        if anomalies:
+            projs = sorted({a.get("project") or a["path"].split("/", 1)[0] for a in anomalies})
+            print(f"检测到 {len(anomalies)} 项异常，分布在子项目: {', '.join(projs)}\n")
+            print("请 `cd` 到对应子项目后单独跑 `/rpiv-loop:flow-status fix`。\n")
+        else:
+            print("（聚合范围内无异常需修复）\n")
+        return 0
+    return mode_feature(live, archived, mode)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="rpiv-loop:flow-status (Python)")
+    parser.add_argument("mode", nargs="?", default="", help="模式: 留空=精简摘要 | all | pending | in-progress | completed | <feature> | check | fix")
+    parser.add_argument("--rpiv-dir", action="append", default=None,
+                        help="rpiv 目录绝对路径；可重复指定多个做聚合。默认 ./rpiv；"
+                             "若 ./rpiv/subprojects.txt 存在则自动聚合其中列出的子项目 rpiv。")
+    args = parser.parse_args()
+
+    cwd = Path.cwd()
+    mode = args.mode.strip()
+
+    # 解析要扫描的 rpiv 目录集合 + 是否聚合
+    if args.rpiv_dir:
+        rpiv_dirs = [Path(d) for d in args.rpiv_dir]
+        aggregated = len(rpiv_dirs) > 1
+    else:
+        primary = cwd / "rpiv"
+        extra = read_subprojects_config(primary, cwd) if primary.is_dir() else []
+        if extra:
+            # 伞目录场景：本目录 rpiv（通常无 md）+ 配置列出的子项目一起聚合
+            rpiv_dirs = ([primary] if primary.is_dir() else []) + extra
+            aggregated = True
+        else:
+            rpiv_dirs = [primary]
+            aggregated = False
+
+    if aggregated:
+        return _run_aggregated(mode, rpiv_dirs)
+    return _run_single(mode, rpiv_dirs[0])
 
 
 if __name__ == "__main__":

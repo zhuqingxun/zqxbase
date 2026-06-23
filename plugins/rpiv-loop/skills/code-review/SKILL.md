@@ -3,7 +3,7 @@ name: rpiv-loop:code-review
 description: >-
   在提交前运行的技术代码审查，用于质量和错误检查
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.1.14
+version: 2.1.15
 ---
 
 对最近更改的文件执行技术代码审查。
@@ -77,6 +77,11 @@ git ls-files --others --exclude-standard
    - 代码检查、类型和格式标准
    - 日志记录标准
    - 测试标准
+
+6. **删测试资产覆盖核对**（当 diff 含测试文件/测试资产删除时强制）
+   - 对每个被删测试，**逐条**列出其断言维度（文本内容 / 几何 / fill / 字号 / 边界 等），不能只看测试名或参数化的 `visual_type` 名
+   - 对每个断言维度，核对是否真有替代测试覆盖——**参数化覆盖同名 type ≠ 覆盖该测试所有断言维度**
+   - 任一断言维度无替代覆盖 → 标记为问题，要求"先补再删"，缺口补齐前不得删除
 
 ## 验证问题是否真实
 

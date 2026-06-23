@@ -6,7 +6,7 @@ description: >-
   也适用于: 用户提供了 markdown 文件或目录并要求转化为 PPT 的场景。
 argument-hint: "<输入路径> [--preset <name>] [--theme <name>] [--output <path>] [--engine codex|renderer] [--compare] [--cover-image] [--style-ref <pptx>] [--no-style-ref]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.7
+version: 3.0.8
 ---
 
 # PPT:Create — 一键生成最高质量 PPT
@@ -41,6 +41,8 @@ v3.5.0 把产线从"会话即兴串联 parse/architect/plan/render"改造成**�
 v3.5.0 起由 `engine/orchestrator.py` 短命状态机统一编排. 你 (会话 Claude) 的职责是: 在 orchestrator 暂停于 LLM gate 时 (exit 3), 按 run 目录下的 `prompt-context.md` 产出对应 YAML, 然后 `resume`. 不再手动逐个调 parse/prompt_assembler/validate_plan/render.
 
 v3.6.0 起新增 codex 引擎线 (gpt-5.5 + presentations 插件, 编辑级 deck): Step 0 先路由, codex 可用默认走 codex 线, 不可用静默走下方 renderer 线 (Step 1-5). codex 引擎契约与坑清单见 `<plugin-root>/references/codex-engine.md`.
+
+> **引擎定位 (2026-06-23 F4 对照实验验证)**: codex 是**质量主力**, renderer 是**离线 fallback**。F4 对照 (同输入分别跑 codex/renderer + ppt:taste 双轴评分 + 用户肉眼裁决) 结论: codex 最终质量**明显优于** renderer (codex 满意可交付、renderer 基本不可用; taste 双轴 codex layout 3.86 > renderer 3.33, 差距全在 layout —— renderer 自适应母版在 4-5 项时布局崩坏 / 标题栏容不下长标题)。故「codex 可用即走 codex」不是任意默认、而是经实测验证的质量优先级; renderer 仅在 codex 不可用时优雅降级。**维护提示**: 优化 renderer 内部视觉/布局对「最终 PPT 质量」边际价值有限, 不建议为此大投入。
 
 ### Step 0: 引擎路由
 

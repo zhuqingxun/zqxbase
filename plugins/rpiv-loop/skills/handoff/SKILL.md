@@ -2,7 +2,7 @@
 name: rpiv-loop:handoff
 description: 长程任务跨会话打结 + 续会话冷启动。**本 skill 仅负责创建新 handoff 或 mark-consumed 已有 handoff**，把当前会话的状态、决策、待办、教训持久化成 handoff 文件，下次会话首条消息引用即可机械化恢复。当用户提到"打个结"、"生成 handoff"、"创建 handoff"、"今天到这"、"明天接着"、"暂停一下"、"切别的话题"、"/rpiv-loop:handoff" 时触发。**用户意图为"查看 / 列出 / 看一下 pending handoff" 时, 禁止触发本 skill, 改用 `/rpiv-loop:handoff-list` 命令 (fast path, 不加载 SOP)**。也适用于：完成显著 milestone 后用户切换任务、context window 用量明显增长、跨日推进同一长程任务。**配套双层 hook 自动检测**：(1) SessionStart hook 启动时扫 cwd + 直接子目录的 pending handoff，命中即注入 system context；(2) UserPromptSubmit hook 在会话**首条 user prompt** 时再次注入 prompt 前缀强提醒 (用 ~/.claude/handoff_first_prompt_seen.json 跟踪 session_id, 同会话只注入一次)。两层叠加保证: 即使 LLM 漏看 SessionStart 注入, 也会在第一条用户消息时被 UserPromptSubmit 强制提醒, 你必须先用 AskUserQuestion 询问用户是否推进 handoff 再处理用户原始请求。注意：本 skill 的 "handoff" 是 Claude Code 社区"跨会话打结"语义（非 OpenAI Agents SDK 的多 agent 间运行时转移）。状态机仅 pending → archived 两状态，handoff 是一次性票据，被新会话消费后即归档。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.14
+version: 2.1.15
 ---
 
 # Handoff: 跨会话长程任务交接
@@ -31,15 +31,15 @@ version: 2.1.14
 ```
 [/rpiv-loop:handoff create]
    ↓
-pending  ──────────  存在，待下次会话消费
+pending  ──────────  存在于 rpiv/ 根目录，待下次会话消费
    │
    │  新会话首条消息: 引用本 handoff 路径作为 bootstrap
    │  bootstrap prompt 顶部含: /rpiv-loop:handoff --mark-consumed <path>
-   ↓  (status: pending → archived + 写 consumed_at)
-archived ──────────  已消费，一次性票据
+   ↓  (pending → archived + 写 consumed_at + mv 到 rpiv/archive/)
+archived ──────────  已消费，文件已归档进 rpiv/archive/（一次性票据）
 ```
 
-**handoff 是一次性票据**：每份 handoff 只服务一次会话续接，被消费后即归档。任务自然完成时 = `rpiv/` 里全是 archived 且无 pending = 任务已结。
+**handoff 是一次性票据**：每份 handoff 只服务一次会话续接，被消费后即归档进 `rpiv/archive/`（消费即归档，不在工作目录根部堆积）。任务自然完成时 = `rpiv/` 根目录无 pending handoff = 任务已结。
 
 ### 与 compaction / memory 的区分
 
@@ -63,7 +63,7 @@ OpenAI Agents SDK 的 "handoff" 是**多 agent 间运行时控制权转移**。�
    - cwd 下有 `rpiv/` → 用 `rpiv/`
    - 否则降级到 `handoff/`（不存在则 mkdir）
 2. **扫已有 handoff，确定 v\<n\>**
-   - `Glob "**/handoff-*.md"` 找全部
+   - `Glob "**/handoff-*.md"` 找全部（**`**` 递归务必保留**：已消费 handoff 已挪进 `rpiv/archive/`，递归 glob 才能把归档历史一并纳入版本号计算，避免新 handoff 复用旧编号）
    - 解析文件名末尾 `v<N>`，取 max+1（首次 = v1）
 3. **判断 edit vs new-file**
    - 找最新 handoff（按 mtime + frontmatter `created_at`）
@@ -181,11 +181,11 @@ skill 在写文件**之前**检查以下条件，任一失败立即报错退出�
 
 | 当前 status | 动作 |
 |------------|------|
-| `pending` | 改为 `archived` + 写 `consumed_at: <now>` + `updated_at: <now>` → 输出 `✅ 已消费 <path>` |
-| `archived` | warn `⚠️ 已于 <consumed_at> 消费过`，AskUserQuestion 询问"是否重新激活"。yes → 改回 pending + 清 `consumed_at`；no → 不变 |
+| `pending` | ① 改为 `archived` + 写 `consumed_at: <now>` + `updated_at: <now>`；② `mkdir -p <handoff_dir>/archive/` 后 `mv` 文件进去（`<handoff_dir>` = 源文件所在的 `rpiv/` 或 `handoff/`；目标已存在同名则加 `.YYYYMMDD_HHMMSS` 后缀，与 archive.py 一致）；③ 输出 `✅ 已消费并归档到 <handoff_dir>/archive/<name>` |
+| `archived` | warn `⚠️ 已于 <consumed_at> 消费过`（此时文件通常已在 `<handoff_dir>/archive/`），AskUserQuestion 询问"是否重新激活"。yes → `mv` 回 `<handoff_dir>/` 根目录 + 改回 `pending` + 清 `consumed_at`（恢复成可被 detector 扫到的待消费态）；no → 不变 |
 | 其他（罕见，如手动改） | 报错 `⛔ status=<x> 不在预期范围 (pending/archived)，请人工检查 frontmatter` |
 
-3. mark-consumed **不读 handoff 正文**，只动 frontmatter，避免污染消费会话上下文（正文由消费会话自己 Read 触发）。
+3. mark-consumed **不读 handoff 正文**，只动 frontmatter + 物理挪文件，避免污染消费会话上下文（正文由消费会话自己 Read 触发）。先写 frontmatter 再 `mv`；`mv` 失败时回滚 frontmatter，保持 pending 留原地（与 archive.py 的回滚语义一致）。
 
 ## 模式 C: --list-pending
 
@@ -407,5 +407,5 @@ Claude 主动 propose 信号（仅询问不 auto-execute）：
 2. **不写 supersede 链**：frontmatter 不含 `supersedes` / `superseded_by` 字段，演化追溯靠文件名时间序
 3. **mark-consumed 必须显式调用**：单纯 Read handoff 不会改状态，必须按 bootstrap prompt 调 `--mark-consumed`
 4. **跨设备 / 重读**：archived → pending 重激活罕见，需用户确认。多份 pending 同时存在 = 工作流出错
-5. **任务自然完成**：无独立 close 动作，最后一份停 archived 即可。整条链可后续用 `/rpiv-loop:archive` 批量归档（虽然已是 archived，archive skill 会跳过 status=archived 文件，无副作用）
+5. **任务自然完成**：无独立 close 动作，最后一份停 archived 即可。**mark-consumed 在消费时已把文件挪进 `<handoff_dir>/archive/`，无需再跑 `/rpiv-loop:archive`**——已消费 handoff 不会堆积在工作目录根部（查历史用 `/rpiv-loop:handoff-list --all`）
 6. **不要把 handoff 当 task tracker**：进度事实落 progress.jsonl / todo，handoff 只存状态摘要 + 决策上下文

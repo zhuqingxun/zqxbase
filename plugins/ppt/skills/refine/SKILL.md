@@ -5,7 +5,7 @@ description: >-
   当用户提到"调整 PPT""修改 PPT""ppt:refine""PPT 微调"时触发.
 argument-hint: "<pptx 路径> <调整指令>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 3.0.7
+version: 3.0.8
 ---
 
 # PPT:Refine — 自然语言追加调整
@@ -66,15 +66,14 @@ Read .theme-prompt.md 确保 visual_type 选择遵循当前主题的硬约束 + 
 
 修改 slide-plan.yaml 中受影响的 slides, 写回原路径.
 
-### Step 3: 局部重渲染 + deterministic 校验
+### Step 3: 全量重渲染 + deterministic 校验
 
 ```bash
 uv run python <plugin-root>/engine/render.py <workdir>/slide-plan.yaml \
-    --theme <theme> --output <output-path> \
-    --base-pptx <original-pptx> --only-slides <changed-slide-ids>
+    --theme <theme> --output <output-path>
 ```
 
-**注意**: `--only-slides` 当前实现是"追加新版本到末尾", 不是原位置替换. 用户需要确认目标页号语义. 如需原位置替换, 重渲染全部 slides 不传 `--base-pptx`.
+**注意**: refine 一律**全量重渲染整份 PPT**(render.py 输出确定性, 同输入同输出), 不做局部页替换. 早期 `--base-pptx`/`--only-slides` 局部替换路径因页号失真 + 追加到末尾不原位替换, 已于 2026-06-23 弃用移除, 全量重渲染是唯一可靠路径.
 
 渲染后跑 deterministic 校验 (带 `--theme` 让应用率门禁不退化):
 ```bash

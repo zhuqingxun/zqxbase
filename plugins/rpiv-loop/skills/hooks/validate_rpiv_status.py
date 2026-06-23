@@ -29,10 +29,18 @@ TYPE_RE = re.compile(r"^type:\s*([^\s#]+)\s*$", re.MULTILINE)
 
 def classify(posix_path: str, file_type: str | None = None) -> str:
     name = Path(posix_path).name
-    # handoff 优先于 todo 判定：handoff 文件常落在 rpiv/todo/，先按 frontmatter type
-    # 或文件名（标准 handoff-* 前缀 / 历史 *-HANDOFF 后缀，均含 "handoff"）识别，
-    # 避免被路径规则归成 todo（todo 枚举无 pending，会误拒 handoff 的合法 pending）。
-    if file_type == "handoff" or "handoff" in name.lower():
+    stem = name[:-3] if name.lower().endswith(".md") else name
+    low = stem.lower()
+    # 1. frontmatter type 显式声明优先：todo/issue/feature 一律按 todo 枚举校验，
+    #    避免"关于 handoff 的 todo"(如 todo-xxx-handoff-yyy) 被文件名误判成 handoff 票据。
+    if file_type == "handoff":
+        return "handoff"
+    if file_type in ("todo", "issue", "feature"):
+        return "todo"
+    # 2. type 缺失时按文件名识别真 handoff 票据：仅 handoff- 前缀 / -handoff 后缀。
+    #    真 handoff 文件常无 type 字段，靠文件名；收窄为前后缀而非"含 handoff 子串"，
+    #    否则会误伤中间含 handoff 的普通 todo/issue 名（本规则的历史 bug）。
+    if low.startswith("handoff-") or low.endswith("-handoff"):
         return "handoff"
     if "/rpiv/todo/" in posix_path:
         return "todo"

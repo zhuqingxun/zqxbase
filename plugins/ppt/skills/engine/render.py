@@ -11,8 +11,6 @@ Uses registry pattern: each visual type has a dedicated renderer function.
 
 Usage:
     uv run --script engine/render.py <slide-plan.yaml> --theme <theme> --output output.pptx
-    uv run --script engine/render.py <slide-plan.yaml> --theme <theme> --output output.pptx \
-        --base-pptx existing.pptx --only-slides 3,5,7
 """
 
 import argparse
@@ -35,7 +33,6 @@ SKILLS_DIR = Path(__file__).resolve().parent.parent
 # resolve when executed via `uv run --script`. Not needed if imported as a library.
 sys.path.insert(0, str(SKILLS_DIR))
 
-from lib.pptx_compat import delete_slide
 from lib.font_fallback import resolve_font_for_pptx
 from lib.margins import get_safe_area, enforce_margins, SafeArea
 from lib.content_fitter import suggest_font_size, estimate_text_overflow
@@ -601,23 +598,16 @@ def render_slide(prs: Presentation, spec: SlideSpec, theme: dict, total_slides: 
     return slide
 
 
-def render_presentation(plan: SlidePlan, theme: dict, output_path: str,
-                        base_pptx: str = None, only_slides: list[int] = None):
-    """Render full presentation from slide plan."""
-    if base_pptx:
-        prs = Presentation(base_pptx)
-    else:
-        prs = Presentation()
-        prs.slide_width = Inches(13.333)
-        prs.slide_height = Inches(7.5)
+def render_presentation(plan: SlidePlan, theme: dict, output_path: str):
+    """Render full presentation from slide plan.
 
-    if base_pptx and only_slides:
-        indices_to_delete = sorted(
-            [sid - 1 for sid in only_slides if 0 < sid <= len(prs.slides)],
-            reverse=True,
-        )
-        for idx in indices_to_delete:
-            delete_slide(prs, idx)
+    一律全量重渲染整份 deck (render.py 输出确定性, 同输入同输出)。早期的
+    base_pptx/only_slides 局部页替换路径因页号失真+追加到末尾不原位替换,
+    已于 2026-06-23 弃用移除 (refine 改全量重渲染为唯一可靠路径)。
+    """
+    prs = Presentation()
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
 
     # 一次性算 layout + safe area, 传给每个 render_slide 调用 — 避免 N 次重复 dict.get / layout 扫描
     blank_layout = _get_blank_layout(prs)
@@ -625,8 +615,6 @@ def render_presentation(plan: SlidePlan, theme: dict, output_path: str,
 
     total_slides = plan.narrative.total_slides
     for spec in plan.slides:
-        if only_slides and spec.id not in only_slides:
-            continue
         render_slide(prs, spec, theme, total_slides, slide_layout=blank_layout, safe=safe_area)
 
     # Windows file lock protection — 尝试 9 个备用名 (output_v2.pptx ... output_v9.pptx)
@@ -692,16 +680,12 @@ def main():
     parser.add_argument("--theme", default=None,
                         help="theme name (default: huawei if omitted)")
     parser.add_argument("--output", default="output.pptx")
-    parser.add_argument("--base-pptx", default=None)
-    parser.add_argument("--only-slides", default=None,
-                        help="Comma-separated slide IDs to render")
     args = parser.parse_args()
 
     plan = SlidePlan.from_yaml(args.slide_plan)
     _resolve_image_refs(plan, Path(args.slide_plan).resolve().parent)
     theme = load_theme(args.theme)
-    only = [int(x) for x in args.only_slides.split(",")] if args.only_slides else None
-    render_presentation(plan, theme, args.output, args.base_pptx, only)
+    render_presentation(plan, theme, args.output)
     print(f"Rendered {len(plan.slides)} slides to {args.output}")
 
 

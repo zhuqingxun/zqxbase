@@ -7,7 +7,7 @@ description: >-
   仅 interview 场景可用, 要求工作区已完成 types/templates 登记且至少一个会议 polish=completed.
 argument-hint: "[--full] [--split | --no-split]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Agent, AskUserQuestion
-version: 2.1.8
+version: 2.1.9
 ---
 
 

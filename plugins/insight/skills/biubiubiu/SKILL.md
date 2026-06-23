@@ -4,8 +4,8 @@ description: >-
   一键启动全自主 agent 团队，自动完成从信息源发现到部署的完整研究流程。insight:brainstorm 完成后使用此命令，无需人工介入。
   当用户提到'自动研究'、'全自主研究'、'research biubiubiu'、'启动研究团队'、'深度调研'时触发。
   也适用于用户说'帮我研究一下 XXX'且研究范围足够大（需要多源调研+写作+部署）的场景。
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch, Skill, TeamCreate, SendMessage, TeamDelete, TaskCreate, TaskUpdate, TaskGet, TaskList
-version: 1.1.3
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch, Skill, SendMessage, TaskCreate, TaskUpdate, TaskGet, TaskList, TaskStop
+version: 1.1.4
 ---
 
 # Biubiubiu Research: 全自主研究团队执行
@@ -113,13 +113,11 @@ docs/                      # 研究报告输出
 
 执行：创建目录结构 + `pyproject.toml`（如需要）+ `uv sync`。
 
-### 步骤 4：创建团队
+### 步骤 4：团队机制说明（无需显式创建团队）
 
-```
-TeamCreate:
-  team_name: research-{topic}
-  description: 全自主研究: {topic}
-```
+当前 Claude Code harness **没有 `TeamCreate`/`TeamDelete` 工具**。团队是**单一 implicit flat team**：你（main 会话）即 Leader，用 `Agent` 工具 spawn 的每个 named agent（Scout / Analyst）自动加入该 implicit team，可被 `SendMessage` 按 name 寻址。因此本步骤无需任何操作，直接进入步骤 5。
+
+> 历史备注：旧 SOP 曾用 `TeamCreate` / `team_name`，当前 harness 已废弃——`Agent` 工具的 `team_name` 参数标注 "Deprecated; ignored. The session has a single implicit team."。与 `rpiv-loop:biubiubiu` 步骤 2 对齐。
 
 ### 步骤 5：创建任务结构
 
@@ -140,6 +138,8 @@ TeamCreate:
 ```
 
 ### 步骤 6：启动团队
+
+**spawn 机制**：用 `Agent` 工具 spawn 每个角色，参数：`name` = 角色名（如 `scout` / `analyst-1`）、`subagent_type` = `general-purpose`、`run_in_background` = `true`（不阻塞 Leader 协调）。**不要传 `team_name`**（已废弃且被忽略）。spawn 出的 named agent 自动加入 implicit team，后续用 `SendMessage`（`to` = 角色名）双向通信；spawn 返回的 `agent_id` 可用于 `TaskStop` 兜底。
 
 **第一批（并行启动 2 个 agent）：**
 
@@ -279,9 +279,38 @@ related_files:
 {推荐的深化方向}
 ```
 
-2. **关闭团队**：对所有 agent 发送 `shutdown_request`，等待确认后 `TeamDelete`
+2. **关闭团队**：对每个仍活跃的 named teammate 用 `SendMessage` 发送 `{"type": "shutdown_request", "reason": "..."}`，agent 回 `shutdown_response approve=true` 后自行终止。**当前 harness 无 `TeamDelete`**，无需也不能调用。某 agent 无响应时用 `TaskStop`（task_id = spawn 返回的 agent_id）强制终止兜底
 3. **归档过程文件**：将 `research/` 下的过程文件归档到 `research/archive/`（与 biubiubiu 相同流程）
 4. **向用户报告**：输出产物清单，提示可用 `/insight:publish` 站点集成 + `/ppt:create` 生成演示文稿 + `/nblm` 增强输出
+## 上下文控制契约（防主 context 爆仓）
+
+本 skill 的编排核心是**让重 IO 在子 agent 独立 context 里发生，主 agent（Leader）只持有编排状态**。各角色遵守以下契约，使全流程主 context 峰值可控、可长时间稳定运行。
+
+### 子 agent → Leader 的回传纪律（tool-result clearing）
+
+Scout / Analyst 做 `WebFetch`、大文件读取、深度研究输出提取等**重 tool result** 操作后：
+
+- **原始内容一律落盘**到 `research/` 对应笔记/模块文件，**不**通过 SendMessage 把全文回传给 Leader
+- 回 Leader 的 `SendMessage` 只含「**产物路径 + 体积（行数/字数）+ ≤3 条核心要点**」
+- 反例（禁止）：把抓取的网页全文、专题模块全文粘进 SendMessage 给 Leader
+
+### Leader 的 context 边界
+
+- 门禁审查（门禁 1/2/3）对子 agent 产物**就地 Read + 出结论**，只保留审查结论（通过 / 问题清单），**不把被审产物全文搬运进后续编排消息**
+- 大体量调研产出（Gemini Deep Research 报告 `research/gemini-deep-research-{topic}.md` 等）**先落盘**，Leader 读后只提炼关键结论入编排，不在主 context 长期保留全文
+- Scout 是阶段 1-2 临时角色，`material-fetch` 完成即 shutdown 释放其 context
+
+### 各阶段 tool result 体积预算（软约束，超出即落盘 + clearing）
+
+| 阶段 | 主要 tool result | 预算 / 处理 |
+|------|-----------------|------------|
+| 信息源发现 | WebSearch 结果 | 子 agent 内消化，回传仅注册表路径 |
+| 深度调研 | 深度研究 / WebFetch 输出，单次常 5-10k tokens | 落盘，回传 ≤3 要点（tool-result clearing） |
+| 专题写作 | 6 模块全文，12-30k tokens | 落盘 `research/` 模块文件，主 context 不持有全文 |
+| 部署验证 | 构建日志 | 子 agent / Leader 内消化，仅留结论 |
+
+> 进阶手段（当前不做，按需启用）：checkpoint + 多 session 续跑（阶段数 ≥5 且需中断时）、分层 `/compact`（主 context 仍逼近压缩线时手动触发，`focus` 保留站点结构决策 + 未完成模块清单）。当前以「子 agent 隔离 + 落盘 + clearing」为主，已覆盖绝大多数场景。
+
 ## 规模自适应
 
 根据内容模块数量调整团队配置：

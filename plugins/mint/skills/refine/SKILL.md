@@ -6,8 +6,8 @@ description: >-
   支持两种模式：保守（仅修错字和口水词）、适度（句子级优化，默认）。
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
 argument-hint: "<工作目录> [保守|适度] [--脱敏]"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TeamCreate, TaskCreate, TaskUpdate, SendMessage
-version: 2.1.8
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, SendMessage, TaskStop
+version: 2.1.9
 ---
 
 # mint:refine — 校对清洁
@@ -75,7 +75,7 @@ Leader（你）─── 分段 / 协调 / 人工澄清 / 合并 / 输出
    - 优先按 Markdown 标题或说话人时间戳分割
    - 每段目标 5000-15000 字
    - **重叠区**：每段前后各扩展 500 字（只读上下文，不修改）
-5. 创建团队：`TeamCreate(team_name: "mint-refine-{timestamp}")`
+5. **团队机制**（无需显式创建）：当前 Claude Code harness 无 `TeamCreate`/`TeamDelete`，团队为单一 implicit flat team——用 `Agent` 工具 spawn 的每个 named agent（Architect / Worker-A/B / Reviewer）自动加入，`subagent_type: general-purpose`、不传 `team_name`（已废弃且被忽略），后续用 `SendMessage` 按 name 寻址。与 `rpiv-loop:biubiubiu` 步骤 2 对齐
 
 ### 阶段 1: 架构分析（串行，Architect）
 
@@ -172,7 +172,7 @@ Reviewer 对每段的 A/B 两版输出进行交叉对比：
    - 更新文件末尾的「最后更新」日期
 4. 更新 `meta.yaml` 中 refine 阶段状态
 5. 终端输出：统计报告 + 质量评分表 + 变更详情 + 人工澄清记录 + **词表沉淀条数**
-6. 关闭团队
+6. 关闭团队：对仍活跃的 named teammate 发 `SendMessage` `{"type": "shutdown_request"}`，agent approve 后自行终止；无响应用 `TaskStop`（task_id = spawn 返回的 agent_id）兜底。当前 harness 无 `TeamDelete`
 
 ## meta.yaml 更新
 

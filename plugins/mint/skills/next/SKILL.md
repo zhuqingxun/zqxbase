@@ -6,7 +6,7 @@ description: >-
   也适用于：用户跑完某个阶段想确认下一动作、多会议并行时想看全景推荐、卡在某处想看其他路径。
 argument-hint: "[meeting_name] [--all]"
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.8
+version: 2.1.9
 ---
 
 # mint:next — 智能引导
