@@ -3,7 +3,7 @@ name: mint:polish
 description: >-
   MINT 流水线 Stage 3: 编辑稿生成——将清洁逐字稿转化为高可读性的编辑稿，产出三种文档：书面化文稿、观点+原声对照、精华语录集。包含独立 Reviewer 阶段做七维审查：观点覆盖完整性（核心）、话题/数据漏检扫描、结构化质量、原声质量、观点准确性、脱敏安全、格式可读性。适用于需要将访谈/会议记录转化为可交付文档的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -232,6 +232,8 @@ Leader 启动一个独立的 general-purpose agent 作为 Reviewer，传入：
 
 ### 第八步：更新 meta.yaml
 
+> `stages.polish` 含 `review` 七维嵌套巨结构（~30 行），CLI `--field` JSON 表达过于脆弱，**此块保留 Edit 手写**——这是 meta_io single-source 的已知例外（见 issue fix-mint-meta-yaml-split-brain-writing：嵌套巨结构不迁 CLI）。手写时务必保证：`status` ∈ `pending|in_progress|completed|failed`，`completed_at` 用 ISO8601（`YYYY-MM-DDTHH:MM:SS`），字段顺序与下方一致。
+
 ```yaml
 stages:
   polish:
@@ -289,9 +291,11 @@ stages:
 
 报告本次生成的文件路径和各自的字数统计，附上 Reviewer 最终评分和主要问题修正记录。
 
-同时更新 `current`：
-- `current.cursor` = `"polish"`
-- `current.last_action_desc` = `"完成编辑稿"`
+同时通过 meta_io CLI 设置游标（统一写入口，cursor 经 STAGE_ORDER 校验）：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py set-cursor "<工作目录>" polish --desc "完成编辑稿"
+```
 
 ### 最后一步：更新元数据并输出引导块
 

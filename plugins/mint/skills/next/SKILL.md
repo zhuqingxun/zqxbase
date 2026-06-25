@@ -6,7 +6,7 @@ description: >-
   也适用于：用户跑完某个阶段想确认下一动作、多会议并行时想看全景推荐、卡在某处想看其他路径。
 argument-hint: "[meeting_name] [--all]"
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.9
+version: 2.1.10
 ---
 
 # mint:next — 智能引导
@@ -117,7 +117,7 @@ uv run --script {MINT_SCRIPTS}/meta_io.py load-workspace "<workspace_root>"
 
 stdout 为 JSON，含 `workspace.name / workspace.scenario / intent.goal / intent.deliverables`。
 
-3. 整体推荐通过 `workspace-recommendation` CLI 一次调用完成（内部 scan + load workspace + Rule 5/6）：
+3. 整体推荐通过 `workspace-recommendation` CLI 一次调用完成（内部 scan + load workspace + Rule 5a/5b）：
 
 ```bash
 uv run --script {MINT_SCRIPTS}/meta_io.py workspace-recommendation "<workspace_root>"
@@ -125,7 +125,7 @@ uv run --script {MINT_SCRIPTS}/meta_io.py workspace-recommendation "<workspace_r
 
 stdout 为 JSON `{primary: {cmd, reason}, alternatives: [{cmd, when}]}`。
 
-> **Rule 6 触发**：CLI 内部自动判定；当 `workspace.scenario == "interview"` 且所有会议 `progress_num >= 3`（polish 及之前完成）时——若 `<workspace>/汇总分析/mint_*.md` 不存在则推荐 `/mint:summarize`；若已存在则提示"已完成"，alternatives 给重跑或核查质量。其他情况走 Rule 5（多会议优先级 top-1）。
+> **Rule 5b 触发**：CLI 内部自动判定；当 `workspace.scenario == "interview"` 且所有会议 `progress_num >= 3`（polish 及之前完成）时——若 `<workspace>/汇总分析/mint_*.md` 不存在则推荐 `/mint:summarize`；若已存在则提示"已完成"，alternatives 给重跑或核查质量。其他情况走 Rule 5a（多会议优先级 top-1）。
 >
 > **备选实现**：历史 Python 内联脚本调 `workspace_overall_recommendation(meetings, workspace)` 等价，但新 CLI 更简洁且保证 workspace 参数传递正确。
 
@@ -194,8 +194,8 @@ stdout 为 JSON `{primary: {cmd, reason}, alternatives: [{cmd, when}]}`。
 - Rule 2：取下一个 pending 阶段推进（respect `intent.skip_stages`）
 - Rule 3：全部 completed 但 deliverables 未对齐 → 推荐 revise/extract 补齐
 - Rule 4：全部完成且对齐 → 提示收尾
-- Rule 5：全景模式按 blockers_count > 0 → progress_num 升序 → last_action 升序 排序
-- Rule 6：工作区全景模式下，scenario == "interview" 且所有会议 progress_num >= 3（polish 及之前完成）→ 若 `<workspace>/汇总分析/mint_*.md` 不存在则推荐 `/mint:summarize` 生成跨会议汇总；已存在则提示"已完成"，alternatives 给 `/mint:status --workspace --detail` 与重跑 `/mint:summarize`。scenario=meeting 或任一会议 polish 未完成时不触发
+- Rule 5a：全景模式按 blockers_count > 0 → progress_num 升序 → last_action 升序 排序
+- Rule 5b：工作区全景模式下，scenario == "interview" 且所有会议 progress_num >= 3（polish 及之前完成）→ 若 `<workspace>/汇总分析/mint_*.md` 不存在则推荐 `/mint:summarize` 生成跨会议汇总；已存在则提示"已完成"，alternatives 给 `/mint:status --workspace --detail` 与重跑 `/mint:summarize`。scenario=meeting 或任一会议 polish 未完成时不触发
 
 ## 边界规则
 

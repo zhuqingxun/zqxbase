@@ -7,7 +7,7 @@ description: >-
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
 argument-hint: "<工作目录> [保守|适度] [--脱敏]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, SendMessage, TaskStop
-version: 2.1.9
+version: 2.1.10
 ---
 
 # mint:refine — 校对清洁
@@ -176,27 +176,16 @@ Reviewer 对每段的 A/B 两版输出进行交叉对比：
 
 ## meta.yaml 更新
 
-refine 完成后需更新 meta.yaml 的 stages.refine 部分：
+refine 完成后通过 meta_io CLI 写入 stages.refine（统一写入口，自动保序 + 枚举校验，**不要手写 YAML**）：
 
-```yaml
-stages:
-  refine:
-    status: completed        # pending | in_progress | completed
-    version: 3               # 版本号，每次重跑 +1
-    completed_at: 2026-03-20T15:00:00
-    params:
-      mode: moderate         # conservative | moderate
-      model: gpt-4o
-      desensitized: false    # 是否生成了脱敏版本
-    quality:
-      fidelity: 92
-      fluency: 88
-      consistency: 90
-      cleanliness: 95
-      format: 98
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py set-stage "<工作目录>" refine --status completed --version {N} --param mode=moderate --param model=gpt-4o --param desensitized=false --field 'quality={"fidelity":92,"fluency":88,"consistency":90,"cleanliness":95,"format":98}'
 ```
 
-如 meta.yaml 不存在，创建基础结构。如已存在 refine 条目，version +1。
+- `--status completed` 时 `completed_at` 自动填当前 ISO 时间。
+- `{N}`：版本号，每次重跑 +1（已存在 refine 条目时在原 version 基础上递增）。
+- `--param` 写 `stages.refine.params`（`mode` ∈ conservative/moderate；`model`；`desensitized` 是否生成了脱敏版本）。
+- `--field 'quality={...}'`：写 `stages.refine.quality` 五维评分（JSON 自动解析为嵌套对象：fidelity / fluency / consistency / cleanliness / format）。
 
 ## 两种校对模式
 
@@ -301,12 +290,12 @@ uv run --script {MINT_SCRIPTS}/meta_io.py add-blocker "<工作目录>" "ambiguit
 
 ## 最后一步：更新元数据并输出引导块
 
-1. **刷新 current.last_action + 计算 next_hints**：
+1. **设置游标 + 计算 next_hints**：
    ```bash
-   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py set-cursor "<工作目录>" refine --desc "完成校对"
    uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
    ```
-   同时将 `current.cursor` 更新为 `"refine"`、`current.last_action_desc` 更新为 `"完成校对"`（在上述命令之前或通过 Edit 工具写入 meta.yaml）。
+   （`current.last_action` 已由「meta.yaml 更新」一节的 `set-stage` 自动刷新；`set-cursor --desc` 写入 `current.last_action_desc`。）
 
 2. **渲染引导块**：
    - Read `{MINT_REF}/next-hints-template.md`

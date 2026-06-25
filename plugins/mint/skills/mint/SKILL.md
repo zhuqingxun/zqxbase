@@ -6,7 +6,7 @@ description: >-
   当用户提到"处理录音""从头跑一遍""mint""完整处理"时触发。
 argument-hint: "<音频文件路径> [会议名]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill
-version: 2.1.9
+version: 2.1.10
 ---
 
 # MINT 一键流水线编排器
@@ -233,11 +233,12 @@ uv run --script {MINT_SCRIPTS}/meta_io.py find-workspace-root
 全部阶段完成后，刷新 meta.yaml 并输出统一引导块：
 
 ```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py set-cursor "<工作目录>" {最终阶段} --desc "一键流水线完成"
 uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
 uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
 ```
 
-同时将 `current.cursor` 更新为 `"extract"`（或 --skip-polish 场景下的实际最终阶段）、`current.last_action_desc` 更新为 `"一键流水线完成"`。
+`{最终阶段}` 取本次流水线实际跑到的最后一个流水线阶段（通常 `extract`；`--skip-polish` / `--skip-extract` 等场景为实际最终阶段，必须 ∈ `transcribe`/`refine`/`polish`/`extract`）。`current.last_action_desc` 由 `set-cursor --desc` 写入「一键流水线完成」。各阶段 `stages.*` 状态由对应子 skill 在其执行末尾调 `set-stage` 更新（见下方「meta.yaml 管理」）。
 
 然后：
 - Read `{MINT_REF}/next-hints-template.md`
@@ -278,17 +279,13 @@ desensitization:      # --脱敏 时由 refine 阶段填充
 
 ### 阶段完成时更新
 
-每个子 skill 执行完毕后，编排器更新对应阶段的状态：
+每个子 skill 执行完毕后，由该子 skill 通过 meta_io CLI 更新对应阶段状态（统一写入口，保序 + 枚举校验，编排器与子 skill 都不手写 meta.yaml）：
 
-```yaml
-stages:
-  {stage}:
-    status: completed
-    version: {版本号，重跑则递增}
-    completed_at: {ISO 时间戳}
-    params: {本次运行参数}
-    quality: {质量评分，仅 refine 阶段}
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py set-stage "<工作目录>" {stage} --status completed --version {N} [--param k=v ...] [--field k=v ...]
 ```
+
+`completed_at` 在 `--status completed` 时自动填充。具体每个阶段写哪些 `params` / `quality` / `produced` 字段，见各子 skill 的「meta.yaml 更新」一节（refine 的 `quality`、extract 的 `source`/`produced` 等）。
 
 ### 重跑阶段
 

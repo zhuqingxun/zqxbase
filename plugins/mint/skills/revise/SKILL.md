@@ -6,7 +6,7 @@ description: >-
   当用户说"把XX改成YY""删掉关于XX的部分""这段话换个说法""这里需要脱敏""修订一下稿件"时触发。
 argument-hint: "<修订指令> [<工作目录>] [--from 校对稿|编辑稿|分析稿]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -133,15 +133,15 @@ version: 2.1.9
 
 ### 第四步：更新 meta.yaml
 
-在工作目录的 `meta.yaml` 中追加修订记录：
+通过 meta_io CLI 追加修订记录（统一写入口，自动保序，**不要手写 YAML**）：
 
-```yaml
-revisions:
-  - timestamp: {ISO 时间戳}
-    type: revise
-    description: "{修订指令概要}"
-    files_affected: {实际修改的文件数}
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py add-revision "<工作目录>" --type revise --desc "{修订指令概要}" --files "{实际修改文件相对路径,逗号分隔}" --last-action-desc "定向修订({--from 阶段})"
 ```
+
+- `--files`：传第三步**实际修改**的文件相对路径列表（逗号分隔）——记录实际受影响文件而非计数，供 next-rules 路径匹配。
+- `--last-action-desc`：更新 `current.last_action_desc`；revise 是维护类操作，**不改 `current.cursor`**（cursor 停留在最近流水线阶段）。
+- `timestamp` 缺省自动填当前 ISO 时间。
 
 ### 第五步：输出修订报告
 
@@ -177,12 +177,11 @@ revisions:
 
 > **`{MINT_SCRIPTS}` / `{MINT_REF}` 路径约定**：分别指 mint 插件的 `scripts/` 和 `references/` 目录。首次引用时通过 `Glob` 定位对应目录下的任一文件，多结果时优先非 `marketplaces/` 路径。
 
-1. **刷新 current.last_action + 计算 next_hints**：
+1. **计算 next_hints**：
    ```bash
-   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
    uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
    ```
-   同时将 `current.cursor` 更新为 `"revise"`、`current.last_action_desc` 更新为 `"定向修订({--from 阶段})"`。
+   （`current.last_action` 已由第四步 `add-revision` 自动刷新；`current.last_action_desc` 也已在第四步通过 `--last-action-desc` 设置。revise 是维护类操作，**不改 `current.cursor`**。）
 
 2. **"返回主流水线"语义覆盖**（PRD 7.3）：由于 revise 是非线性维护操作，compute-next-hints 的默认推荐可能偏移。根据本次修订的 `--from` 阶段和实际受影响文件，手工覆盖 next_hints 并写回 meta.yaml.next_hints：
 

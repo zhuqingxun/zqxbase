@@ -4,7 +4,7 @@ description: >-
   MINT 流水线 Stage 1: 语音转文本——调用阿里云百炼平台将录音文件转为带时间戳和说话人标记的原始口水稿。当用户提到"语音转文字""录音转文本""转录""transcribe""把录音转成文字""ASR"时使用。支持 mp3/m4a/wav/flac/ogg 等常见音频格式，自动启用说话人分离。
 argument-hint: "<音频文件路径> <人名或会议名>"
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -173,23 +173,16 @@ uv run --script {MINT_SCRIPTS}/transcribe.py "<音频路径>" "<名称>"
 
 ### 第六步：更新 meta.yaml
 
-更新 transcribe 阶段状态：
-```yaml
-stages:
-  transcribe:
-    status: completed
-    version: 1  # 或递增
-    completed_at: {当前 ISO 时间}
-    params:
-      model: "fun-asr"
-      speakers: {识别到的说话人数}
+通过 meta_io CLI 写入 transcribe 阶段状态与游标（统一写入口，自动保序 + 枚举校验，**不要手写 YAML**）：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py set-stage "<工作目录>" transcribe --status completed --version {N} --param model=fun-asr --param speakers={识别到的说话人数}
+uv run --script {MINT_SCRIPTS}/meta_io.py set-cursor "<工作目录>" transcribe --desc "完成转录"
 ```
 
-同时更新 `current`：
-- `current.cursor` = `"transcribe"`
-- `current.last_action_desc` = `"完成转录"`
-
-如果是重新转录，version 递增。
+- `--status completed` 时 `completed_at` 自动填当前 ISO 时间，无需手传。
+- `{N}`：首次转录传 `1`；重新转录时在上次 version 基础上递增。
+- `--param` 的值自动 JSON 转型（`speakers=2` → int，`model=fun-asr` → 原样 str）。
 
 ### 第七步：验证并报告
 

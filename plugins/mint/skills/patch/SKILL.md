@@ -7,7 +7,7 @@ description: >-
   或在阅读任意稿件时指出某个词识别错误（如"XX应该是YY"）。
 argument-hint: "<纠错指令> [<工作目录>] [--from 校对稿|编辑稿|分析稿]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -97,17 +97,16 @@ version: 2.1.9
 
 ### 第五步：更新 meta.yaml
 
-在工作目录的 `meta.yaml` 中追加修订记录：
+通过 meta_io CLI 追加修订记录（统一写入口，自动保序，**不要手写 YAML**）：
 
-```yaml
-revisions:
-  - timestamp: {ISO 时间戳}
-    type: patch
-    description: "修正'{错误词}'->'{正确词}'"
-    files_affected: {受影响文件数}
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py add-revision "<工作目录>" --type patch --desc "修正'{错误词}'->'{正确词}'" --files "{命中文件相对路径,逗号分隔}" --last-action-desc "词表补丁({纠错条数}条)"
 ```
 
-如果一次 patch 包含多条纠错，合并为一条 revision 记录，description 列出所有修正项。
+- `--files`：传第四步**实际命中替换**的文件相对路径列表（逗号分隔，如 `03_校对稿/x_校对稿.md,04_编辑稿/x_结构化分析.md`）——记录实际受影响文件而非计数，供 next-rules 路径匹配。
+- `--last-action-desc`：更新 `current.last_action_desc`；patch 是维护类操作，**不改 `current.cursor`**（cursor 停留在最近流水线阶段）。
+- `timestamp` 缺省自动填当前 ISO 时间。
+- 如果一次 patch 包含多条纠错，合并为一条 revision，`--desc` 列出所有修正项。
 
 ### 第六步：输出变更摘要
 
@@ -148,12 +147,11 @@ uv run --script {MINT_SCRIPTS}/meta_io.py resolve-blockers "<工作目录>" "<�
 
 ## 最后一步：更新元数据并输出引导块
 
-1. **刷新 current.last_action + 计算 next_hints**：
+1. **计算 next_hints**：
    ```bash
-   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
    uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
    ```
-   同时将 `current.cursor` 更新为 `"patch"`、`current.last_action_desc` 更新为 `"词表补丁({纠错条数}条)"`。
+   （`current.last_action` 已由第五步 `add-revision` 自动刷新；`current.last_action_desc` 也已在第五步通过 `--last-action-desc` 设置。patch 是维护类操作，**不改 `current.cursor`**。）
 
 2. **"返回主流水线"语义覆盖**（PRD 7.3）：patch 修了词表并刷新全部稿件，手工覆盖 next_hints：
 

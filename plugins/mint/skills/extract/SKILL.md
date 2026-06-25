@@ -4,7 +4,7 @@ description: >-
   MINT 流水线 Stage 4: 结构化信息提取——从逐字稿中提取要点摘要、发言人分析（含深度意图分析）、行动项、关键决策等结构化产出物。支持选择输入源（clean 或 polished 稿）和指定产出物子集。
 argument-hint: "<工作目录> [--source clean|polished] [--artifacts summary,speakers,actions,decisions]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -174,19 +174,16 @@ Executive Summary，1-2 页的精炼摘要，让读者快速了解全貌。
 
 ### 第五步：更新 meta.yaml
 
-```yaml
-stages:
-  extract:
-    status: completed
-    version: 1  # 或递增
-    source: "clean"  # 或 "polished"
-    completed_at: {当前 ISO 时间}
-    params:
-      model: "{使用的 LLM 模型}"
-      artifacts: ["summary", "speakers", "actions", "decisions"]
-      intent_depth: "deep"
-      desensitized: false    # 是否基于脱敏输入
+通过 meta_io CLI 写入 stages.extract（统一写入口，自动保序 + 枚举校验，**不要手写 YAML**）：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py set-stage "<工作目录>" extract --status completed --version {N} --field source=clean --field 'produced=["summary","speakers","actions","decisions"]' --param model="{使用的 LLM 模型}" --param 'artifacts=["summary","speakers","actions","decisions"]' --param intent_depth=deep --param desensitized=false
 ```
+
+- `--status completed` 时 `completed_at` 自动填当前 ISO 时间；`{N}` 重跑递增。
+- `--field source=clean`（或 `polished`）：写 `stages.extract.source`（输入源）。
+- `--field 'produced=[...]'`：写 `stages.extract.produced`（本次生成的 artifacts 列表），供 mint:next 的 Rule 3 判断交付物是否对齐。
+- `--param` 写 `stages.extract.params`（`model` / `artifacts` 列表 / `intent_depth` / `desensitized` 是否基于脱敏输入）。
 
 ### 第六步：报告结果
 
@@ -196,19 +193,16 @@ stages:
 - actions：提取了几条行动项
 - decisions：提取了几个决策 + 几个遗留问题
 
-同时更新 `current`：
-- `current.cursor` = `"extract"`
-- `current.last_action_desc` = `"完成结构化提取"`
-
-在 `stages.extract` 中写入 `produced` 字段（本次生成的 artifacts 列表），供 mint:next 的 Rule 3 判断交付物是否对齐。
+（`current.cursor` / `current.last_action_desc` 由「最后一步」的 `set-cursor` 统一写入；`produced` 字段已在第五步 `set-stage --field 'produced=[...]'` 写入。）
 
 ### 最后一步：更新元数据并输出引导块
 
-1. **刷新 current.last_action + 计算 next_hints**：
+1. **设置游标 + 计算 next_hints**：
    ```bash
-   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
+   uv run --script {MINT_SCRIPTS}/meta_io.py set-cursor "<工作目录>" extract --desc "完成结构化提取"
    uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
    ```
+   （`current.last_action` 已由第五步的 `set-stage` 自动刷新；`set-cursor --desc` 写入 `current.last_action_desc`。）
 
 2. **渲染引导块**：
    - Read `{MINT_REF}/next-hints-template.md`

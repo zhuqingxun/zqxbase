@@ -5,7 +5,7 @@ description: >-
   当用户说"看看进度""处理到哪了""status""状态""工作区全景""详细状态"时触发。
 argument-hint: "[<工作目录>] [--detail] [--workspace]"
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -150,7 +150,7 @@ uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
 
 | # | 时间 | 类型 | 描述 | 影响文件 |
 |---|------|------|------|---------|
-| 1 | {MM-DD HH:mm} | {type} | {description} | {files_affected} 个 |
+| 1 | {MM-DD HH:mm} | {type} | {description} | {affected_files 条目数} 个 |
 ```
 
 ### 模式 3：工作区全景中表（`--workspace` 或 cwd 在工作区根）

@@ -6,7 +6,7 @@ description: >-
   触发场景："同步到下游""我改了校对稿，帮我更新后面的""sync""手动改了，传播一下""把我的修改同步过去"。
   与 revise 的区别：revise 是用户描述要改什么，AI 执行；sync 是用户已经改好了，AI 检测差异并传播。
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion
-version: 2.1.9
+version: 2.1.10
 ---
 
 
@@ -133,16 +133,15 @@ version: 2.1.9
 ### 第六步：执行同步并更新 meta.yaml
 
 1. 对确认的文件执行 Edit
-2. 在 `meta.yaml` 中追加修订记录：
+2. 通过 meta_io CLI 追加修订记录（统一写入口，自动保序，**不要手写 YAML**）：
 
-```yaml
-revisions:
-  - timestamp: {ISO 时间戳}
-    type: sync
-    description: "从 {阶段名} 同步人工修改到下游"
-    source_file: "{被修改的文件名}"
-    files_affected: {受影响文件数}
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py add-revision "<工作目录>" --type sync --desc "从 {阶段名} 同步人工修改到下游" --files "{源文件},{下游受影响文件1},{下游受影响文件2}" --last-action-desc "从{源阶段}同步到下游"
 ```
+
+- `--files`：传**源文件 + 全部下游受影响文件**的相对路径列表（逗号分隔）。canonical revisions 形态用 `affected_files` 列表统一记录所有受影响文件（源文件即列表首项），不再单设 `source_file` / 计数字段。
+- `--last-action-desc`：更新 `current.last_action_desc`；sync 是维护类操作，**不改 `current.cursor`**（cursor 停留在最近流水线阶段）。
+- `timestamp` 缺省自动填当前 ISO 时间。
 
 ### 第七步：输出同步报告
 
@@ -175,12 +174,11 @@ revisions:
 
 ## 最后一步：更新元数据并输出引导块
 
-1. **刷新 current.last_action + 计算 next_hints**：
+1. **计算 next_hints**：
    ```bash
-   uv run --script {MINT_SCRIPTS}/meta_io.py refresh-last-action "<工作目录>"
    uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
    ```
-   同时将 `current.cursor` 更新为 `"sync"`、`current.last_action_desc` 更新为 `"从{源阶段}同步到下游"`。
+   （`current.last_action` 已由第六步 `add-revision` 自动刷新；`current.last_action_desc` 也已在第六步通过 `--last-action-desc` 设置。sync 是维护类操作，**不改 `current.cursor`**。）
 
 2. **"返回主流水线"语义覆盖**（PRD 7.3）：sync 已把修改传播到全部下游，手工覆盖 next_hints：
 
