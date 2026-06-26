@@ -103,7 +103,7 @@ def main() -> int:
 
     try:
         result = subprocess.run(
-            ["uv", "run", str(CHECK_SCRIPT), feature],
+            ["uv", "run", "--no-project", str(CHECK_SCRIPT), feature],
             capture_output=True,
             text=True,
             timeout=60,

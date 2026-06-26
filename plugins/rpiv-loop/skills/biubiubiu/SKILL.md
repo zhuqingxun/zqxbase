@@ -3,7 +3,7 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskStop, SendMessage, Skill
-version: 2.1.15
+version: 2.1.16
 ---
 
 # Biubiubiu: 全自主 RPIV 团队执行
@@ -16,7 +16,7 @@ version: 2.1.15
 首次执行前调用（幂等，已存在则静默跳过）：
 
 ```bash
-uv run D:/CODE/plugins/rpiv-loop/tools/ensure_project_dod.py
+uv run ${CLAUDE_PLUGIN_ROOT}/tools/ensure_project_dod.py
 ```
 
 该脚本确保项目根目录存在 `rpiv/dod.yaml`（项目级 DoD 通用门），后续 AC gate 校验以此为上下文。
@@ -220,7 +220,7 @@ Architect 完成 create-plan 后：
 
 #### 门禁 3：实现完成 + AC gate 循环
 
-所有子任务的快速检查通过后，进入 **AC gate 循环**（参考 runbook：`D:/CODE/plugins/rpiv-loop/tools/run_acceptance_fix_loop.py`）：
+所有子任务的快速检查通过后，进入 **AC gate 循环**（参考 runbook：`${CLAUDE_PLUGIN_ROOT}/tools/run_acceptance_fix_loop.py`）：
 
 **循环入口**（一次性工作）：
 1. QA 运行完整测试套件 + 全面代码审查

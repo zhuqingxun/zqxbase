@@ -17,18 +17,19 @@ from __future__ import annotations
 
 import argparse
 import datetime
-import re
-import shutil
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 # 复用 flow_status.py 的解析工具（同目录）
 sys.path.insert(0, str(Path(__file__).parent))
 from flow_status import (  # noqa: E402
-    FRONTMATTER_RE,
     parse_frontmatter,
     classify_file,
     parse_filename,
+    is_handoff_name,
+    _replace_fm_field,
     AUX_PREFIXES,
     TODO_PREFIXES,
     PROCESS_PREFIXES,
@@ -37,20 +38,6 @@ from flow_status import (  # noqa: E402
 ARCHIVABLE_STATUSES = {"completed", "superseded"}
 HARD_BLOCK_STATUSES = {"open", "pending"}
 SOFT_BLOCK_STATUSES = {"in-progress"}
-
-
-def _replace_or_insert_fm_field(text: str, key: str, new_value: str) -> str:
-    """与 flow_status._replace_fm_field 等价,但本地化以解耦。"""
-    m = FRONTMATTER_RE.match(text)
-    if not m:
-        return text
-    block = m.group(1)
-    pattern = re.compile(rf"^({re.escape(key)}):\s*.*?\s*$", re.MULTILINE)
-    if pattern.search(block):
-        new_block = pattern.sub(rf"\1: {new_value}", block, count=1)
-    else:
-        new_block = block + f"\n{key}: {new_value}"
-    return text[:m.start(1)] + new_block + text[m.end(1):]
 
 
 def archive_one(file_path: Path, rpiv_dir: Path, now_iso: str, force: bool,
@@ -116,25 +103,38 @@ def archive_one(file_path: Path, rpiv_dir: Path, now_iso: str, force: bool,
         renamed = True
 
     # 更新 frontmatter: status=archived, archived_at=now, updated_at=now
-    new_text = _replace_or_insert_fm_field(text, "status", "archived")
-    new_text = _replace_or_insert_fm_field(new_text, "archived_at", now_iso)
-    new_text = _replace_or_insert_fm_field(new_text, "updated_at", now_iso)
+    new_text = _replace_fm_field(text, "status", "archived")
+    new_text = _replace_fm_field(new_text, "archived_at", now_iso)
+    new_text = _replace_fm_field(new_text, "updated_at", now_iso)
+
+    # 落盘顺序：先把「已打 archived 戳」的内容写进 archive 目录的临时文件，
+    # 原子 os.replace 到目标，最后删源文件。任何一步失败都不会出现
+    # 「源文件已被标 archived 却没移动」的假完成态（原 write→move 顺序的缺陷）。
+    tmp_name = None
     try:
-        file_path.write_text(new_text, encoding="utf-8")
+        fd, tmp_name = tempfile.mkstemp(
+            prefix=f".{file_path.stem}.", suffix=".tmp", dir=str(archive_dir)
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as fp:
+            fp.write(new_text)
+        os.replace(tmp_name, str(dest_path))
+        tmp_name = None  # 已原子替换到目标，无残留临时文件
     except OSError as exc:
-        report["errors"].append({"path": rel, "reason": f"写 frontmatter 失败: {exc}"})
+        if tmp_name and os.path.exists(tmp_name):
+            try:
+                os.remove(tmp_name)
+            except OSError:
+                pass
+        # 源文件保持原样（未改、未移），状态一致，无需回滚。
+        report["errors"].append({"path": rel, "reason": f"归档写入失败: {exc}"})
         return "error"
 
-    # 移动文件
+    # 目标已就位，删除源文件。删除失败仅留下重复（archive 内已是正确归档版，
+    # 源文件仍是未标 archived 的旧内容），仍不构成「标了 archived 没移动」的假完成态。
     try:
-        shutil.move(str(file_path), str(dest_path))
+        file_path.unlink()
     except OSError as exc:
-        # 回滚 frontmatter
-        try:
-            file_path.write_text(text, encoding="utf-8")
-        except OSError:
-            pass
-        report["errors"].append({"path": rel, "reason": f"移动失败: {exc}"})
+        report["errors"].append({"path": rel, "reason": f"已写入归档但源文件删除失败: {exc}"})
         return "error"
 
     if not dest_path.exists():
@@ -170,24 +170,24 @@ def collect_all(rpiv_dir: Path) -> list[Path]:
     for p in rpiv_dir.iterdir():
         if p.is_file() and p.suffix == ".md":
             name = p.name
-            if any(name.startswith(prefix) for prefix, _ in AUX_PREFIXES) or name.startswith("handoff-"):
+            if any(name.startswith(prefix) for prefix, _ in AUX_PREFIXES) or is_handoff_name(name):
                 candidates.append(p)
     return candidates
 
 
 def collect_feature(rpiv_dir: Path, feature: str) -> list[Path]:
-    """收集 *-<feature>.md 命名模式的文件。"""
+    """收集 feature 名**精确**匹配的文件。
+
+    用 parse_filename 抽取每个文件的真实 feature（剥掉已知前缀后的部分）再精确比对，
+    避免 `endswith("-<feature>.md")` 把同尾 feature 误纳入——如 `archive gate` 误匹配
+    `prd-rpiv-dod-gate.md`（其真实 feature 是 rpiv-dod-gate）。
+    """
     matched: list[Path] = []
-    target_suffix = f"-{feature}.md"
-    all_files = collect_all(rpiv_dir)
-    for p in all_files:
-        name = p.name
-        # 1. 任何前缀 + -feature.md
-        if name.endswith(target_suffix):
-            matched.append(p)
-            continue
-        # 2. 裸名(无前缀的 todo)
-        if p.parent.name == "todo" and p.stem == feature:
+    for p in collect_all(rpiv_dir):
+        rel_posix = p.relative_to(rpiv_dir.parent).as_posix()
+        category = classify_file(rel_posix, p.name)
+        _phase, feat = parse_filename(category, p.name)
+        if feat == feature:
             matched.append(p)
     return matched
 

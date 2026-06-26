@@ -3,7 +3,7 @@ name: rpiv-loop:validate
 description: >-
   根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
 allowed-tools: Read, Bash, Edit, Grep, Glob
-version: 2.1.15
+version: 2.1.16
 ---
 
 # 运行项目的全面验证
@@ -150,7 +150,7 @@ cargo test
 本阶段结束前**必须**运行：
 
 ```bash
-uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>
+uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>
 ```
 
 - 退出码 `0` → 所有 blocking AC 均 passed 或 not_applicable（且 evidence/notes 非空）→ 可进入 delivery-report

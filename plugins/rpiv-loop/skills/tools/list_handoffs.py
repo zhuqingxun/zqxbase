@@ -24,6 +24,7 @@ from handoff_detector import (  # noqa: E402
     BLACKLIST,
     days_since,
     fmt_time_label,
+    is_handoff_name,
     parse_frontmatter,
 )
 
@@ -40,8 +41,8 @@ def scan_dir(target_dir, statuses=("pending",)):
         if not subdir.is_dir():
             continue
         try:
-            for f in subdir.glob("handoff-*.md"):
-                if not f.is_file():
+            for f in subdir.glob("*.md"):
+                if not f.is_file() or not is_handoff_name(f.name):
                     continue
                 fm = parse_frontmatter(f)
                 status = fm.get("status")

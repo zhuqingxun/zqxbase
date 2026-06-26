@@ -29,23 +29,34 @@ BLACKLIST = {
 
 STALE_DAYS = 7
 
+FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
+
+
+def is_handoff_name(name):
+    """handoff 票据文件名：`handoff-` 前缀 或 `-handoff` 后缀（与 validate_rpiv_status.classify 对齐）。"""
+    stem = name[:-3] if name.lower().endswith(".md") else name
+    low = stem.lower()
+    return low.startswith("handoff-") or low.endswith("-handoff")
+
 
 def parse_frontmatter(file_path):
-    """简单解析 yaml frontmatter, 返回 dict. 失败返回 {}."""
+    """解析 yaml frontmatter, 返回 dict. 失败返回 {}.
+
+    用正则锚定首个 `---\\n...\\n---` 块（而非 split("---")），避免 frontmatter
+    某 scalar 值内含 `---` 时被错误截断。
+    """
     try:
         text = file_path.read_text(encoding="utf-8", errors="ignore")
     except OSError:
         return {}
 
-    if not text.startswith("---"):
+    m = FRONTMATTER_RE.match(text)
+    if not m:
         return {}
-
-    parts = text.split("---", 2)
-    if len(parts) < 3:
-        return {}
+    block = m.group(1)
 
     result = {}
-    for line in parts[1].splitlines():
+    for line in block.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
@@ -83,8 +94,8 @@ def scan_dir_for_handoffs(target_dir):
         if not subdir.is_dir():
             continue
         try:
-            for f in subdir.glob("handoff-*.md"):
-                if not f.is_file():
+            for f in subdir.glob("*.md"):
+                if not f.is_file() or not is_handoff_name(f.name):
                     continue
                 fm = parse_frontmatter(f)
                 if fm.get("status") != "pending":
@@ -155,21 +166,8 @@ def fmt_item(handoff, cwd_path, idx=None):
     return lines
 
 
-def main():
-    try:
-        raw = sys.stdin.read()
-        hook_input = json.loads(raw) if raw.strip() else {}
-    except (json.JSONDecodeError, OSError):
-        hook_input = {}
-
-    cwd = hook_input.get("cwd", "") or ""
-    if not cwd:
-        return 0
-
-    cwd_path = Path(cwd)
-    if not cwd_path.is_dir():
-        return 0
-
+def collect_handoffs(cwd_path):
+    """扫 cwd + 直接子目录的 pending handoff, 按 anchor_iso/mtime 倒序排."""
     all_handoffs = []
 
     cwd_handoffs = scan_dir_for_handoffs(cwd_path)
@@ -192,14 +190,32 @@ def main():
     except OSError:
         pass
 
-    if not all_handoffs:
-        return 0
-
     # 排序: 优先 frontmatter updated_at (Edit 模式会更新), fallback mtime, 最新在前
     all_handoffs.sort(
         key=lambda h: (h.get("anchor_iso") or "", h.get("mtime_ts", 0)),
         reverse=True,
     )
+    return all_handoffs
+
+
+def main():
+    try:
+        raw = sys.stdin.read()
+        hook_input = json.loads(raw) if raw.strip() else {}
+    except (json.JSONDecodeError, OSError):
+        hook_input = {}
+
+    cwd = hook_input.get("cwd", "") or ""
+    if not cwd:
+        return 0
+
+    cwd_path = Path(cwd)
+    if not cwd_path.is_dir():
+        return 0
+
+    all_handoffs = collect_handoffs(cwd_path)
+    if not all_handoffs:
+        return 0
 
     total = len(all_handoffs)
     parts = [

@@ -26,7 +26,16 @@ LEGAL_STATUS = {
     "process": {"pending", "in-progress", "completed", "superseded", "archived"},
     "todo": {"open", "in-progress", "completed", "archived"},
     "aux": {"pending", "completed", "archived"},
+    # 不含 handoff：classify_file 永不返回 handoff，handoff 文件按 process 分组/显示。
+    # 其 status 合法性不走 category 体系，改用下面的 HANDOFF_LEGAL_STATUS 单独审计。
+    # 「handoff 不作为 category」这一结构由 test_rpiv_legal_status_consistency.py 守卫，勿把 handoff 塞进本 dict。
 }
+
+# handoff 票据 status 审计兜底：与 hook validate_rpiv_status.py 的 handoff 枚举一致。
+# 用途——hook 在写入时独占强制 handoff 合法性；但若有人绕过 hook（手工编辑 / 外部脚本）
+# 写出非法 status 的 handoff，flow_status 的一致性审计用此常量兜底抓出。
+# 与 hook + spec 的一致性由 test_rpiv_legal_status_consistency.py 守卫。
+HANDOFF_LEGAL_STATUS = {"pending", "archived"}
 
 # ----- 文件名前缀映射（前缀 -> phase 显示名）-----
 PROCESS_PREFIXES = [
@@ -70,6 +79,9 @@ STATUS_SYMBOL = {
 }
 
 # fix 模式残留项的 LLM 执行协议(运行时下发,SKILL.md 不重复维护)
+# 重跑命令用本脚本运行时的真实绝对路径(Path(__file__))拼接,
+# 禁止硬编码本机绝对路径——否则换安装目录/换 OS 即指向不存在路径。
+_SELF_CHECK_CMD = f"uv run --no-project python {Path(__file__).resolve().as_posix()} check"
 PROTOCOL_INSTRUCTIONS = """PROTOCOL:
 按下列步骤处理 items(payload 见上方 JSON 行):
 
@@ -82,7 +94,8 @@ PROTOCOL_INSTRUCTIONS = """PROTOCOL:
    - completed_todo_unarchived → **不询问用户**,直接复述 item 的 command_hint 字段(如 /rpiv-loop:archive rpiv/todo/xxx.md),告诉用户跑该命令即可
 2. 每个 item 一组问题,4 个以内同批问;超过分批。
 3. 拿到用户决策后,用 Edit 工具直接改对应文件的 frontmatter(status / superseded_by / updated_at,**必须同步 updated_at = 当前时间 ISO 8601**)。
-4. 全部处理完后,重跑 `uv run --no-project python D:/CODE/plugins/rpiv-loop/tools/flow_status.py check` 确认无残留异常,输出最终 check 结果。
+4. 全部处理完后,重跑下列命令确认无残留异常,输出最终 check 结果:
+   `""" + _SELF_CHECK_CMD + """`
 """
 
 # ----- frontmatter 解析 -----
@@ -163,6 +176,28 @@ def parse_filename(category: str, filename: str) -> tuple[str, str]:
     return "Unknown", stem
 
 
+def is_handoff_name(filename: str) -> bool:
+    """文件名是否为 handoff 票据：`handoff-` 前缀 或 `-handoff` 后缀。
+
+    与 hooks/validate_rpiv_status.py 的 classify() 识别口径对齐，使所有发现/列举
+    工具与校验层一致，避免后缀命名的 handoff 对工具隐形。
+    """
+    stem = filename[:-3] if filename.lower().endswith(".md") else filename
+    low = stem.lower()
+    return low.startswith("handoff-") or low.endswith("-handoff")
+
+
+def legal_status_for(f: dict) -> set:
+    """handoff 文件按 HANDOFF_LEGAL_STATUS 审计（兜底 hook 被绕过），其余按 category 枚举。
+
+    handoff 不在 LEGAL_STATUS 的 category 体系内（classify_file 永不返回 handoff，见两常量注释
+    与守卫测试），但其 status 仍需校验——用独立的 HANDOFF_LEGAL_STATUS，与 hook 强制层一致。
+    """
+    if is_handoff_name(f.get("filename", "")):
+        return HANDOFF_LEGAL_STATUS
+    return LEGAL_STATUS.get(f["category"], set())
+
+
 # ----- 扫描 -----
 def scan_rpiv(rpiv_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
     """扫描 rpiv 下所有 md，返回 (live_files, archived_files, parse_errors).
@@ -185,7 +220,7 @@ def scan_rpiv(rpiv_dir: Path) -> tuple[list[dict], list[dict], list[dict]]:
     for p in rpiv_dir.iterdir():
         if p.is_file() and p.suffix == ".md":
             name = p.name
-            if any(name.startswith(prefix) for prefix, _ in AUX_PREFIXES) or name.startswith("handoff-"):
+            if any(name.startswith(prefix) for prefix, _ in AUX_PREFIXES) or is_handoff_name(name):
                 candidates.append(p)
 
     for p in candidates:
@@ -331,7 +366,7 @@ def consistency_check(live: list[dict]) -> list[dict]:
     # 1. status 合法性
     for f in live:
         status = (f["fm"].get("status") or "").strip()
-        legal = LEGAL_STATUS.get(f["category"], set())
+        legal = legal_status_for(f)
         if status and status not in legal:
             anomalies.append({
                 "path": f["path"],
@@ -361,7 +396,7 @@ def consistency_check(live: list[dict]) -> list[dict]:
         if plan and prd:
             plan_status = (plan["fm"].get("status") or "").strip()
             prd_status = (prd["fm"].get("status") or "").strip()
-            if plan_status in ("completed", "in-progress") and prd_status != "completed":
+            if plan_status in ("completed", "in-progress") and prd_status in ("pending", "in-progress"):
                 anomalies.append({
                     "path": prd["path"],
                     "kind": "prd_behind_plan",
@@ -387,7 +422,7 @@ def consistency_check(live: list[dict]) -> list[dict]:
                         "suggested_action": "ask_user_to_locate_plan",
                         "feature": feature,
                     })
-                elif (plan["fm"].get("status") or "") != "completed":
+                elif (plan["fm"].get("status") or "").strip() in ("pending", "in-progress"):
                     anomalies.append({
                         "path": plan["path"],
                         "kind": "plan_behind_validation",
@@ -404,7 +439,11 @@ def consistency_check(live: list[dict]) -> list[dict]:
         status = (f["fm"].get("status") or "").strip()
         if status == "in-progress":
             updated = _parse_ts(f["fm"].get("updated_at"))
-            if updated and updated.tzinfo is None and now - updated > cutoff:
+            # 带时区时间戳归一到 naive 再比较（48h 阈值下小时级偏移可忽略）；
+            # 否则 tz-aware 时间戳会因与 naive now 不可比而被静默漏检。
+            if updated is not None and updated.tzinfo is not None:
+                updated = updated.replace(tzinfo=None)
+            if updated and now - updated > cutoff:
                 anomalies.append({
                     "path": f["path"],
                     "kind": "stale_in_progress",

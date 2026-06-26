@@ -3,7 +3,7 @@ name: rpiv-loop:delivery-report
 description: >-
   生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.1.15
+version: 2.1.16
 ---
 
 # Delivery Report: 交付报告
@@ -26,7 +26,7 @@ version: 2.1.15
 **第一步必须调用** AC 对账脚本，未通过则立即中断，不得进入后续任何步骤：
 
 ```bash
-uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>
+uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>
 ```
 
 （消费项目上下文中若插件根在 PATH 变量里，也可写为 `uv run <插件根>/tools/check_acceptance.py <feature>`。）

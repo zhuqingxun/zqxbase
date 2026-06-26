@@ -184,12 +184,6 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="rpiv-loop AC 校验")
     parser.add_argument("feature", help="特性名（kebab-case）")
     parser.add_argument(
-        "--strict",
-        action="store_true",
-        default=True,
-        help="严格模式（默认启用）",
-    )
-    parser.add_argument(
         "--json",
         action="store_true",
         help="输出 JSON 格式（给 hook 用）",

@@ -2,7 +2,7 @@
 name: rpiv-loop:prime
 description: 使用代码库理解项目，加载项目上下文
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.15
+version: 2.1.16
 ---
 
 # Prime: 加载项目上下文
@@ -16,7 +16,7 @@ version: 2.1.15
 首次执行前调用（幂等，已存在则静默跳过）：
 
 ```bash
-uv run D:/CODE/plugins/rpiv-loop/tools/ensure_project_dod.py
+uv run ${CLAUDE_PLUGIN_ROOT}/tools/ensure_project_dod.py
 ```
 
 该脚本若发现 `rpiv/dod.yaml` 缺失则从 `tools/dod_template.yaml` 拷贝初始化；已存在则静默跳过。确保项目级 DoD 通用门在后续 RPIV 各阶段可用。

@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.1.15",
+      "version": "2.1.16",
       "keywords": [
         "rpiv",
         "workflow",
@@ -25,7 +25,7 @@
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.1.10",
+      "version": "2.1.11",
       "keywords": [
         "meeting",
         "transcription",

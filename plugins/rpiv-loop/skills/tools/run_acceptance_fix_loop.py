@@ -12,7 +12,7 @@ check_acceptance.py 退出码 0 或触发护栏（10 轮上限 / same-error-twic
 在 biubiubiu 模式 `#### 门禁 3：实现完成` 阶段，所有子任务快速检查通过后：
 
   1. QA agent 运行完整测试套件 + 初步 code-review
-  2. QA 运行 `uv run D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py <feature>`
+  2. QA 运行 `uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>`
   3. 退出码 0 -> 跳过循环，进入交付步骤 6
   4. 退出码 1/2 -> 进入下述循环
 
@@ -25,7 +25,7 @@ last_failure_set = None  # 上一轮失败 AC id 集合
 while round < 10:
     # 1. 重新获取失败清单（带 JSON 便于 parse）
     result = subprocess.run(
-        ["uv", "run", "D:/CODE/plugins/rpiv-loop/tools/check_acceptance.py",
+        ["uv", "run", "${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py",
          feature, "--json"],
         capture_output=True, text=True,
     )

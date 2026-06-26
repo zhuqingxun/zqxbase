@@ -2,7 +2,7 @@
 name: rpiv-loop:archive
 description: 归档已完成的过程文件
 allowed-tools: Bash, Read, AskUserQuestion
-version: 2.1.15
+version: 2.1.16
 ---
 
 # Archive: 归档 RPIV 过程文件
@@ -12,7 +12,7 @@ version: 2.1.15
 ## 调用脚本
 
 ```bash
-uv run --no-project python D:/CODE/plugins/rpiv-loop/tools/archive.py $ARGUMENTS
+uv run --no-project python ${CLAUDE_PLUGIN_ROOT}/tools/archive.py $ARGUMENTS
 ```
 
 ## 用法

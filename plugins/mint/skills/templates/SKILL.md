@@ -7,7 +7,7 @@ description: >-
   仅 interview 场景可用；polish 通过 resolve-template 自动选出本表中的条目。
 argument-hint: "[add|list|remove] [<id>] [<name>] [<file>] [<applies_to>] [--set-default]"
 allowed-tools: Read, Bash, Glob, AskUserQuestion
-version: 2.1.10
+version: 2.1.11
 ---
 
 # mint:templates — 访谈提纲注册表管理
@@ -90,23 +90,19 @@ uv run --script {MINT_SCRIPTS}/meta_io.py find-workspace-root "$(pwd)"
 
 #### A.2 id 规范化
 
-若 id 未提供，由 name 通过 `normalize_id(name, existing_template_ids, prefix="tpl-")` 生成。skill 本体不重实现；直接把 `name` 传给 CLI，让 CLI 内部处理 id 生成也可（但当前 CLI 要求显式 id，skill 层先生成 id 再传）。
-
-最简做法：skill 层用一段 uv run python 调 `normalize_id`：
+若 id 未提供，由 name 经 `normalize-id` CLI 生成（CLI 内部复用 `normalize_id` + 与 templates 注册表去重）。skill **不内联 python、不直接 import meta_io**——统一走 CLI 边界：
 
 ```bash
-ID=$(uv run --with pyyaml python -c "
-import sys
-sys.path.insert(0, '{MINT_SCRIPTS_DIR}')
-from meta_io import normalize_id, load_workspace
-from pathlib import Path
-ws = load_workspace(Path('$WS_ROOT/.mint/workspace.yaml'))
-existing = {t['id'] for t in (ws.get('templates') or []) if isinstance(t, dict)}
-print(normalize_id('$NAME', existing, prefix='tpl-'))
-")
+uv run --script {MINT_SCRIPTS}/meta_io.py normalize-id "$NAME" \
+  --workspace-root "$WS_ROOT" --prefix tpl- --registry templates
 ```
 
-`{MINT_SCRIPTS_DIR}` = `{MINT_SCRIPTS}` 的绝对路径（由 Glob 定位后记录）。
+stdout 为 JSON `{"id": "tpl-xxx"}`，取其 `id` 字段记为 `$ID` 供 A.3 使用。
+
+失败（exit 2）：透传 stderr `ERROR:` 并 exit 2。常见错误：
+- `name 含非 ASCII 字符，请改用英文名或手工指定 id: <name>`（name 为中文且不命中预设映射）→ 提示用户改用英文 name 或在调用时显式传 `<id>`。
+
+若用户已显式提供 `<id>`，跳过本步直接进 A.3。
 
 #### A.3 调 CLI 写入
 

@@ -6,7 +6,7 @@ description: >-
   当用户说"初始化工作区""init""新建 mint 工作区""/mint:init"时触发。
   这是所有 mint 流水线使用的前置步骤：未 init 的目录运行 /mint 或 /mint:next 会报错。
 allowed-tools: Read, Write, Bash, AskUserQuestion
-version: 2.1.10
+version: 2.1.11
 ---
 
 # mint:init — 工作区初始化
@@ -77,16 +77,24 @@ Q4 仅在 interview 场景触发，而 AskUserQuestion 的 batch 内无条件分
 
 **Q2 — deliverables（多选并集 4 项）**
 
+Q2 的 options **并集（single-source）来自 `deliverable-presets` CLI**，不要在 skill 里另抄一份硬编码列表：
+
+```bash
+uv run --script {MINT_SCRIPTS}/meta_io.py deliverable-presets
+```
+
+取返回 JSON 的 `selectable` 数组（恰 4 项）作为下方 options 的 label 集；description 文案沿用本文档。当前快照为 `["观点分析", "行动项", "决议清单", "要点摘要"]`，**以 CLI 实际输出为准**。
+
 - question: `希望产出哪些交付物? (可多选, 会按场景自动补齐)`
 - header: `交付物`
 - multiSelect: `true`
-- options（必须 4 项，硬编码并集）：
+- options（取自 `deliverable-presets` 的 `selectable`，当前 4 项快照）：
   - label: `观点分析` — description: `提取受访人的观点、立场与深层意图`
   - label: `行动项` — description: `可执行的下一步任务清单`
   - label: `决议清单` — description: `多人会议中达成的决定事项`
   - label: `要点摘要` — description: `结构化的要点回顾`
 
-说明：Q2 的 options 是两场景并集。过滤与补齐由 `meta_io.py init-workspace` 按 Q1 结果处理。
+说明：Q2 的 options 是两场景并集。过滤与补齐由 `meta_io.py init-workspace` 按 Q1 结果处理（删除非本场景项 + 自动补齐场景必备项，规则与 `deliverable-presets` 的 `presets` 字段一致）。
 
 **Q3 — goal（4 预设 + 自动 Other 兜底）**
 

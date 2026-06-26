@@ -22,9 +22,8 @@ if str(HOOK_DIR) not in sys.path:
     sys.path.insert(0, str(HOOK_DIR))
 
 from handoff_detector import (  # noqa: E402
-    BLACKLIST,
+    collect_handoffs,
     fmt_item,
-    scan_dir_for_handoffs,
 )
 
 SEEN_FILE = Path.home() / ".claude" / "handoff_first_prompt_seen.json"
@@ -55,35 +54,6 @@ def save_seen(sessions):
         os.replace(tmp_path, SEEN_FILE)
     except OSError:
         pass
-
-
-def collect_handoffs(cwd_path):
-    all_handoffs = []
-    cwd_handoffs = scan_dir_for_handoffs(cwd_path)
-    for h in cwd_handoffs:
-        h["scope"] = "current"
-        h["project_label"] = "./"
-    all_handoffs.extend(cwd_handoffs)
-
-    try:
-        for sub in sorted(cwd_path.iterdir()):
-            if not sub.is_dir():
-                continue
-            if sub.name in BLACKLIST or sub.name.startswith("."):
-                continue
-            sub_handoffs = scan_dir_for_handoffs(sub)
-            for h in sub_handoffs:
-                h["scope"] = "subdir"
-                h["project_label"] = f"{sub.name}/"
-            all_handoffs.extend(sub_handoffs)
-    except OSError:
-        pass
-
-    all_handoffs.sort(
-        key=lambda h: (h.get("anchor_iso") or "", h.get("mtime_ts", 0)),
-        reverse=True,
-    )
-    return all_handoffs
 
 
 def render_prompt_prefix(handoffs, cwd):
