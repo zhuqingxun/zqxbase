@@ -2,7 +2,7 @@
 name: rpiv-loop:flow-status
 description: 查看过程文件的状态
 allowed-tools: Bash, Edit, AskUserQuestion
-version: 2.1.16
+version: 2.6.0
 ---
 
 # /rpiv-loop:flow-status
@@ -23,6 +23,8 @@ uv run --no-project python ${CLAUDE_PLUGIN_ROOT}/tools/flow_status.py $ARGUMENTS
 ```
 留空 | all | pending | in-progress | completed | <feature> | check | fix
 ```
+
+默认模式与 `all` 只展示活跃过程文件和 todo；已经归档的文件不列入状态输出。需要查看归档文件时，显式使用 `archived` 状态过滤或查询具体 `<feature>`。
 
 ## 多子项目聚合（伞目录场景）
 

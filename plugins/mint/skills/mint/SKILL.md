@@ -6,7 +6,7 @@ description: >-
   当用户提到"处理录音""从头跑一遍""mint""完整处理"时触发。
 argument-hint: "<音频文件路径> [会议名]"
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion, Skill
-version: 2.1.11
+version: 2.1.2
 ---
 
 # MINT 一键流水线编排器

@@ -8,7 +8,7 @@ description: >-
   当用户提到 "评审 PPT" "ppt:taste" "看一下 deck 质量" "审美评分" "找问题" 时触发.
 argument-hint: "<pptx 路径> 或 <png 目录> [--mode anchor|general]"
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
-version: 3.0.8
+version: 3.9.2
 ---
 
 # PPT:Taste — 视觉评审

@@ -1,7 +1,7 @@
 {
   "name": "ppt",
-  "version": "3.0.8",
-  "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, manage visual themes",
+  "version": "3.9.2",
+  "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, and review visual taste with public fallback principles.",
   "author": {
     "name": "zhuqingxun"
   },
@@ -11,6 +11,9 @@
     "presentation",
     "pptx",
     "slides",
-    "theme"
+    "huawei",
+    "review",
+    "critique",
+    "taste"
   ]
 }

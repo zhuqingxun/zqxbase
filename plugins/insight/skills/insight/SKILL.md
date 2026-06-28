@@ -31,14 +31,13 @@ Insight 和 RPIV 是平级插件，各自独立：
 ## 环境要求
 
 ### 必须
-- **Claude Code Pro+**：biubiubiu 需要 Agent Team 功能（brainstorm/ppt-refine 无此限制）
-- **uv**：Python 包管理器，PPT 生成需要
+- **Claude Code Pro+**：biubiubiu 需要 Agent Team 功能（brainstorm/nblm 无此限制）
+- **uv**：Python 包管理器，辅助脚本和后续交付链路可能需要
 
 ### 可选（增强体验）
-- **notebooklm CLI**：`/insight:nblm` 和 `/insight:ppt-refine` NBLM 模式需要
+- **notebooklm CLI**：`/insight:nblm` 需要
   - 第三方工具，基于 Google NotebookLM 非官方 API，可能随时失效
   - 安装：`uv tool install notebooklm-mcp-cli`
-- **LibreOffice**：ppt-refine QA 渲染验证，无则跳过视觉验证
 
 ## 目录约定
 
@@ -82,9 +81,7 @@ archived_at: null
 |------|------|---------|
 | `/insight:brainstorm` | 研究需求澄清 | "我想研究一下 X" |
 | `/insight:biubiubiu` | 全自主研究团队执行 | "自动研究"、"深度调研" |
-| `/insight:ppt-refine` | PPT 精加工 | "精加工 PPT"、"PPT 增强" |
 | `/insight:nblm` | NotebookLM 增强输出 | "生成播客"、"做视频" |
-| `/insight:publish` | 站点集成（灵活模式） | "发布到站点"、"站点集成" |
 
 ## 典型工作流
 
@@ -98,17 +95,13 @@ archived_at: null
    → Agent 团队自动完成: 信息源发现 → 调研 → 写作 → PPT → 部署
    → 输出 output/*.pptx + site/docs/ + research/delivery-report-*.md
 
-3. /insight:ppt-refine output/xxx.pptx
-   → 视觉增强: 渐变/装饰 + NBLM 信息图嵌入
-
-4. /insight:nblm
+3. /insight:nblm
    → 生成播客音频、视频等增强输出
 ```
 
 ### 单独使用
 
 每个命令也可独立使用，不要求完整流程。例如：
-- 只用 `/insight:ppt-refine` 精加工已有 PPT
 - 只用 `/insight:nblm` 从已有 notebook 生成播客
 
 ## 质量标准

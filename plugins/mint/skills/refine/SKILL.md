@@ -7,12 +7,13 @@ description: >-
   当用户调用 /mint:refine 时触发，将 02_原始稿/ 目录下的 ASR 转录稿清洁为 03_校对稿/ 目录下的逐字稿。
 argument-hint: "<工作目录> [保守|适度] [--脱敏]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, SendMessage, TaskStop
-version: 2.1.11
+version: 2.3.3
 ---
 
 # mint:refine — 校对清洁
 
 > **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录，`{MINT_SCRIPTS}` 为同级 `scripts/` 目录。首次引用时通过
+> 本 skill 专属参考在本目录 `references/` 下,通过 `Glob("**/plugins/mint/skills/refine/references/<file>")` 定位(转 CodeAgent 后即 `references/<file>` 相对本 skill)。
 > `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 将 ASR 原始转录稿清洁为可读逐字稿。使用 Agent Team 双路交叉校对，包含架构师、双路校对员、审查员、人工澄清环节。
@@ -116,7 +117,7 @@ Leader 将不确定项通过 AskUserQuestion 分批呈现给用户：
 
 **高优先级问题的新类型——语境可疑表达**（2026-04-08 新增）：
 
-若 Architect 在不确定项清单中标出"语法通顺但语境冲突"的表达（参考 `{MINT_REF}/architect-prompt.md` 第 7 节），这类问题必须在阶段 1.5 优先询问用户。示例：
+若 Architect 在不确定项清单中标出"语法通顺但语境冲突"的表达（参考 `references/architect-prompt.md` 第 7 节），这类问题必须在阶段 1.5 优先询问用户。示例：
 
 > "第 X 段有一句「现有的干部全是男的」，但前后段讨论的是招博士生、新人管新人。请确认原意：
 > - A) 确实是性别描述
@@ -203,7 +204,7 @@ uv run --script {MINT_SCRIPTS}/meta_io.py set-stage "<工作目录>" refine --st
   - 访谈者的感叹和元评论（"我觉得很有价值""你这个洞察很关键"）默认删除
 - 保持：段落结构、核心观点、说话人语气立场
 
-详细的校对模式规则见 `{MINT_REF}/worker-prompt.md`；访谈场景的精简深度校准见 `{MINT_REF}/lessons-learned.md` 第五章。
+详细的校对模式规则见 `references/worker-prompt.md`；访谈场景的精简深度校准见 `{MINT_REF}/lessons-learned.md` 第五章。
 
 ## 校对通用规则
 
@@ -307,8 +308,8 @@ uv run --script {MINT_SCRIPTS}/meta_io.py add-blocker "<工作目录>" "ambiguit
 
 | 文件 | 用途 | 何时读取 |
 |------|------|---------|
-| `{MINT_REF}/architect-prompt.md` | Architect 指引（含不确定项清单格式） | 阶段 1 |
-| `{MINT_REF}/worker-prompt.md` | Worker 校对规则（两种模式+重叠区说明） | 阶段 2 |
+| `references/architect-prompt.md` | Architect 指引（含不确定项清单格式） | 阶段 1 |
+| `references/worker-prompt.md` | Worker 校对规则（两种模式+重叠区说明） | 阶段 2 |
 | `{MINT_REF}/reviewer-prompt.md` | Reviewer 评分标准+交叉对比策略 | 阶段 3 |
 | `{MINT_REF}/lessons-learned.md` | 历次校对积累的经验教训（高频错字表、语义陷阱、脱敏规则等） | Architect 阶段 1 + Reviewer 阶段 3 |
 

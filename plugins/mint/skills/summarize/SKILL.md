@@ -7,13 +7,14 @@ description: >-
   仅 interview 场景可用, 要求工作区已完成 types/templates 登记且至少一个会议 polish=completed.
 argument-hint: "[--full] [--split | --no-split]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Agent, AskUserQuestion
-version: 2.1.11
+version: 3.0.0
 ---
 
 
 # mint:summarize — 跨会议汇总
 
 > **`{MINT_REF}` 路径约定**: 指 mint 插件的 `references/` 目录, `{MINT_SCRIPTS}` 为同级 `scripts/` 目录. 首次引用时通过
+> 本 skill 专属参考在本目录 `references/` 下,通过 `Glob("**/plugins/mint/skills/summarize/references/<file>")` 定位(转 CodeAgent 后即 `references/<file>` 相对本 skill)。
 > `Glob("**/plugins/mint/references/next-hints-template.md")` 定位, 多结果时优先非 `marketplaces/` 路径 (私有开发版).
 
 > **v3.0 变更**: prompt 输出格式重设为 V2.0 实证风格 (无受访者编号 / 综合论证骨架 / 子主题分类). 新增**按 interviewee_type 拆分主产物**配置 (`split_by_type`) + **观点汇总样例模板**配置 (`viewpoint_template_path`). 产物 1+2 受配置控制, 产物 3 (深度洞察) 永远 1 份.
@@ -96,7 +97,7 @@ summarize:
 1. workspace.yaml `summarize.viewpoint_template_path` 字段已存在 → 读取该文件全文 (前 N 行节选, 限制 ≤ 200 行) 作为 `{{viewpoint_format_reference}}` 占位符注入内容
 2. 字段不存在 → 走 0.3 步问
 
-如果用户跳过模板提供, 则注入**内置 V2.0 默认样例**: Read `{MINT_REF}/summarize-default-viewpoint-format-v2.md` (本指引附带的内置样例, 见本目录下伴随文件; 若该文件不存在, 用 prompt 内嵌的简短默认描述)
+如果用户跳过模板提供, 则注入**内置 V2.0 默认样例**: Read `references/summarize-default-viewpoint-format-v2.md` (本指引附带的内置样例, 见本目录下伴随文件; 若该文件不存在, 用 prompt 内嵌的简短默认描述)
 
 #### 0.3 AskUserQuestion (一次性问)
 
@@ -246,12 +247,12 @@ done
 对 `delta.added ∪ delta.changed` 每个受访者并行启动 Agent:
 
 1. Read `polish_source_abs` 得到受访者 polish 源全文
-2. Read `{MINT_REF}/summarize-append-interviewee-prompt.md`
+2. Read `references/summarize-append-interviewee-prompt.md`
 3. 启动 Agent (subagent_type="general-purpose"), prompt 含:
    - Part 1 元数据 (meeting_dir / 受访者代号 / interviewee_type / 是否脱敏稿)
    - Part 2 该 type 的提纲问题清单 (从基底主文件中按章节顺序抽出)
    - Part 3 polish 源全文
-   - 末尾附 `{MINT_REF}/summarize-append-interviewee-prompt.md` 全文作为 System Prompt
+   - 末尾附 `references/summarize-append-interviewee-prompt.md` 全文作为 System Prompt
 4. Agent 返回 JSON → 解析:
    - 验证 `fragments[*].question_num` 在 Part 2 问题编号集合内 (非法项跳过)
    - 验证每条 fragment 的 `markdown_only` 和 `markdown_quote` 均以 `<EDITION>` 起始
@@ -404,14 +405,14 @@ BACKUP_JSON=$(uv run --script {MINT_SCRIPTS}/meta_io.py summarize-backup-outputs
 
 - `.md` 提纲: 直接 Read, 全文作为 `template_text`
 - `.pdf` 提纲: 调 `pdf_extract.py "<template.file_abs>"`; 失败 → `parse_status: failed`
-- 为每个 template 启动 Agent 抽问题清单 (subagent_type="general-purpose", prompt 含 `{MINT_REF}/summarize-template-questions-prompt.md`). 多 template 并行启动.
+- 为每个 template 启动 Agent 抽问题清单 (subagent_type="general-purpose", prompt 含 `references/summarize-template-questions-prompt.md`). 多 template 并行启动.
 - 若**所有** template 失败 → 整体进入"无提纲模式"
 
 **A.3 模板节选准备 (新增, 给产物 1+2 的 prompt 注入用)**:
 
 根据第 0 步决策的 `viewpoint_template_path`:
 
-- 字段空 (使用内置默认): Read `{MINT_REF}/summarize-default-viewpoint-format-v2.md` (本插件附带), 全文作为 `viewpoint_format_reference`
+- 字段空 (使用内置默认): Read `references/summarize-default-viewpoint-format-v2.md` (本插件附带), 全文作为 `viewpoint_format_reference`
 - 字段有值: Read `<root>/<viewpoint_template_path>`, 取前 200 行 (或全文若 < 200 行) 作为 `viewpoint_format_reference`
 - 都失败 → 用兜底字符串 `(未提供格式参考样例; 请按本指引正文规则输出)`
 
@@ -442,18 +443,18 @@ fi
 
 对每个 type, 串行跑产物 1 + 产物 2 (`split_mode=true` 输入材料):
 
-- B.split.1.<type>: Agent (System=`{MINT_REF}/summarize-viewpoint-only-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 该 type input → Write `mint_纯观点汇总_<type>.md`
-- B.split.2.<type>: Agent (System=`{MINT_REF}/summarize-viewpoint-quote-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 该 type input → Write `mint_观点原声汇总_<type>.md`
+- B.split.1.<type>: Agent (System=`references/summarize-viewpoint-only-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 该 type input → Write `mint_纯观点汇总_<type>.md`
+- B.split.2.<type>: Agent (System=`references/summarize-viewpoint-quote-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 该 type input → Write `mint_观点原声汇总_<type>.md`
 
 最后跑产物 3 (1 次):
 
-- B.split.3: Agent (System=`{MINT_REF}/summarize-insight-prompt.md`) + 全 type input → Write `mint_深度洞察.md`
+- B.split.3: Agent (System=`references/summarize-insight-prompt.md`) + 全 type input → Write `mint_深度洞察.md`
 
 #### B 合模式: 3 次 Agent 调用 (串行 + 立即 Write)
 
-- B.combine.1: Agent (System=`{MINT_REF}/summarize-viewpoint-only-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 合模式 input → Write `mint_纯观点汇总.md`
-- B.combine.2: Agent (System=`{MINT_REF}/summarize-viewpoint-quote-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 同 input → Write `mint_观点原声汇总.md`
-- B.combine.3: Agent (System=`{MINT_REF}/summarize-insight-prompt.md`) + 同 input → Write `mint_深度洞察.md`
+- B.combine.1: Agent (System=`references/summarize-viewpoint-only-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 合模式 input → Write `mint_纯观点汇总.md`
+- B.combine.2: Agent (System=`references/summarize-viewpoint-quote-prompt.md`, Part 4 注入 `viewpoint_format_reference`) + 同 input → Write `mint_观点原声汇总.md`
+- B.combine.3: Agent (System=`references/summarize-insight-prompt.md`) + 同 input → Write `mint_深度洞察.md`
 
 #### Agent 失败处理
 

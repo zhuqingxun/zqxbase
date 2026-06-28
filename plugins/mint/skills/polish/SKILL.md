@@ -3,13 +3,14 @@ name: mint:polish
 description: >-
   MINT 流水线 Stage 3: 编辑稿生成——将清洁逐字稿转化为高可读性的编辑稿，产出三种文档：书面化文稿、观点+原声对照、精华语录集。包含独立 Reviewer 阶段做七维审查：观点覆盖完整性（核心）、话题/数据漏检扫描、结构化质量、原声质量、观点准确性、脱敏安全、格式可读性。适用于需要将访谈/会议记录转化为可交付文档的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 2.1.11
+version: 2.6.1
 ---
 
 
 # mint:polish — 编辑稿生成
 
 > **`{MINT_REF}` 路径约定**：指 mint 插件的 `references/` 目录，`{MINT_SCRIPTS}` 为同级 `scripts/` 目录。首次引用时通过
+> 本 skill 专属参考在本目录 `references/` 下,通过 `Glob("**/plugins/mint/skills/polish/references/<file>")` 定位(转 CodeAgent 后即 `references/<file>` 相对本 skill)。
 > `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径（私有开发版）。
 
 将清洁逐字稿（clean）转化为高可读性的编辑稿，产出三种文档。
@@ -63,7 +64,7 @@ version: 2.1.11
 - 如果提供了 `--template`，按模板的问题结构组织
 - 如果没有模板，自动从对话中提炼话题结构
 - 每个话题/问题下包含：观点概括 + 关键原声引用
-- 详细格式和写作规则见 `{MINT_REF}/structured-prompt.md`
+- 详细格式和写作规则见 `references/structured-prompt.md`
 
 ### 3. 精华语录集（quotes）
 
@@ -74,7 +75,7 @@ version: 2.1.11
 特征：
 - 精选最有冲击力、信息量最大的发言
 - 按话题分类，每条附说话人和上下文简述
-- 详细选取标准见 `{MINT_REF}/quotes-prompt.md`
+- 详细选取标准见 `references/quotes-prompt.md`
 
 ## 执行流程
 
@@ -153,7 +154,7 @@ PRD 6.3 的报错分支（缺 interviewee_type 但 workspace.yaml.types[] 非空
 
 ### 第四步：生成观点原声对照
 
-使用 `{MINT_REF}/structured-prompt.md` 中的详细指引。
+使用 `references/structured-prompt.md` 中的详细指引。
 
 - 如果第零步解析出的 `template_path` 非 null（source = explicit / type_default）：按模板的问题结构提取
 - 如果 source = none（无模板模式）：先让 LLM 从对话中自动提炼 5-10 个核心话题作为结构
@@ -162,7 +163,7 @@ PRD 6.3 的报错分支（缺 interviewee_type 但 workspace.yaml.types[] 非空
 
 ### 第五步：生成精华语录集
 
-使用 `{MINT_REF}/quotes-prompt.md` 中的详细指引。
+使用 `references/quotes-prompt.md` 中的详细指引。
 
 从 clean 稿中精选最有价值的发言片段，按话题分类组织。
 
@@ -173,11 +174,11 @@ PRD 6.3 的报错分支（缺 interviewee_type 但 workspace.yaml.types[] 非空
 Leader 启动一个独立的 general-purpose agent 作为 Reviewer，传入：
 1. **Clean 稿路径**：`03_校对稿/{name}_校对稿.md`
 2. **待审产出物路径列表**：本次生成的文件（编辑稿/结构化分析/脱敏稿等，精华原声建议也审但优先级低）
-3. **Reviewer 指引**：`{MINT_REF}/polish-reviewer-prompt.md` 的完整内容内联或让 Reviewer 自己 Read
+3. **Reviewer 指引**：`references/polish-reviewer-prompt.md` 的完整内容内联或让 Reviewer 自己 Read
 4. **脱敏场景标识**：是否启用脱敏自检（`--脱敏` 场景启用）
 5. **受访者真实姓名**：用于脱敏扫描（仅脱敏场景）
 
-**Reviewer 执行七维审查**（详见 `{MINT_REF}/polish-reviewer-prompt.md`）：
+**Reviewer 执行七维审查**（详见 `references/polish-reviewer-prompt.md`）：
 - **维度 1：观点覆盖完整性（权重 25%，🌟 核心）** — clean 稿中受访人明确表达的所有观点（立场/判断/建议/对比/结论/诊断/反问/量化/矛盾揭示/自我反思）是否都在 polish 产出中得到完整覆盖。Reviewer 必须先做"观点提取"（按问题分段 bullet 列出所有明确观点并编号 `P{Q}-{序号}`），再做"覆盖对照"（逐条检查 polish 中的状态：✅完全覆盖/⚠覆盖不完整/❌漏检）
 - **维度 2：话题/数据/案例漏检扫描（权重 15%）** — 具体数据、案例、历史背景、专有名词等**非观点类细节**的覆盖情况（维度 1 的配套细节层）
 - **维度 3：结构化质量（权重 15%）** — 复杂问题是否分层/延伸分块
@@ -353,7 +354,7 @@ Leader 自检存在天然盲点：
 - 脱敏场景下，独立扫描模式库比 Leader 顺手 grep 的命中覆盖率高 ~30%
 - 对比纯双路 Worker 对抗（2.3x 成本），单路 + 独立 Reviewer 成本约 1.4-1.6x，质量收益达到双路对抗的 60-70%
 
-详见 `{MINT_REF}/polish-reviewer-prompt.md`。
+详见 `references/polish-reviewer-prompt.md`。
 
 ## 脱敏版本生成规则
 
@@ -461,7 +462,7 @@ registry:
 | LLM 调用失败 | 报告错误，已完成的产出物保留 |
 | resolve-template 报错（第零步） | 透传 stderr `ERROR: ...` 并退出。常见原因：workspace.yaml.types[] 非空但 meta.interviewee_type 缺失（老会议未升级）、type.default_template_id 指向不存在的 template、显式 `--template` 既不在注册表也不是有效路径 |
 | `--template` 传入的 id 不存在于注册表 | resolve-template 会尝试当路径处理，若路径也不存在 → exit 2 + stderr |
-| Reviewer agent 启动失败 | 降级为 Leader 自检（执行 `{MINT_REF}/polish-reviewer-prompt.md` 中的 7 维 checklist），在 meta.yaml 中标记 `review.enabled: true, review.mode: fallback_self_check` |
+| Reviewer agent 启动失败 | 降级为 Leader 自检（执行 `references/polish-reviewer-prompt.md` 中的 7 维 checklist），在 meta.yaml 中标记 `review.enabled: true, review.mode: fallback_self_check` |
 | Reviewer 第 3 轮仍退回 | 汇总全部问题清单，通过 AskUserQuestion 呈现给用户，由用户决定是否接受当前版本或人工介入 |
 | Reviewer 报告脱敏 critical 失败 | **禁止**静默通过或跳过扫描。必须 Edit 定点修复命中位置后重新扫描，直到全部 PASS。若无法修复（如原文没有合适的脱敏方案），上报用户 |
 | 用户明确传入 `--skip-review` | 跳过第六步，但在第八步 meta.yaml 中记录 `review.enabled: false`，并在第九步报告中显著提示"本次产出未经 Reviewer 审查" |

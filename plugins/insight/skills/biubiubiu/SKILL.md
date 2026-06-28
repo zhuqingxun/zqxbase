@@ -5,7 +5,7 @@ description: >-
   当用户提到'自动研究'、'全自主研究'、'research biubiubiu'、'启动研究团队'、'深度调研'时触发。
   也适用于用户说'帮我研究一下 XXX'且研究范围足够大（需要多源调研+写作+部署）的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch, Skill, SendMessage, TaskCreate, TaskUpdate, TaskGet, TaskList, TaskStop
-version: 1.1.4
+version: 1.3.0
 ---
 
 # Biubiubiu Research: 全自主研究团队执行
@@ -20,7 +20,7 @@ version: 1.1.4
 | 工作量分布 | 20% 设计 + 80% 编码 | 80% 调研写作 + 20% 集成部署 |
 | 质量标准 | 测试通过 + 代码审查 | 五层深度检验 + 溯源率 100% |
 | 并行模式 | Dev-1/Dev-2 并行编码 | Analyst-1/2 并行写不同专题 |
-| 特色集成 | — | — |
+| 特色集成 | — | NotebookLM notebook（共享）+ YouTube 视频分析 |
 | 产出物 | 代码 + 测试 | Markdown 报告 + 站点部署 |
 | 后续增强 | — | `/ppt:create` 生成演示文稿 + `/nblm` 播客/视频 |
 
@@ -28,15 +28,21 @@ version: 1.1.4
 
 | 角色 | 职责 | 活跃阶段 |
 |------|------|----------|
-| **Leader**（你自己） | 协调、质量门禁、部署 | 全程 |
-| **Scout** | 信息源发现（Web + YouTube）、素材提取 | 阶段 1-2 |
+| **Leader**（你自己） | 协调、NotebookLM 管理、质量门禁、部署 | 全程 |
+| **Scout** | 信息源发现（Web + YouTube）、素材提取、NotebookLM 源管理 | 阶段 1-2 |
 | **Analyst-1** | 深度调研 + 专题写作（分配的模块） | 阶段 2-4 |
 | **Analyst-2**（大型项目） | 深度调研 + 专题写作（分配的模块） | 阶段 2-4 |
 
 ## 前置检查
 
 执行前验证：
-
+<!-- SYNC:PRIVATE -->
+1. **NotebookLM 登录状态**：`notebooklm status`。
+   - **未登录时禁止静默跳过**。必须使用 AskUserQuestion 向用户说明 NotebookLM 的价值并询问是否登录：
+     - 选项 1（推荐）："登录 NotebookLM 后继续"——说明价值：NBLM 可将所有信息源（PDF、网页、视频）汇入同一个 notebook，支持跨源提问和信息图生成，显著提升研究深度和信息综合质量
+     - 选项 2："跳过 NotebookLM，仅用 Web 调研"——说明影响：将失去跨源综合分析、视频内容提取、信息图自动生成能力，研究深度和信息综合质量会降低
+   - 用户选择登录后，提示执行 `! notebooklm login`，等待登录完成后再继续
+<!-- /SYNC:PRIVATE -->
 2. **Gemini Deep Research 可用性**：检查 `~/.claude/playwright-gemini-auth.json` 是否存在。
    - **存在**：Gemini Pro 登录态可用，在 Scout 阶段并行启动 Deep Research（针对 2-3 个核心深度问题）
    - **不存在**：使用 AskUserQuestion 询问用户：
@@ -44,6 +50,7 @@ version: 1.1.4
      - 选项 2："跳过，仅用 WebSearch"——说明影响：将失去多轮推理的学术深度调研能力
    - 用户选择登录后，通过 Playwright MCP 打开 gemini.google.com，用户在弹出浏览器中完成登录，然后 `storageState` 保存到 `~/.claude/playwright-gemini-auth.json`
 3. **项目 CLAUDE.md**：读取获取技术栈、部署目标等上下文
+4. **站点检测**：检查是否存在 `site/mkdocs.yml`，决定是否包含站点集成阶段 <!-- SYNC:PRIVATE_LINE -->
 
 ## 执行流程
 
@@ -77,6 +84,7 @@ archived_at: null
 
 ## 产出物
 - Markdown 报告：是/否
+- 站点部署：是/否（站点路径：...） <!-- SYNC:PRIVATE_LINE -->
 
 ## 信息源方向
 - 官方来源：...
@@ -113,6 +121,33 @@ docs/                      # 研究报告输出
 
 执行：创建目录结构 + `pyproject.toml`（如需要）+ `uv sync`。
 
+<!-- SYNC:PRIVATE -->
+### 步骤 3：NotebookLM Notebook 初始化
+
+```bash
+# 创建 notebook（--json 获取 ID）
+notebooklm create "Research: {topic-display-name}" --json
+```
+
+保存元数据到 `{research-dir}/nblm-meta.json`：
+```json
+{
+  "notebook_id": "...",
+  "notebook_name": "Research: {topic}",
+  "created_at": "...",
+  "topic": "{topic}",
+  "sources": []
+}
+```
+
+设置为当前 notebook：
+```bash
+notebooklm use {notebook_id}
+```
+
+此 notebook 在后续步骤中持续添加源，并供 `/nblm` 技能复用。
+<!-- /SYNC:PRIVATE -->
+
 ### 步骤 4：团队机制说明（无需显式创建团队）
 
 当前 Claude Code harness **没有 `TeamCreate`/`TeamDelete` 工具**。团队是**单一 implicit flat team**：你（main 会话）即 Leader，用 `Agent` 工具 spawn 的每个 named agent（Scout / Analyst）自动加入该 implicit team，可被 `SendMessage` 按 name 寻址。因此本步骤无需任何操作，直接进入步骤 5。
@@ -121,6 +156,30 @@ docs/                      # 研究报告输出
 
 ### 步骤 5：创建任务结构
 
+<!-- SYNC:PRIVATE -->
+```
+阶段 1：信息源发现（Scout + Gemini 并行）
+  T1 source-discovery     → Scout 系统搜索信息源 + YouTube 视频
+  T1.5 gemini-research    → Leader 通过 Playwright MCP 启动 Gemini Deep Research [与 T1 并行]
+                            从 brainstorm-summary 提取 2-3 个核心深度问题，提交给 Gemini
+                            研究完成后提取报告保存到 research/gemini-deep-research-{topic}.md
+  T2 source-registration  → Scout 将高价值源添加到 NotebookLM       [blockedBy: T1]
+
+阶段 2：素材获取与深度调研
+  T3 material-fetch       → Scout WebFetch 关键源 + 提取图片/图表   [blockedBy: T1]
+  T4 nblm-analysis        → Leader 通过 NotebookLM 提取视频/源洞察  [blockedBy: T2]
+
+阶段 3：深度写作
+  T5 write-modules        → Analyst(s) 撰写各专题模块               [blockedBy: T3, T4]
+  T6 write-overview       → Analyst 撰写主线概览 + 参考资料归档      [blockedBy: T5]
+
+阶段 4：集成&部署
+  T7 site-integration     → Leader 站点配置 + 首页卡片（如适用）     [blockedBy: T6]
+  T8 deploy               → Leader 构建 + 部署 + 验证               [blockedBy: T7]
+  T9 delivery-report      → Leader 生成交付报告                     [blockedBy: T8]
+```
+<!-- /SYNC:PRIVATE -->
+<!-- SYNC:PUBLIC_ONLY -->
 ```
 阶段 1：信息源发现（Scout + Gemini 并行）
   T1 source-discovery     → Scout 系统搜索信息源 + YouTube 视频
@@ -136,6 +195,7 @@ docs/                      # 研究报告输出
 阶段 4：集成&部署
   T5 delivery-report      → Leader 生成交付报告                     [blockedBy: T4]
 ```
+<!-- /SYNC:PUBLIC_ONLY -->
 
 ### 步骤 6：启动团队
 
@@ -159,12 +219,23 @@ docs/                      # 研究报告输出
     5. `WebSearch` 第三方分析报告
   - 按 Tier 分级（Tier 1 高价值 → Tier 5 补充参考）记录每个信息源
   - 保存信息源注册表到 `{research-dir}/source-registry.md`
-
+<!-- SYNC:PRIVATE -->
+- **阶段 1：NotebookLM 源注册**
+  - 将发现的高价值 URL 添加到 NotebookLM（使用 Leader 告知的 notebook ID）：
+    ```bash
+    notebooklm source add "{url}" -n {notebook_id}
+    notebooklm source add "{youtube_url}" -n {notebook_id}
+    ```
+  - 每添加一批源后更新 `nblm-meta.json` 的 sources 数组
+  - 通过 SendMessage 通知 Leader 已添加的源清单
+<!-- /SYNC:PRIVATE -->
 - **阶段 2：素材获取**
   - `WebFetch` 关键页面，提取核心内容保存到 `{research-dir}/` 按主题命名的笔记文件
   - 提取架构图/截图：PDF 用 PyMuPDF、网页图片用 requests 下载
   - 保存图片到 `assets/` 目录，记录每张图的来源 URL 和获取日期
-  - 识别信息缺口 → 执行补充搜索- 你是阶段 1-2 的角色，material-fetch 完成后等待 shutdown
+  - 识别信息缺口 → 执行补充搜索 → 添加新源到 NotebookLM <!-- SYNC:PRIVATE_LINE -->
+<!-- SYNC:PUBLIC_ONLY -->  - 识别信息缺口 → 执行补充搜索<!-- /SYNC:PUBLIC_ONLY -->
+- 你是阶段 1-2 的角色，material-fetch 完成后等待 shutdown
 - **完成任务的固定顺序**：标记 TaskUpdate completed 之前，必须先 Edit 对应的 `research/` 文件，将 frontmatter `status` 更新为 `completed`、`updated_at` 更新为当前时间戳。顺序：Edit frontmatter → TaskUpdate completed，不可颠倒
 - 全程使用中文
 
@@ -189,6 +260,7 @@ docs/                      # 研究报告输出
 - **信息获取优先级**：
   1. 先检查 `{research-dir}/` 已有调研笔记
   2. 不足则自行 `WebSearch`/`WebFetch` 补充
+  3. 需要视频/多源综合分析时，通过 SendMessage 请求 Leader 用 NotebookLM 提问 <!-- SYNC:PRIVATE_LINE -->
 - **完成任务的固定顺序**：Edit frontmatter → TaskUpdate completed，不可颠倒
 - 全程使用中文
 
@@ -196,12 +268,25 @@ docs/                      # 研究报告输出
 
 #### 门禁 1：信息源就绪
 
-Scout 完成 source-discovery 后：
+Scout 完成 source-discovery + source-registration 后：
 - 检查信息源注册表覆盖所有内容模块
 - 检查每个模块至少有 3 个独立信息源
 - **YouTube 检查**：确认每个模块都搜索过相关视频（即使无高价值结果，需记录"已搜索"）
+- **NotebookLM 检查**：notebook 中已添加 5+ 个高价值源 <!-- SYNC:PRIVATE_LINE -->
 - **Frontmatter 校验**：`grep ^status:` 检查源注册表文件
 - 通过 → Scout 进入素材获取
+
+<!-- SYNC:PRIVATE -->
+#### 门禁 1.5：NotebookLM 视频洞察
+
+Leader 在 Scout 添加 YouTube 视频和关键 URL 后，使用 NotebookLM 提取关键信息：
+```bash
+notebooklm ask "基于已添加的所有源，总结以下问题的关键信息：1. {问题1} 2. {问题2} ..." -n {notebook_id}
+```
+
+将 NotebookLM 的回答保存到 `{research-dir}/nblm-insights.md`，通知 Analyst 参考。
+此步骤与 Scout 的素材获取并行执行。
+<!-- /SYNC:PRIVATE -->
 
 #### 门禁 2：素材就绪
 
@@ -223,10 +308,19 @@ Scout 完成 material-fetch 后：
 - 有质量问题 → SendMessage 要求 Analyst 修改（最多 2 轮）
 - 通过 → 概览写作
 
+<!-- SYNC:PRIVATE -->
+#### 门禁 4：集成完成
+
+站点集成完成后：
+- **站点构建**（如适用）：`cd site && uv run mkdocs build --clean` 零错误
+- 通过 → 部署
+<!-- /SYNC:PRIVATE -->
+<!-- SYNC:PUBLIC_ONLY -->
 #### 门禁 4：集成完成
 
 - **站点构建**（如适用）：零错误
 - 通过 → 交付
+<!-- /SYNC:PUBLIC_ONLY -->
 
 ### 步骤 8：完成交付
 
@@ -263,11 +357,20 @@ related_files:
 
 ## 产出物清单
 - Markdown 报告：{文件路径列表}
+- 站点 URL：{URL}（如适用） <!-- SYNC:PRIVATE_LINE -->
 
+<!-- SYNC:PRIVATE -->
+## NotebookLM Notebook
+- Notebook ID：{id}
+- 已添加源数量：{N}
+- **后续可用 `/ppt:create` 生成演示文稿**（基于研究报告）
+- **后续可用 `/insight:nblm` 生成增强输出**（播客、视频等）
+<!-- /SYNC:PRIVATE -->
+<!-- SYNC:PUBLIC_ONLY -->
 ## 后续可选步骤
-- `/insight:publish` — 将研究成果集成到站点（如有 MkDocs 等站点框架）
 - `/ppt:create` — 基于研究报告生成演示文稿
-- `/nblm` — 生成播客、视频等增强输出
+- `/insight:nblm` — 生成播客、视频等增强输出
+<!-- /SYNC:PUBLIC_ONLY -->
 
 ## 关键发现摘要
 {3-5 条最重要的研究发现}
@@ -281,7 +384,9 @@ related_files:
 
 2. **关闭团队**：对每个仍活跃的 named teammate 用 `SendMessage` 发送 `{"type": "shutdown_request", "reason": "..."}`，agent 回 `shutdown_response approve=true` 后自行终止。**当前 harness 无 `TeamDelete`**，无需也不能调用。某 agent 无响应时用 `TaskStop`（task_id = spawn 返回的 agent_id）强制终止兜底
 3. **归档过程文件**：将 `research/` 下的过程文件归档到 `research/archive/`（与 biubiubiu 相同流程）
-4. **向用户报告**：输出产物清单，提示可用 `/insight:publish` 站点集成 + `/ppt:create` 生成演示文稿 + `/nblm` 增强输出
+4. **向用户报告**：输出产物清单、NotebookLM notebook ID、提示可用 `/insight:nblm` 生成增强输出 <!-- SYNC:PRIVATE_LINE -->
+<!-- SYNC:PUBLIC_ONLY -->4. **向用户报告**：输出产物清单，提示可用 `/ppt:create` 生成演示文稿 + `/insight:nblm` 增强输出<!-- /SYNC:PUBLIC_ONLY -->
+
 ## 上下文控制契约（防主 context 爆仓）
 
 本 skill 的编排核心是**让重 IO 在子 agent 独立 context 里发生，主 agent（Leader）只持有编排状态**。各角色遵守以下契约，使全流程主 context 峰值可控、可长时间稳定运行。
@@ -298,6 +403,7 @@ Scout / Analyst 做 `WebFetch`、大文件读取、深度研究输出提取等**
 
 - 门禁审查（门禁 1/2/3）对子 agent 产物**就地 Read + 出结论**，只保留审查结论（通过 / 问题清单），**不把被审产物全文搬运进后续编排消息**
 - 大体量调研产出（Gemini Deep Research 报告 `research/gemini-deep-research-{topic}.md` 等）**先落盘**，Leader 读后只提炼关键结论入编排，不在主 context 长期保留全文
+- NotebookLM ask 回答先落盘 `research/nblm-insights.md`，Leader 读后提炼，不全文保留 <!-- SYNC:PRIVATE_LINE -->
 - Scout 是阶段 1-2 临时角色，`material-fetch` 完成即 shutdown 释放其 context
 
 ### 各阶段 tool result 体积预算（软约束，超出即落盘 + clearing）
@@ -327,9 +433,15 @@ Scout / Analyst 做 `WebFetch`、大文件读取、深度研究输出提取等**
 
 | 情况 | 处理 |
 |------|------|
+| NotebookLM 未登录 | **禁止静默跳过**。使用 AskUserQuestion 说明 NBLM 对研究的价值（跨源分析、视频提取、信息图生成），让用户选择"登录后继续"或"跳过"。用户选择登录后提示 `! notebooklm login` | <!-- SYNC:PRIVATE_LINE -->
+| NotebookLM 源添加失败 | 记录失败 URL，不阻塞流程，改用 WebFetch 直接获取 | <!-- SYNC:PRIVATE_LINE -->
+| NotebookLM 批量添加 | 分批添加（每批 5 个 URL），每批确认成功后再下一批，避免超时 | <!-- SYNC:PRIVATE_LINE -->
 | YouTube 搜索无结果 | 记录"已搜索 {关键词} 无高价值视频"，不阻塞，继续 Web 调研 |
-| YouTube WebFetch 超时 | **不要 WebFetch YouTube 页面**（JS 渲染导致超时）。只用 WebSearch 获取视频标题/描述/URL，提取关键信息到调研笔记 || 信息源不足（模块 < 3 源） | 扩大搜索范围，降低 Tier 标准，在报告中标注信息缺口 |
+| YouTube WebFetch 超时 | **不要 WebFetch YouTube 页面**（JS 渲染导致超时）。只用 WebSearch 获取视频标题/描述/URL，将 URL 添加到 NotebookLM 由其解析视频内容 | <!-- SYNC:PRIVATE_LINE -->
+<!-- SYNC:PUBLIC_ONLY -->| YouTube WebFetch 超时 | **不要 WebFetch YouTube 页面**（JS 渲染导致超时）。只用 WebSearch 获取视频标题/描述/URL，提取关键信息到调研笔记 |<!-- /SYNC:PUBLIC_ONLY -->
+| 信息源不足（模块 < 3 源） | 扩大搜索范围，降低 Tier 标准，在报告中标注信息缺口 |
 | 写作深度不够 | SendMessage 具体指出缺失的层次，要求 Analyst 补充（最多 2 轮） |
+| 站点不存在 | 跳过站点集成阶段（T7、T9 部署部分），产出物保存到 `output/` | <!-- SYNC:PRIVATE_LINE -->
 | **Agent 卡死（15 分钟无输出）** | **硬性超时**：检查 output 文件行数和最后时间戳。15 分钟无新输出 → 放弃该 agent，Leader 用已有数据快速补充缺口。不要无限等待 |
 | Agent 部分完成后卡死 | 读取该 agent 的 output 文件，提取已完成的部分结果（可能含有价值），然后 Leader 补充剩余 |
 
@@ -339,5 +451,7 @@ Scout / Analyst 做 `WebFetch`、大文件读取、深度研究输出提取等**
 - 所有产出文件遵循 insight 的 frontmatter 规范（status/created_at/updated_at/archived_at）
 - agent 之间关键指令单独发送短消息，不要混在长文本中
 - Scout 是阶段 1-2 角色，素材获取完成后关闭以节省资源
+- NotebookLM notebook ID 必须在交付报告中输出，供 `/nblm` 技能复用 <!-- SYNC:PRIVATE_LINE -->
 - 如果项目已有调研笔记或部分内容，可跳过对应阶段，从现有文件继续
-- **所有研究成果必须发布到站点**：Gemini Deep Research 报告等调研产出物，不能仅保存在 `research/` 目录。必须在站点集成阶段将其作为独立页面或模块子页面发布到 `site/docs/` 并添加到 mkdocs.yml 导航。发布形式（独立深度专题 / 打散融入现有模块 / 附录）由 Leader 根据内容与现有结构的关系自主判断
+- **所有研究成果必须发布到站点**：Gemini Deep Research 报告、NotebookLM 洞察等调研产出物，不能仅保存在 `research/` 目录。必须在站点集成阶段（T7）将其作为独立页面或模块子页面发布到 `site/docs/` 并添加到 mkdocs.yml 导航。发布形式（独立深度专题 / 打散融入现有模块 / 附录）由 Leader 根据内容与现有结构的关系自主判断 <!-- SYNC:PRIVATE_LINE -->
+<!-- SYNC:PUBLIC_ONLY -->- **所有研究成果必须发布到站点**：Gemini Deep Research 报告等调研产出物，不能仅保存在 `research/` 目录。必须在站点集成阶段将其作为独立页面或模块子页面发布到 `site/docs/` 并添加到 mkdocs.yml 导航。发布形式（独立深度专题 / 打散融入现有模块 / 附录）由 Leader 根据内容与现有结构的关系自主判断<!-- /SYNC:PUBLIC_ONLY -->

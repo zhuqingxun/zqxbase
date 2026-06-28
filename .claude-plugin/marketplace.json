@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.1.16",
+      "version": "2.17.3",
       "keywords": [
         "rpiv",
         "workflow",
@@ -25,7 +25,7 @@
       "name": "mint",
       "source": "./plugins/mint",
       "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "2.1.11",
+      "version": "3.2.1",
       "keywords": [
         "meeting",
         "transcription",
@@ -38,7 +38,7 @@
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
-      "version": "1.0.8",
+      "version": "1.1.0",
       "keywords": [
         "reflect",
         "retrospective",
@@ -49,7 +49,7 @@
     {
       "name": "challenge",
       "source": "./plugins/challenge",
-      "description": "Red-Blue adversarial review: structured attack-defense analysis on plans, architectures, and decisions",
+      "description": "Red-Blue Adversarial structured thinking tool for stress-testing decisions, architectures, and technical choices",
       "version": "1.0.1",
       "keywords": [
         "challenge",
@@ -62,8 +62,8 @@
     {
       "name": "whatsnew",
       "source": "./plugins/whatsnew",
-      "description": "Claude Code changelog viewer: check what's new in any Claude Code release",
-      "version": "1.0.1",
+      "description": "List Claude Code changelog and release notes for specified versions",
+      "version": "1.0.0",
       "keywords": [
         "whatsnew",
         "changelog",
@@ -74,8 +74,8 @@
     {
       "name": "insight",
       "source": "./plugins/insight",
-      "description": "Insight research methodology: structured deep research workflow (brainstorm → source discovery → deep research → writing → deployment)",
-      "version": "1.1.4",
+      "description": "Insight research methodology: structured deep research pipeline from brainstorming to PPT delivery",
+      "version": "1.2.0",
       "keywords": [
         "research",
         "insight",
@@ -87,8 +87,8 @@
     {
       "name": "ppt",
       "source": "./plugins/ppt",
-      "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, manage visual themes",
-      "version": "3.0.8",
+      "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, and review visual taste with public fallback principles.",
+      "version": "3.9.2",
       "keywords": [
         "ppt",
         "presentation",

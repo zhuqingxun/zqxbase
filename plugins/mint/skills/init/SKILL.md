@@ -6,12 +6,13 @@ description: >-
   当用户说"初始化工作区""init""新建 mint 工作区""/mint:init"时触发。
   这是所有 mint 流水线使用的前置步骤：未 init 的目录运行 /mint 或 /mint:next 会报错。
 allowed-tools: Read, Write, Bash, AskUserQuestion
-version: 2.1.11
+version: 1.2.0
 ---
 
 # mint:init — 工作区初始化
 
 > **路径约定**：`{MINT_REF}` = mint 插件 `references/` 目录，`{MINT_SCRIPTS}` = 同级 `scripts/` 目录。
+> 本 skill 专属参考在本目录 `references/` 下,通过 `Glob("**/plugins/mint/skills/init/references/<file>")` 定位(转 CodeAgent 后即 `references/<file>` 相对本 skill)。
 > 首次引用时通过 `Glob("**/plugins/mint/references/lessons-learned.md")` 定位，多结果时优先非 `marketplaces/` 路径。
 
 ## 用法
@@ -225,7 +226,7 @@ meeting 场景（保持原文案）：
 ## 参考文档
 
 - `{MINT_REF}/workspace-schema.md` — workspace.yaml schema（含 interviewee_types / templates）
-- `{MINT_REF}/scenario-presets.md` — scenario 枚举 + deliverables 过滤规则
+- `references/scenario-presets.md` — scenario 枚举 + deliverables 过滤规则
 - `{MINT_REF}/meta-schema.md` — 会议级 meta.yaml schema（transcribe 阶段写入）
 - `{MINT_REF}/types-templates.md` — ID 约定、预设映射、引用完整性规则
 

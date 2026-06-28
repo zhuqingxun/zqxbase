@@ -5,7 +5,7 @@ description: >-
   当用户说"看看进度""处理到哪了""status""状态""工作区全景""详细状态"时触发。
 argument-hint: "[<工作目录>] [--detail] [--workspace]"
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.11
+version: 2.2.2
 ---
 
 
@@ -104,9 +104,9 @@ uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
 ```markdown
 ## MINT 状态：{project}
 
-工作目录：{工作目录}  
-创建日期：{created} | 源音频：{source_audio}  
-当前游标 (cursor)：{current.cursor} | 最近操作：{current.last_action_desc} ({current.last_action})  
+工作目录：{工作目录}
+创建日期：{created} | 源音频：{source_audio}
+当前游标 (cursor)：{current.cursor} | 最近操作：{current.last_action_desc} ({current.last_action})
 阻塞项：{blockers_count} 项
 
 ### 阶段进度
@@ -158,7 +158,7 @@ uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
 ```markdown
 ## 工作区：{workspace.name}
 
-项目目标：{intent.goal}  
+项目目标：{intent.goal}
 场景：{workspace.scenario} | 期望交付物：{intent.deliverables join ", "}
 
 ### 会议全景
@@ -166,7 +166,7 @@ uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
 | 会议 | cursor | 进度 | 阻塞 | last_action |
 |------|--------|------|------|-------------|
 | 01_张三 | extract | 4/4 ✓ | 0 | {MM-DD HH:mm} |
-| 02_屈卓 | refine | 2/4 | 0 | {MM-DD HH:mm} |
+| 02_示例会议 | refine | 2/4 | 0 | {MM-DD HH:mm} |
 | 03_李四 | transcribe | 1/4 | 0 | {MM-DD HH:mm} |
 
 共 N 个会议，completed X 个 / in-progress Y 个 / pending Z 个
@@ -184,13 +184,13 @@ uv run --script {MINT_SCRIPTS}/meta_io.py compute-next-hints "<工作目录>"
 | 会议 | 忠实度 | 流畅度 | 一致性 | 清洁度 | 格式 |
 |------|--------|--------|--------|--------|------|
 | 01_张三 | 95 | 92 | 95 | 93 | 100 |
-| 02_屈卓 | -- | -- | -- | -- | -- |
+| 02_示例会议 | -- | -- | -- | -- | -- |
 
 ### 阻塞项聚合
 
 | 会议 | # | 类型 | 描述 |
 |------|---|------|------|
-| 02_屈卓 | 1 | ambiguity | "爱学"公司名还是产品名 |
+| 02_示例会议 | 1 | ambiguity | "爱学"公司名还是产品名 |
 
 （无阻塞项时输出：`所有会议均无阻塞项`）
 ```

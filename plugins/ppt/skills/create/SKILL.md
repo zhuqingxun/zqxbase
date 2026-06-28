@@ -6,7 +6,7 @@ description: >-
   也适用于: 用户提供了 markdown 文件或目录并要求转化为 PPT 的场景。
 argument-hint: "<输入路径> [--preset <name>] [--theme <name>] [--output <path>] [--engine codex|renderer] [--compare] [--cover-image] [--style-ref <pptx>] [--no-style-ref]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-version: 3.0.8
+version: 3.9.2
 ---
 
 # PPT:Create — 一键生成最高质量 PPT

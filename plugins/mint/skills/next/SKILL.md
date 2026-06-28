@@ -6,13 +6,14 @@ description: >-
   也适用于：用户跑完某个阶段想确认下一动作、多会议并行时想看全景推荐、卡在某处想看其他路径。
 argument-hint: "[meeting_name] [--all]"
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.11
+version: 1.2.3
 ---
 
 # mint:next — 智能引导
 
 > **路径约定**：`{MINT_REF}` = mint 插件 `references/` 目录，`{MINT_SCRIPTS}` = 同级 `scripts/` 目录。
-> 首次引用时通过 `Glob("**/plugins/mint/references/next-rules.md")` 定位，多结果时优先非 `marketplaces/` 路径。
+> 本 skill 专属参考在本目录 `references/` 下,通过 `Glob("**/plugins/mint/skills/next/references/<file>")` 定位(转 CodeAgent 后即 `references/<file>` 相对本 skill)。
+> 首次引用时通过 `Glob("**/plugins/mint/skills/next/references/next-rules.md")` 定位，多结果时优先非 `marketplaces/` 路径。
 
 基于 `meta.yaml` + `.mint/workspace.yaml` 的元数据和当前 cwd，通过纯规则推理给出下一步推荐。不调用 LLM，输出稳定可预期。
 
@@ -24,7 +25,7 @@ version: 2.1.11
 /mint:next --all            # 强制全景模式
 ```
 
-- `<meeting_name>`：会议子目录名（相对于工作区根），如 `02_屈卓`
+- `<meeting_name>`：会议子目录名（相对于工作区根），如 `02_示例会议`
 - `--all`：无视 cwd，强制输出工作区全景
 
 ## 核心职责区分
@@ -187,7 +188,7 @@ stdout 为 JSON `{primary: {cmd, reason}, alternatives: [{cmd, when}]}`。
 
 ## 规则引擎说明
 
-规则详见 `{MINT_REF}/next-rules.md`。本 skill 不重复规则实现，全部委托 `meta_io.compute_next_hints()` 和 `meta_io.workspace_overall_recommendation()`。
+规则详见 `references/next-rules.md`。本 skill 不重复规则实现，全部委托 `meta_io.compute_next_hints()` 和 `meta_io.workspace_overall_recommendation()`。
 
 规则摘要（供用户理解输出）：
 - Rule 1：有 blockers 优先推荐处理

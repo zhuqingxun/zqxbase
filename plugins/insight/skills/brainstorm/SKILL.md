@@ -5,7 +5,7 @@ description: >-
   输出结构化的研究需求摘要，可直接作为 insight:biubiubiu 的输入。
 argument-hint: "[研究主题]"
 allowed-tools: Read, Write, AskUserQuestion, Skill
-version: 1.1.4
+version: 1.1.1
 ---
 
 # Brainstorm: 研究需求访谈
