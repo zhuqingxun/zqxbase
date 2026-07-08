@@ -22,19 +22,6 @@
       ]
     },
     {
-      "name": "mint",
-      "source": "./plugins/mint",
-      "description": "MINT (Meeting Intelligence) pipeline: audio → transcript → refined → polished → structured insights",
-      "version": "3.2.1",
-      "keywords": [
-        "meeting",
-        "transcription",
-        "asr",
-        "intelligence",
-        "audio"
-      ]
-    },
-    {
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
