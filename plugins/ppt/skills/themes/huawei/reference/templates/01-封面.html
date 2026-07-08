@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><title>01 · 封面</title>
+<link rel="stylesheet" href="../assets/theme.css">
+<link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script>
+<script src="../assets/tweaks.js" defer></script>
+<style>
+.cover-slide { background: var(--c-paper); padding: 0; }
+.cover-bar { position: absolute; top: 0; bottom: 0; left: 0; width: 16px; background: var(--c-primary); }
+.cover-inner { flex: 1; padding: 140px 120px 120px 180px; display: flex; flex-direction: column; justify-content: space-between; }
+.cover-eyebrow { font-family: var(--f-mono); font-size: 18px; letter-spacing: 0.22em; color: var(--c-primary); text-transform: uppercase; margin-bottom: 48px; display: flex; align-items: center; gap: 14px; }
+.cover-eyebrow::before { content: ''; width: 54px; height: 2px; background: var(--c-primary); }
+.cover-slide h1 { font-size: 108px; font-weight: 500; line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 36px; color: var(--c-ink); max-width: 1400px; }
+.cover-slide h1 em { font-style: normal; color: var(--c-primary); font-weight: 400; }
+.cover-slide .sub { font-size: 34px; color: var(--c-ink-soft); line-height: 1.4; font-weight: 300; max-width: 1200px; margin: 0; }
+.cover-meta { display: flex; justify-content: space-between; border-top: 1px solid var(--c-rule); padding-top: 28px; font-family: var(--f-mono); font-size: 16px; color: var(--c-ink-mute); letter-spacing: 0.06em; }
+.cover-meta span b { color: var(--c-ink); font-weight: 500; margin-right: 10px; }
+</style>
+</head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+<div class="slide cover-slide">
+  <div class="cover-bar"></div>
+  <div class="cover-inner">
+    <div>
+      <div class="cover-eyebrow">Reference Template · 主标题胶片</div>
+      <h1>{行业/主题}<br>与<em>{子主题}</em><br>战略规划蓝图</h1>
+      <p class="sub">面向高管层的主打胶片 — 从战略共识到架构落地<br>一份完整的思考与实施框架</p>
+    </div>
+    <div class="cover-meta">
+      <span><b>出品</b>{团队占位}</span>
+      <span><b>版本</b>V1.0</span>
+      <span><b>日期</b>2026 · Q2</span>
+      <span><b>密级</b>内部参考</span>
+    </div>
+  </div>
+</div>
+</body></html>

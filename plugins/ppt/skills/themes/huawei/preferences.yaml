@@ -1,0 +1,111 @@
+# ============================================================
+# 华为主题 LLM 决策偏好
+# 由 prompt_assembler.py 在 plan-time 拼接进 Stage 3 prompt
+# 路径契约: themes/<name>/preferences.yaml 同侧 tokens.yaml + layouts.yaml
+# ============================================================
+
+# --- 硬约束 1: role 强制映射 (PRD Q2 6 硬约束之 4) ---
+required_for_role:
+  title: cover-left-bar              # 封面 -> 左红条封面
+  closing: thankyou                  # 致谢/收尾 -> 致谢页
+  section: section-divider-dark      # 章节首页 -> 深色大数字分隔
+  toc: toc                           # 目录 -> 目录页 (注: SlideRole 无 toc 枚举,
+                                     # plan_assembler 通过 content.title in {"目录","Contents"}
+                                     # 等启发式独立判断, 详见 P3 §3.3)
+
+# --- 硬约束 2: 内容触发强制 (PRD Q2 6 硬约束之 2) ---
+required_for_content:
+  - trigger: kpi_count_ge_3          # 内容含 >=3 个量化指标
+    visual_type: kpi-stats
+    description: ">=3 个 KPI 数字 -> kpi-stats (不允许走 data-contrast)"
+  - trigger: has_layered_architecture # 出现 L1/L2/L3 或 接入层/服务层/数据层
+    visual_type: architecture-layered
+    description: "分层架构内容 -> architecture-layered (不允许走 cards / table)"
+
+# --- 硬约束 3: 通用版式禁用清单 (PRD Q2 6 硬约束之 forbidden) ---
+forbidden_visual_types:
+  - hero-statement                   # 用 cover-left-bar / thankyou / section-divider-dark 替代
+  # data-contrast 不放禁用清单, 因 2 个数据张力时仍合法
+
+# --- 软引导: visual_type 偏好权重 (0..1) (PRD Q2 12 软引导) ---
+# 内容歧义时 LLM 按权重排序选择
+visual_type_preferences:
+  # huawei 18 版式 (高权重; 6 硬约束已在前 3 段, 此处保留 1.0 让一致性兜底)
+  cover-left-bar: 1.0
+  toc: 1.0
+  section-divider-dark: 1.0
+  kpi-stats: 1.0
+  architecture-layered: 1.0
+  thankyou: 1.0
+  # 12 软引导
+  matrix-2x2: 0.85
+  timeline-huawei: 0.9               # 时间线母版 (旧 timeline-horizontal 已 deprecated, T13)
+  process-flow-huawei: 0.9           # 优于通用 process-N-phase
+  swot: 0.8
+  roadmap: 0.85
+  pyramid: 0.7
+  heatmap-matrix: 0.7
+  cards-6: 0.85                      # 恰好 6 项时显式选 (3x2 网格); 项数不定走自适应 cards
+  rings: 0.75
+  personas: 0.8
+  risk-list: 0.85
+  governance: 0.85
+
+  # 无后缀自适应母版 (T10 收敛: LLM 选母版给数据, 布局由 len(points) 派生, 不猜 N)
+  cards: 0.85                        # 2-6 张卡, 替代旧 cards-2..5 (deprecated)
+  process: 0.85                      # 2-5 步流程, 替代旧 process-N-phase (deprecated)
+  comparison: 0.8                    # 2-5 列对比, 替代旧 comparison-2..5 (deprecated)
+
+  # 通用 fallback (低权重)
+  data-contrast: 0.5                 # 仅 2 个数据张力时
+  table: 0.6
+  bullets: 0.4
+  hero-statement: 0.0                # 与 forbidden_visual_types 冗余表达
+  quote-hero: 0.3
+
+# --- 退回链 (Q2 PRD §3.2 工程目标"退回保护" + leader 指引 #3) ---
+# 当 huawei 专属版式因 schema 校验失败 (内容前提不满足) 时, LLM 应改选 fallback_chain 内的下一项
+fallback_chain:
+  kpi-stats:                         # 内容前提: >=3 KPI; 否则:
+    - data-contrast                  # 2 个 KPI -> data-contrast
+    - bullets                        # 1 或 0 KPI -> bullets
+  architecture-layered:              # 内容前提: >=2 层每层 1-6 cell; 否则:
+    - cards                          # 并列条目 -> 自适应 cards (len 派生)
+    - table                          # 真表格 -> table
+  process-flow-huawei:               # 内容前提: 3-6 步; 否则:
+    - process                        # 步骤数不定 -> 自适应 process
+    - bullets
+  timeline-huawei:                   # 内容前提: 3-6 阶段; 否则:
+    - bullets                        # timeline-horizontal 已 deprecated (T13), 退回 bullets
+  matrix-2x2:                        # 内容前提: 双轴 + 4 象限; 否则:
+    - cards                          # 4 并列条目 -> 自适应 cards
+    - comparison                     # 2 列对比 -> 自适应 comparison
+  swot:                              # 内容前提: 4 象限明确 SWOT; 否则:
+    - cards
+    - comparison
+  roadmap:                           # 内容前提: 3-5 阶段 x 1-5 行; 否则:
+    - table                          # timeline-horizontal 已 deprecated (T13), 退回 table
+  pyramid:                           # 内容前提: 3-5 层级; 否则:
+    - cards
+    - bullets
+  heatmap-matrix:                    # 内容前提: 3-6 列评分矩阵; 否则:
+    - table
+  cards-6:                           # 内容前提: 恰好 6 项; 否则退到自适应 cards (按 len 派生)
+    - cards
+  rings:                             # 内容前提: 2-4 环; 否则:
+    - cards
+    - bullets
+  personas:                          # 内容前提: 2-4 角色; 否则:
+    - cards
+  risk-list:                         # 内容前提: 2-6 风险项; 否则:
+    - bullets
+    - table
+  governance:                        # 内容前提: 顶部主体 + 2-4 单元; 否则:
+    - cards
+    - table
+
+# --- 应用率门禁阈值 (Q5 决议) ---
+# 由 validate_plan.py 读取, 控制 huawei 18 版式在 plan 中的占比门禁
+application_thresholds:
+  warn_below: 0.60                   # 占比 <60% -> WARN
+  fail_below: 0.30                   # 占比 <30% -> FAIL (阻塞 plan-stage)

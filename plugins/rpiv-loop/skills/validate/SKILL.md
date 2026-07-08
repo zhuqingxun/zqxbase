@@ -3,8 +3,10 @@ name: rpiv-loop:validate
 description: >-
   根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
 allowed-tools: Read, Bash, Edit, Grep, Glob
-version: 2.1.0
+version: 2.17.4
 ---
+
+> `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
 
 # 运行项目的全面验证
 
@@ -50,7 +52,7 @@ version: 2.1.0
 
 **Test**：
 
-- 存在 `pytest` 或 `[tool.pytest]` → `pytest -v`（若 CLAUDE/README 有约定如 `-m "not slow"` 则加上）；若无 pytest 有 `unittest` → `python -m unittest discover`；均无则跳过并注明
+- 存在 `pytest` 或 `[tool.pytest]` → 按上方「运行方式」选择 `uv run pytest -v` 或 `pytest -v`（若 CLAUDE/README 有约定如 `-m "not slow"` 则加上）；若无 pytest 有 `unittest` → 按上方「运行方式」选择 `uv run python -m unittest discover` 或 `python -m unittest discover`；均无则跳过并注明
 
 **Coverage**：
 
@@ -150,7 +152,7 @@ cargo test
 本阶段结束前**必须**运行：
 
 ```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>
+uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>
 ```
 
 - 退出码 `0` → 所有 blocking AC 均 passed 或 not_applicable（且 evidence/notes 非空）→ 可进入 delivery-report

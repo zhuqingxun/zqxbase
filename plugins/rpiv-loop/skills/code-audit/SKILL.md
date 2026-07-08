@@ -1,32 +1,41 @@
 ---
 name: rpiv-loop:code-audit
 description: >-
-  对指定目录/模块进行全量代码审计（不依赖 git diff）。支持 5 个维度的并行审查，置信度评分过滤误报，高严重度问题自动评估爆炸半径。
-argument-hint: "<目标目录> [logic|security|performance|architecture|integration]"
+  对指定目录/模块/skill 进行全量代码审计（不依赖 git diff）。支持逻辑、安全、性能、架构、集成与环境、可迁移性 6 个维度的审查，特别适合审计 skills 是否绑定 Claude Code、Codex、opencode 或特定机器环境。
+argument-hint: "<目标> [logic|security|performance|architecture|integration|portability]"
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write
-version: 2.0.1
+version: 2.17.4
 ---
 
-对指定目录进行全量代码审计。
+对指定目录、文件、模块或 skill 进行全量代码审计。
 
 ## 参数解析
 
 从 `$ARGUMENTS` 中解析：
 
-- **第一个参数**（必填）：目标目录路径（如 `neuromem/services/`、`backend/app/api/`）
+- **第一个参数**（必填）：目标，可以是目录路径、单个文件路径、模块路径或已安装 skill 名称。
+  - 已存在的相对/绝对路径：直接解析为目标路径。
+  - 已安装 skill 名称（如 `rpiv-loop:code-audit`）：先在当前运行面的 skills 根目录中按 `<name-with-colon-replaced-by-hyphen>/` 解析；若不存在，再扫描该 skills 根目录下 `SKILL.md` 的 frontmatter `name` 精确匹配。若当前运行面没有可发现的 skills 根目录，停止审计并要求用户提供明确路径。
+  - `self` / `自身`：当正在执行本 skill 且能发现当前 skill 目录时，解析为当前 skill 目录；否则要求用户提供明确路径。
+  - 若目标无法解析，停止审计并给出候选路径，不要猜测到无关插件源目录。
 - **第二个参数**（可选）：审查维度，支持中英文，以下等价：
   - `logic` | `逻辑` — 逻辑正确性
   - `security` | `安全` — 安全漏洞
   - `performance` | `性能` — 性能问题
   - `architecture` | `架构` — 架构与设计
   - `integration` | `集成` — 集成与环境兼容性
+  - `portability` | `migration` | `可迁移性` | `迁移` | `环境中立` — skills/代码的跨运行面、跨工具、跨机器迁移能力
   - 逗号分隔组合：`logic,security` 或 `逻辑,安全`（中英文可混用）
-  - 不提供时默认全量审查（5 个维度全部执行）
+  - 不提供时默认全量审查（6 个维度全部执行）
+  - 当目标是 skill 目录或 `SKILL.md` 时，可迁移性维度必须执行；如果用户指定的维度不包含 `portability`，自动追加并在报告中说明原因。
 
 **示例：**
 
 ```
 /code-audit neuromem/services/                    # 全量审查
+/code-audit rpiv-loop:code-audit                  # 审计已安装 skill
+/code-audit self architecture                     # 审计当前 skill 的架构
+/code-audit rpiv-loop:code-audit portability      # 仅审计 skill 可迁移性
 /code-audit neuromem/services/ architecture       # 仅架构深度审查
 /code-audit neuromem/services/ 架构               # 同上（中文）
 /code-audit backend/app/api/ logic,security       # 逻辑+安全深度审查
@@ -37,19 +46,22 @@ version: 2.0.1
 
 ### Phase 0：上下文收集
 
-1. 读取项目根目录的 `CLAUDE.md`、`README.md`（如果存在）
-2. 读取目标目录下的 `CLAUDE.md`（如果存在）
-3. 扫描 `docs/` 目录中的编码规范文件（如果存在）
-4. 记录项目使用的语言、框架、编码规范
-5. **运行环境识别**：从 CLAUDE.md 和项目配置（pyproject.toml、package.json、Dockerfile 等）中识别目标运行环境（Windows/macOS/Linux/跨平台），标记为 `cross_platform` 如果代码需在多平台运行
-6. **Git 配置检查**：检查 `.gitattributes` 是否存在、是否配置了行尾符规则（`* text=auto` 等），记录对文件内容的潜在影响
-7. 如果 `cross_platform = true`，在 Phase 2 的逻辑审查和集成审查中自动激活跨平台兼容性检查项
+1. 读取项目根目录的 `CLAUDE.md`、`README.md`（如果存在）。若目标位于当前运行面的全局 skills 目录，同时读取该运行面的全局规则文件和目标 `SKILL.md`。
+2. 读取目标目录下的 `CLAUDE.md`（如果存在）。
+3. 扫描 `docs/` 目录中的编码规范文件（如果存在）。若目标 skill 明确引用共享资源目录，只读取与本次审计相关的共享引用文件，避免把整个插件树误当目标。
+4. 记录项目使用的语言、框架、编码规范。
+5. **运行环境识别**：从 `CLAUDE.md` 和项目配置（pyproject.toml、package.json、Dockerfile 等）中识别目标运行环境（Windows/macOS/Linux/跨平台），标记为 `cross_platform` 如果代码需在多平台运行。
+6. **Git 配置检查**：检查 `.gitattributes` 是否存在、是否配置了行尾符规则（`* text=auto` 等），记录对文件内容的潜在影响；如果目标不在 git 仓库中，记录为 `not_git_repo`，不要把 git 命令失败当成审计失败。
+7. **迁移目标识别**：如果目标是 skill 或 workflow，识别其预期运行面（如 Claude Code、Codex、opencode、公司内部自动化运行面、普通 shell）。未知时默认按多运行面可迁移目标审查。
+8. 如果 `cross_platform = true`，在 Phase 2 的逻辑审查、集成审查和可迁移性审查中自动激活跨平台兼容性检查项。
 
 ### Phase 1：文件发现
 
-1. 扫描目标目录，列出所有源代码文件（排除 `.venv/`、`node_modules/`、`__pycache__/`、`.git/`、`dist/`、`build/`）
-2. 按文件类型统计（`.py`、`.ts`、`.js`、`.tsx`、`.jsx` 等）
-3. 输出文件清单供后续 Agent 使用
+1. 扫描目标，列出所有待审计文件。目标可以是目录，也可以是单个文件；如果目标是文件，文件清单只包含该文件。
+2. 排除 `.venv/`、`node_modules/`、`__pycache__/`、`.git/`、`dist/`、`build/`、`*.pyc` 等依赖、缓存和构建产物。
+3. 语言代码文件包括 `.py`、`.ts`、`.js`、`.tsx`、`.jsx`、`.sh`、`.ps1` 等；配置/规范文件包括 `.toml`、`.yaml`、`.yml`、`.json`。
+4. 审计 skills 时，`SKILL.md`、相关 `.md` / `.mdx` 文件和被 `SKILL.md` 直接引用的脚本也属于主审计对象，不能因为不是传统源代码而跳过。
+5. 按文件类型统计并输出文件清单，供后续并行审查员或主执行者顺序审查使用。
 
 ### Phase 2：审查执行
 
@@ -57,9 +69,9 @@ version: 2.0.1
 
 #### 全量模式（无第二参数）
 
-启动 **5 个并行 Agent**，每个 Agent 接收完整文件清单和项目上下文（含 Phase 0 的环境信息），各自独立完整阅读每个文件后审查：
+如果当前会话明确允许启动并行审查员，启动 **6 个并行审查员**，每个审查员接收完整文件清单和项目上下文（含 Phase 0 的环境信息），各自独立完整阅读每个文件后审查。若当前会话未允许或工具不可用，主执行者必须按同样 6 个维度顺序执行审查，不能因为没有并行审查员而跳过维度。
 
-**Agent 1 — 逻辑审查（基础）：**
+**维度 1 — 逻辑审查（基础）：**
 - 边界条件错误（差一、空集合、零值）
 - 竞争条件和并发问题
 - 错误处理缺失或不当（吞异常、裸 except）
@@ -73,39 +85,49 @@ version: 2.0.1
   - 当两个数据源的输出用于比较（`==`、`!=`、diff）时，追溯两端的完整变换链，检查是否经过了相同的预处理管道（过滤、剥离、归一化、编码转换）
   - 特别关注：一端经过 parse/split/transform 处理，另一端直接 read 的模式——极易产生不对称
 
-**Agent 2 — 安全审查（基础）：**
+**维度 2 — 安全审查（基础）：**
 - SQL 注入、命令注入
 - XSS 漏洞
 - 硬编码密钥、API Key、密码
 - 权限检查缺失
 - 用户输入未验证/未转义
 
-**Agent 3 — 性能审查（基础）：**
+**维度 3 — 性能审查（基础）：**
 - N+1 查询模式
 - 内存泄漏（未关闭资源、无界数据结构）
 - 热路径上的阻塞操作
 - 不必要的重复计算或 I/O
 - 可并行但串行执行的操作
 
-**Agent 4 — 架构审查（基础）：**
+**维度 4 — 架构审查（基础）：**
 - SOLID 原则违反（特别是单一职责和依赖倒置）
 - 层级穿透（跨层直接访问）
 - 循环依赖
 - 过度耦合（God Object、超长参数列表）
 - 抽象泄漏
 
-**Agent 5 — 集成与环境审查（基础）：**
+**维度 5 — 集成与环境审查（基础）：**
 - **跨平台兼容性**：文件路径分隔符、行尾符（CRLF/LF）、编码、大小写敏感性在目标平台上是否一致
 - **外部数据假设**：代码对外部输入（文件内容、API 返回、环境变量）的格式假设是否在所有运行环境中成立
 - **配置/列表完备性**：硬编码的排除列表、白名单、映射表是否覆盖了项目中已知的所有实体。**必须用 Glob/ls 实际扫描目标目录，对比列表中的条目和实际存在的目录/文件，报告"列表中有但目录中没有"和"目录中有但列表中没有"的差异**
 - **组件间契约**：函数 A 的输出被函数 B 消费时，A 的输出格式是否与 B 的输入预期一致（关注编码、分隔符、是否含 metadata/标记行）
 - **环境依赖**：代码是否依赖特定的 git 配置（autocrlf）、文件系统特性（大小写）、shell 环境（PATH）、运行时版本
 
-每个 Agent 返回格式：
+**维度 6 — 可迁移性审查（skills/runtime-portability，基础）：**
+- **运行面中立性**：skill 是否把核心流程绑定到 Claude Code、Codex、opencode 或某个公司内部自动化运行面的专属工具名、命令名、hook 名、frontmatter 字段或交互模型。
+- **单一事实源**：是否存在为不同运行面维护多套互相分叉的 instructions；迁移适配是否保持为薄层，而不是复制并改写核心流程。
+- **路径与安装位置中立**：是否硬编码个人绝对路径、特定 home 目录、插件源码目录、workspace 名称或机器用户名；是否优先使用 `<skill-root>`、`<plugin-root>`、环境变量、相对路径或可发现路径。
+- **工具能力抽象**：是否把 `Read/Edit/Write/Bash/Glob/Grep`、`apply_patch`、`AskUserQuestion` 等平台工具当成唯一实现；是否提供等价意图或 fallback。
+- **Shell/OS 中立性**：是否默认绑定 PowerShell、Bash、Windows 路径分隔符、可执行文件后缀、换行符或大小写规则；必要绑定是否明确标注适用环境和替代方案。
+- **前置依赖可发现性**：外部 CLI、脚本、共享资源和凭据是否有发现规则、缺失处理和降级路径，而不是依赖某台机器的隐式安装状态。
+- **同步友好性**：frontmatter、metadata 和共享资源引用是否能在多环境同步时安全裁剪或保留；是否避免把环境专属适配写进核心 workflow 导致长期分叉。
+
+每个并行审查员或主执行者的单维度审查返回格式：
 
 ```yaml
 issues:
-  - severity: critical|high|medium|low
+  - id: CA-001
+    severity: critical|high|medium|low
     confidence: 0-100
     file: "path/to/file.py"
     line: 42
@@ -116,7 +138,7 @@ issues:
 
 #### 单项模式（指定维度）
 
-启动 **1 个 Agent**，执行指定维度的**深度审查**。深度模式在基础检查项之上，额外增加专项深度检查：
+如果当前会话明确允许启动并行审查员，启动 **1 个审查员**，执行指定维度的**深度审查**；否则由主执行者直接执行该维度深度审查。深度模式在基础检查项之上，额外增加专项深度检查：
 
 **logic 深度模式（基础 + 额外）：**
 - + 状态机遗漏转换
@@ -155,15 +177,23 @@ issues:
 - + **Git/文件系统交互审计**：检查所有 git 命令调用和文件系统操作对 autocrlf、core.eol、case sensitivity 的依赖
 - + **隐式契约文档化**：识别代码中未明确文档化的隐式假设（如"输入文件一定是 UTF-8""远端和本地行尾符一致"），标记为 medium 风险
 
-组合模式（如 `logic,security`）：启动对应数量的并行 Agent，每个执行对应维度的深度模式。
+**portability 深度模式（基础 + 额外，审计 skills 时重点执行）：**
+- + **跨运行面矩阵**：逐项列出 Claude Code、Codex、opencode、普通 shell/公司内部自动化运行面对该 skill 的要求，标出核心流程、适配层和不可迁移部分。
+- + **平台专属 token 扫描**：扫描 `Claude`、`Codex`、`opencode`、`AskUserQuestion`、`Read`、`Edit`、`Write`、`Bash`、`apply_patch`、绝对路径、home 目录、plugin 源路径等，判断是必要适配还是不必要绑定。
+- + **迁移降级路径审计**：对每个专属工具或外部依赖，确认是否存在等价动作描述、替代命令、缺失时停止条件或人工确认路径。
+- + **同步分叉风险审计**：检查是否把同一核心 workflow 复制到多个环境目录后分别修改；如果存在，建议抽出共享说明、生成脚本或明确的 adapter 区。
+- + **可迁移性修复建议**：优先给出“保留单一核心流程 + 环境适配薄层”的修改方案，而不是建议维护多个独立版本。
+
+组合模式（如 `logic,security`）：当前会话明确允许启动并行审查员时启动对应数量的并行审查员，每个执行对应维度的深度模式；否则由主执行者逐一执行指定维度。若目标是 skill 且组合中未包含 `portability`，自动追加 `portability`。
 
 ### Phase 3：汇总与过滤
 
-1. 收集所有 Agent 的发现
-2. 去重：同一 file:line 被多个 Agent 报告的，合并为最高严重度
-3. **置信度过滤**：仅保留 `confidence >= 75` 的问题进入正式报告，低于 75 的归入"低置信度附录"
-4. **爆炸半径评估**：对 `severity = critical 或 high` 的问题，使用 Grep 搜索该函数/类/方法在项目中的所有引用方，记录到 `blast_radius` 字段
-5. 按严重度排序：critical → high → medium → low
+1. 收集所有维度的发现。
+2. 去重：同一 file:line 被多个维度报告的，合并为最高严重度。
+3. **置信度过滤**：仅保留 `confidence >= 75` 的问题进入正式报告，低于 75 的归入"低置信度附录"。
+4. **稳定 ID**：为正式报告和低置信度附录中的每个问题分配稳定 ID（如 `CA-001`），后续 deferred/todo 和 code-review-fix 都引用该 ID。
+5. **爆炸半径评估**：对 `severity = critical 或 high` 的问题，使用 Grep 搜索该函数/类/方法在项目中的所有引用方，记录到 `blast_radius` 字段；若目标是 Markdown/skill 规范且没有函数符号，则搜索相关 heading、frontmatter `name` 或关键短语。
+6. 按严重度排序：critical → high → medium → low。
 
 ### Phase 4：健康度评分
 
@@ -176,15 +206,16 @@ issues:
   - 每个 medium 扣 5 分
   - 每个 low 扣 2 分
   - 最低 0 分
-- 总分 = 各维度评分的加权平均（全量模式 5 维度均等权重；单项模式只有该维度）
+- 总分 = 各维度评分的加权平均（全量模式 6 维度均等权重；单项模式只有该维度；skill 目标自动追加 `portability` 时纳入平均）
 - 等级：A(90-100) B(75-89) C(60-74) D(40-59) F(0-39)
 
 ## 输出格式
 
 保存到 `rpiv/validation/code-audit-{kebab-case-target-name}.md`
 
-- 如果 `rpiv/validation/` 目录不存在则创建
-- `{kebab-case-target-name}` 从目标目录路径生成（如 `neuromem-services`、`backend-app-api`）
+- 如果 `rpiv/validation/` 目录不存在则创建。
+- 默认报告目录是当前工作目录的 `rpiv/validation/`。当目标位于全局 skill 安装目录或其他全局配置目录时，不要把过程报告写回全局 skill 目录，除非用户明确要求。
+- `{kebab-case-target-name}` 从目标路径、文件名或 skill 名称生成（如 `neuromem-services`、`backend-app-api`、`rpiv-loop-code-audit`）
 
 ```markdown
 ---
@@ -206,6 +237,7 @@ archived_at: null
 | 性能 | {分数} | {一句话总结} |
 | 架构 | {分数} | {一句话总结} |
 | 集成与环境 | {分数} | {一句话总结} |
+| 可迁移性 | {分数} | {一句话总结} |
 
 **统计：**
 - 扫描文件数：{N}
@@ -216,6 +248,7 @@ archived_at: null
 
 ### Critical
 
+id: {ID}
 severity: critical
 confidence: {0-100}
 status: open
@@ -259,10 +292,12 @@ blast_radius: |
 
 ## 重要提示
 
-- 每个 Agent 必须**完整阅读**目标文件（使用 Read 工具），不能只读片段
-- 专注真正的 bug 和风险，不是风格偏好
-- 每个问题必须有具体行号和可操作的修复建议
-- 安全问题（密钥泄露、注入）标记为 CRITICAL
+- 每个并行审查员或主执行者的每个审查维度都必须**完整阅读**目标文件，不能只读片段。
+- 并行审查员是加速手段，不是正确性前提；不可用时必须由主执行者顺序执行同等审查。
+- 审计 skill 时，可迁移性是重点维度；优先发现会导致 Claude Code、Codex、opencode 或公司内部自动化运行面之间产生长期分叉的绑定。
+- 专注真正的 bug 和风险，不是风格偏好。
+- 每个问题必须有稳定 ID、具体行号和可操作的修复建议；文件级问题使用最相关的行号，确实无法定位时使用 `line: 1` 并说明原因。
+- 安全问题（密钥泄露、注入）标记为 CRITICAL。
 - 置信度评分标准：
   - 90-100：确定是真实问题，有明确证据
   - 75-89：高度可能是问题，上下文支持判断
@@ -315,4 +350,5 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 **关键要求**：
 - 必须使用 `title`（不是 `description`）
 - 必须包含 `type: issue`
+- 必须引用审计报告中的稳定 `id`
 - 文件名格式：`rpiv/todo/fix-{kebab-case-name}.md`

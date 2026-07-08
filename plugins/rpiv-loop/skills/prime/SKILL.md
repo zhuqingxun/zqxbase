@@ -2,8 +2,10 @@
 name: rpiv-loop:prime
 description: 使用代码库理解项目，加载项目上下文
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.1.0
+version: 2.17.4
 ---
+
+> `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
 
 # Prime: 加载项目上下文
 
@@ -16,7 +18,7 @@ version: 2.1.0
 首次执行前调用（幂等，已存在则静默跳过）：
 
 ```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/tools/ensure_project_dod.py
+uv run --no-project python <rpiv-loop-root>/tools/ensure_project_dod.py
 ```
 
 该脚本若发现 `rpiv/dod.yaml` 缺失则从 `tools/dod_template.yaml` 拷贝初始化；已存在则静默跳过。确保项目级 DoD 通用门在后续 RPIV 各阶段可用。
@@ -29,7 +31,7 @@ uv run ${CLAUDE_PLUGIN_ROOT}/tools/ensure_project_dod.py
 !`git ls-files`
 
 显示目录结构：
-运行：`tree -L 3 -I 'node_modules|__pycache__|.git|dist|build'`
+优先运行 `rg --files` 或 `git ls-files`。如果需要目录树，Windows PowerShell 使用 `Get-ChildItem -Recurse -Depth 3`；Unix 且安装了 GNU tree 时才使用 `tree -L 3 -I 'node_modules|__pycache__|.git|dist|build'`。
 
 ### 2. 阅读核心文档
 

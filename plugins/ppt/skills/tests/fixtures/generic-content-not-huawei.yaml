@@ -1,0 +1,24 @@
+# Fixture: 通用内容不被强转 (AC-007 软引导测试)
+# 4 段并列说明,期望 cards-N 不被强转 architecture-layered
+
+meta:
+  title: "Generic Cards-4 Content"
+  preset: business-briefing
+  theme: huawei
+
+narrative:
+  thesis: "通用并列内容,无 6 类硬约束触发"
+  arc: "linear"
+  total_slides: 1
+
+slides:
+  - id: 1
+    role: content
+    visual_type: cards-4
+    content:
+      title: "四种产品定位策略"
+      key_points:
+        - { heading: "成本领先", body: "通过规模经济和效率优化降低成本,在价格敏感市场占优势字数填充 padding"}
+        - { heading: "差异化", body: "通过独特功能或体验创造价值,适合品牌敏感市场字数填充 padding 测试"}
+        - { heading: "聚焦", body: "服务特定细分市场或用户群体,获得局部领先字数填充 padding 测试"}
+        - { heading: "蓝海", body: "开创无竞争的新市场空间,通过价值创新颠覆现有格局字数填充 padding"}

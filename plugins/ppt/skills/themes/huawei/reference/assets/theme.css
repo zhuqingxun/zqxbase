@@ -1,0 +1,49 @@
+/* ========================================================================
+   主题令牌 · theme.css
+   — 参考原PPT红灰色系，可通过 Tweaks 覆盖
+   ======================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ---- 色系 · 对齐原PPT红灰色系 ---- */
+  --c-primary:      #C7000B;    /* 主红 */
+  --c-primary-dark: #8A0008;    /* 深红（hover/表头） */
+  --c-primary-soft: #FDECEE;    /* 浅红（背景色块） */
+  --c-ink:          #1F1F1F;    /* 正文黑 */
+  --c-ink-soft:     #4B4B4B;    /* 次级灰 */
+  --c-ink-mute:     #9A9A9A;    /* 辅助灰 */
+  --c-rule:         #D9D9D9;    /* 分割线 */
+  --c-rule-soft:    #ECECEC;    /* 柔和线 */
+  --c-paper:        #FFFFFF;    /* 页底白 */
+  --c-paper-2:      #F4F4F4;    /* 浅底灰 */
+  --c-paper-3:      #EAEAEA;    /* 表格头灰 */
+  --c-ink-dark:     #2A2A2A;    /* 章节页深底 */
+  --c-accent:       #D97706;    /* 强调橙（次要强调） */
+  --c-ok:           #1E7B3A;
+  --c-warn:         #C7000B;
+
+  /* ---- 字体 ---- */
+  --f-sans: "Inter", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ---- 字号 (1920×1080) ---- */
+  --t-cover:   108px;
+  --t-section:  84px;
+  --t-title:    54px;
+  --t-subtitle: 36px;
+  --t-h4:       28px;
+  --t-body:     24px;
+  --t-small:    20px;
+  --t-micro:    16px;
+  --t-nano:     14px;
+
+  /* ---- 间距 ---- */
+  --s-px: 96px;
+  --s-pt: 88px;
+  --s-pb: 76px;
+
+  /* ---- 其他 ---- */
+  --border: 1px solid var(--c-rule);
+  --border-ink: 1px solid var(--c-ink);
+}

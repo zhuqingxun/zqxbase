@@ -5,7 +5,7 @@ description: >-
   当用户提到"调整 PPT""修改 PPT""ppt:refine""PPT 微调"时触发.
 argument-hint: "<pptx 路径> <调整指令>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 3.9.2
+version: 3.9.3
 ---
 
 # PPT:Refine — 自然语言追加调整

@@ -3,7 +3,7 @@ name: rpiv-loop:record
 description: 从对话上下文或用户描述中记录问题/需求/待办到 rpiv/todo
 argument-hint: "[问题/需求描述]"
 allowed-tools: Read, Write, Bash, Glob, Grep, AskUserQuestion
-version: 2.0.1
+version: 2.17.4
 ---
 
 # Record: 记录待办条目
@@ -57,9 +57,9 @@ version: 2.0.1
    - 示例：`rpiv/todo/issue-dns-resolution-failure.md`、`rpiv/todo/feature-batch-export.md`、`rpiv/todo/todo-migrate-config.md`
 
 2. **创建目录**（如果不存在）：
-   ```bash
-   mkdir -p rpiv/todo
-   ```
+   - 使用当前运行面可用的目录创建方式确保 `rpiv/todo/` 存在。
+   - Windows PowerShell 可用 `New-Item -ItemType Directory -Force rpiv/todo`。
+   - Unix shell 可用 `mkdir -p rpiv/todo`。
 
 3. **检查重名**：
    - 如果同名文件已存在，询问用户是追加/覆盖还是换名

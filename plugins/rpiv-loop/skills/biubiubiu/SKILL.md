@@ -3,20 +3,21 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskStop, SendMessage, Skill
-version: 2.5.0
+version: 2.17.4
 ---
+
+> `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
 
 # Biubiubiu: 全自主 RPIV 团队执行
 
-> **`{RPIV_SKILLS}` 路径约定**：指 rpiv-loop 插件的 `skills/` 目录。首次引用时通过
-> `Glob("**/plugins/rpiv-loop/skills/biubiubiu/SKILL.md")` 定位,多结果时优先非 `marketplaces/` 路径（私有开发版）。
+> **`{RPIV_SKILLS}` 路径约定**：指当前运行面可发现的 rpiv-loop skills 集合。优先按已安装 skill frontmatter `name: rpiv-loop:<name>` 精确匹配；其次按同级目录 `rpiv-loop-<name>/SKILL.md` 或源树 `skills/<name>/SKILL.md` 查找。只有显式处于插件开发模式时，才扫描 `plugins/rpiv-loop/skills/<name>/SKILL.md`。
 
 ## 前置初始化
 
 首次执行前调用（幂等，已存在则静默跳过）：
 
 ```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/tools/ensure_project_dod.py
+uv run --no-project python <rpiv-loop-root>/tools/ensure_project_dod.py
 ```
 
 该脚本确保项目根目录存在 `rpiv/dod.yaml`（项目级 DoD 通用门），后续 AC gate 校验以此为上下文。
@@ -79,9 +80,11 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 
 > 历史备注：旧 SOP 曾用 `TeamCreate` / `team_name`，当前 harness 已废弃——`Agent` 工具的 `team_name` 参数标注 "Deprecated; ignored. The session has a single implicit team."
 
+若当前运行面没有 `Agent` / `TaskCreate` / `TaskUpdate` / `SendMessage` / `TaskStop` 等团队工具，进入 **single-agent sequential mode**：Leader 按同一阶段顺序在本会话内依次扮演 Architect、Research、QA、Dev，使用 checklist 记录任务状态，不调用缺失工具，不承诺并行执行。核心交付链仍是 PRD → Plan → Execute → Validate → Delivery Report，只有调度方式降级。
+
 ### 步骤 3：创建任务结构
 
-使用 TaskCreate 创建以下任务，通过 TaskUpdate 设置 blockedBy 依赖：
+若当前运行面提供任务协作工具，使用 TaskCreate 创建以下任务并设置 blockedBy 依赖。若没有任务协作工具，不调用任何缺失工具；在主会话中创建同等 checklist，按 blockedBy 顺序逐项推进并在每项完成时记录状态。
 
 ```
 阶段 1：需求与调研
@@ -105,6 +108,8 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 ```
 
 ### 步骤 4：启动团队
+
+仅当当前运行面提供可用的 Agent 工具时执行本步骤。若处于 single-agent sequential mode，跳过 spawn；Leader 直接按步骤 3 checklist 依次完成 Architect / Research / QA / Dev 职责，并在每个阶段结束时自检同一门禁。
 
 **第一批（并行启动 3 个 agent）：**
 
@@ -220,7 +225,7 @@ Architect 完成 create-plan 后：
 
 #### 门禁 3：实现完成 + AC gate 循环
 
-所有子任务的快速检查通过后，进入 **AC gate 循环**（参考 runbook：`${CLAUDE_PLUGIN_ROOT}/tools/run_acceptance_fix_loop.py`）：
+所有子任务的快速检查通过后，进入 **AC gate 循环**（参考 runbook：`<rpiv-loop-root>/tools/run_acceptance_fix_loop.py`）：
 
 **循环入口**（一次性工作）：
 1. QA 运行完整测试套件 + 全面代码审查
@@ -360,7 +365,7 @@ related_files:
 {推荐的改进和扩展方向}
 ```
 
-2. **关闭团队**：对每个仍活跃的 named teammate 用 `SendMessage` 发送 `{"type": "shutdown_request", "reason": "..."}`，agent 回 `shutdown_response approve=true` 后自行终止。**当前 harness 无 `TeamDelete`**，无需也不能调用。某 agent 无响应时，用 `TaskStop`（task_id = spawn 返回的 agent_id）强制终止兜底
+2. **关闭团队**：仅当本轮实际启动了 named teammate 时执行。对每个仍活跃的 teammate 用当前运行面支持的团队通信工具发送 `{"type": "shutdown_request", "reason": "..."}`，收到确认后结束；某 teammate 无响应且当前运行面支持 `TaskStop` 时，才用 `TaskStop`（task_id = spawn 返回的 agent_id）强制终止兜底。若处于 single-agent sequential mode，本步骤标记为已跳过。
 3. **归档过程文件**：将本次流程产生的所有 `rpiv/` 过程文件归档到 `rpiv/archive/`。具体操作：
    - 创建 `rpiv/archive/` 目录（如不存在）
    - 遍历以下文件（如存在）：

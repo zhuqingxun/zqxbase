@@ -3,7 +3,7 @@ name: rpiv-loop:fix
 description: 基于 rpiv/todo 下的待办文件进行分析和修复
 argument-hint: "[todo 文件路径]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.1.0
+version: 2.17.4
 ---
 
 # Fix: 分析并修复待办条目

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>12 · 2x2 矩阵</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .mx{flex:1;margin-top:40px;display:grid;grid-template-columns:140px 1fr;grid-template-rows:1fr 140px;gap:20px}
+  .y-axis{writing-mode:vertical-rl;transform:rotate(180deg);display:flex;align-items:center;justify-content:space-between;font-family:var(--f-mono);font-size:14px;color:var(--c-ink-mute);letter-spacing:.12em;text-transform:uppercase;padding:20px 0}
+  .y-axis b{color:var(--c-ink);font-weight:500;letter-spacing:.04em;text-transform:none;font-family:var(--f-sans);font-size:20px}
+  .matrix{position:relative;border-left:2px solid var(--c-ink);border-bottom:2px solid var(--c-ink);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+  .cell{padding:28px;border:1px dashed var(--c-rule);display:flex;flex-direction:column;gap:10px}
+  .cell h4{font-size:22px;margin:0;color:var(--c-ink);font-weight:600}
+  .cell .dots{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+  .cell .dots span{padding:4px 10px;font-family:var(--f-mono);font-size:13px;background:var(--c-paper-2);color:var(--c-ink-soft);letter-spacing:.04em}
+  .cell.hl{background:var(--c-primary-soft);border-color:var(--c-primary);border-style:solid}
+  .cell.hl h4{color:var(--c-primary)}
+  .cell .pt{font-size:16px;color:var(--c-ink-soft);line-height:1.4}
+  .cell-lbl{position:absolute;font-family:var(--f-mono);font-size:13px;letter-spacing:.12em;color:var(--c-ink-mute);text-transform:uppercase}
+  .x-axis{grid-column:2;display:flex;align-items:center;justify-content:space-between;font-family:var(--f-mono);font-size:14px;color:var(--c-ink-mute);letter-spacing:.12em;text-transform:uppercase;padding:0 20px}
+  .x-axis b{color:var(--c-ink);font-weight:500;letter-spacing:.04em;text-transform:none;font-family:var(--f-sans);font-size:20px}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 战略定位</p>
+  <h2 class="title">{根据两个维度对 N 个事物进行分类 — 一句话结论}</h2>
+  <div class="mx">
+  <div class="y-axis"><span>低</span><b>{Y 轴 · 维度一}</b><span>高</span></div>
+  <div class="matrix">
+  <div class="cell"><h4>象限 II · {标签}</h4><p class="pt">{25-40 字描述}</p><div class="dots"><span>事物 A</span><span>事物 B</span></div></div>
+  <div class="cell hl"><h4>象限 I · {明星区}</h4><p class="pt">{25-40 字描述 — 重点}</p><div class="dots"><span>事物 C</span><span>事物 D</span></div></div>
+  <div class="cell"><h4>象限 III · {标签}</h4><p class="pt">{25-40 字描述}</p><div class="dots"><span>事物 E</span></div></div>
+  <div class="cell"><h4>象限 IV · {标签}</h4><p class="pt">{25-40 字描述}</p><div class="dots"><span>事物 F</span><span>事物 G</span></div></div>
+  </div>
+  <div></div>
+  <div class="x-axis"><span>低</span><b>{X 轴 · 维度二}</b><span>高</span></div>
+  </div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>12 / 25</span></div></div></body></html>

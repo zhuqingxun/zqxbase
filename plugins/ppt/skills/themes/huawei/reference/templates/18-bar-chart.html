@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>18 · 柱状图</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .ch{flex:1;margin-top:40px;display:grid;grid-template-columns:1fr 420px;gap:60px}
+  .chart-box{border:1px solid var(--c-rule);padding:32px;background:#fff;display:flex;flex-direction:column}
+  .chart-h{display:flex;justify-content:space-between;border-bottom:1px solid var(--c-rule);padding-bottom:14px;margin-bottom:26px;font-family:var(--f-mono);font-size:13px;letter-spacing:.08em;color:var(--c-ink-mute);text-transform:uppercase}
+  .chart-h .unit{color:var(--c-ink)}
+  .bars{flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:28px;align-items:end;padding:0 10px;position:relative;border-left:1px solid var(--c-rule);border-bottom:1px solid var(--c-ink)}
+  .bars .gl{position:absolute;left:0;right:0;border-top:1px dashed var(--c-rule-soft);font-family:var(--f-mono);font-size:11px;color:var(--c-ink-mute);padding-left:4px}
+  .bar-col{display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;position:relative}
+  .bar{width:100%;background:var(--c-paper-3);position:relative;min-height:2px}
+  .bar.hl{background:var(--c-primary)}
+  .bar .v{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-family:var(--f-mono);font-size:14px;color:var(--c-ink);margin-bottom:6px;white-space:nowrap}
+  .bar.hl .v{color:var(--c-primary);font-weight:500}
+  .bar-col .x{font-size:14px;color:var(--c-ink-soft);font-family:var(--f-mono);letter-spacing:.04em}
+  .leg{display:flex;gap:20px;font-family:var(--f-mono);font-size:13px;color:var(--c-ink-mute);margin-top:16px;justify-content:flex-end}
+  .leg span{display:flex;align-items:center;gap:6px}
+  .leg i{width:14px;height:10px;display:inline-block;background:var(--c-primary);font-style:normal}
+  .leg i.g{background:var(--c-paper-3)}
+  .insights{display:flex;flex-direction:column;gap:14px;justify-content:center}
+  .ins{border-left:3px solid var(--c-primary);padding:16px 20px;background:var(--c-paper-2)}
+  .ins .n{font-family:var(--f-mono);color:var(--c-primary);font-size:14px;letter-spacing:.1em;margin-bottom:6px}
+  .ins b{display:block;font-size:20px;color:var(--c-ink);margin-bottom:6px}
+  .ins p{margin:0;color:var(--c-ink-soft);font-size:16px;line-height:1.45}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 数据洞察</p>
+  <h2 class="title">{图表揭示的一句话结论}</h2>
+  <div class="ch"><div class="chart-box">
+  <div class="chart-h"><span>{图表标题}</span><span class="unit">单位：% · 样本 N = {数字}</span></div>
+  <div class="bars">
+  <div class="bar-col"><div class="bar " style="height:30%"><span class="v">12%</span></div><span class="x">2021</span></div><div class="bar-col"><div class="bar " style="height:42%"><span class="v">18%</span></div><span class="x">2022</span></div><div class="bar-col"><div class="bar " style="height:56%"><span class="v">27%</span></div><span class="x">2023</span></div><div class="bar-col"><div class="bar " style="height:70%"><span class="v">38%</span></div><span class="x">2024</span></div><div class="bar-col"><div class="bar hl" style="height:82%"><span class="v">52%</span></div><span class="x">2025</span></div><div class="bar-col"><div class="bar hl" style="height:94%"><span class="v">68%</span></div><span class="x">2026E</span></div>
+  </div>
+  <div class="leg"><span><i class="g"></i>历史</span><span><i></i>预测</span></div>
+  </div>
+  <div class="insights">
+  <div class="ins"><div class="n">INSIGHT 01</div><b>{观察到的结构性变化}</b><p>{30-50 字说明}</p></div>
+  <div class="ins"><div class="n">INSIGHT 02</div><b>{关键拐点或异常}</b><p>{30-50 字说明}</p></div>
+  <div class="ins"><div class="n">INSIGHT 03</div><b>{前瞻展望}</b><p>{30-50 字说明}</p></div>
+  </div></div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>18 / 25</span></div></div></body></html>

@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>13 · 架构分层</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .arch{flex:1;margin-top:36px;display:flex;flex-direction:column;gap:14px}
+  .layer{background:#fff;border:1px solid var(--c-rule);display:grid;grid-template-columns:260px 1fr;align-items:stretch}
+  .layer .hd{background:var(--c-paper-3);padding:20px 24px;display:flex;flex-direction:column;justify-content:center;gap:4px;border-right:1px solid var(--c-rule)}
+  .layer.hl .hd{background:var(--c-primary);color:#fff}
+  .layer .hd .n{font-family:var(--f-mono);font-size:14px;letter-spacing:.14em;opacity:.7;text-transform:uppercase}
+  .layer .hd b{font-size:24px;font-weight:600}
+  .layer .cells{display:grid;grid-template-columns:repeat(6,1fr)}
+  .layer .cell{padding:18px 16px;border-right:1px dashed var(--c-rule);display:flex;flex-direction:column;gap:4px}
+  .layer .cell:last-child{border-right:none}
+  .layer .cell b{font-size:16px;color:var(--c-ink);font-weight:600}
+  .layer .cell span{font-size:14px;color:var(--c-ink-soft);line-height:1.35}
+  .layer.base{grid-template-columns:260px 1fr 260px}
+  .layer.base .ft{background:var(--c-paper-2);padding:20px 24px;font-size:15px;color:var(--c-ink-soft);border-left:1px solid var(--c-rule);display:flex;align-items:center}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 目标架构</p>
+  <h2 class="title">{架构分层的一句话说明 — 整体视图}</h2>
+  <div class="arch">
+  
+  <div class="layer "><div class="hd"><div class="n">APP LAYER</div><b>应用层</b></div>
+  <div class="cells"><div class="cell"><b>{门户}</b><span>{一句话说明}</span></div><div class="cell"><b>{业务A}</b><span>{一句话说明}</span></div><div class="cell"><b>{业务B}</b><span>{一句话说明}</span></div><div class="cell"><b>{业务C}</b><span>{一句话说明}</span></div><div class="cell"><b>{业务D}</b><span>{一句话说明}</span></div><div class="cell"><b>{业务E}</b><span>{一句话说明}</span></div></div></div>
+  <div class="layer hl"><div class="hd"><div class="n">CAPABILITY</div><b>能力层</b></div>
+  <div class="cells"><div class="cell"><b>{能力1}</b><span>{一句话说明}</span></div><div class="cell"><b>{能力2}</b><span>{一句话说明}</span></div><div class="cell"><b>{能力3}</b><span>{一句话说明}</span></div><div class="cell"><b>{能力4}</b><span>{一句话说明}</span></div><div class="cell"><b>{能力5}</b><span>{一句话说明}</span></div><div class="cell"><b>{能力6}</b><span>{一句话说明}</span></div></div></div>
+  <div class="layer "><div class="hd"><div class="n">PLATFORM</div><b>平台层</b></div>
+  <div class="cells"><div class="cell"><b>{PaaS}</b><span>{一句话说明}</span></div><div class="cell"><b>{DataOS}</b><span>{一句话说明}</span></div><div class="cell"><b>{AI中台}</b><span>{一句话说明}</span></div><div class="cell"><b>{安全}</b><span>{一句话说明}</span></div><div class="cell"><b>{监控}</b><span>{一句话说明}</span></div><div class="cell"><b>{DevOps}</b><span>{一句话说明}</span></div></div></div>
+  <div class="layer "><div class="hd"><div class="n">INFRA</div><b>基础设施</b></div>
+  <div class="cells"><div class="cell"><b>{算力}</b><span>{一句话说明}</span></div><div class="cell"><b>{存储}</b><span>{一句话说明}</span></div><div class="cell"><b>{网络}</b><span>{一句话说明}</span></div><div class="cell"><b>{容器}</b><span>{一句话说明}</span></div><div class="cell"><b>{数据库}</b><span>{一句话说明}</span></div><div class="cell"><b>{安全网关}</b><span>{一句话说明}</span></div></div></div>
+  </div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>13 / 25</span></div></div></body></html>

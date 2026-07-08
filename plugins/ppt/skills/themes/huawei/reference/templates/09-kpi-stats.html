@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>09 · KPI 数字</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .kpis{flex:1;margin-top:40px;display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--c-rule)}
+  .kpi{background:#fff;padding:44px 34px;display:flex;flex-direction:column;justify-content:space-between;min-height:320px}
+  .kpi .lbl{font-family:var(--f-mono);font-size:16px;color:var(--c-ink-mute);letter-spacing:.12em;text-transform:uppercase}
+  .kpi .val{font-size:108px;font-weight:500;color:var(--c-primary);line-height:1;margin:24px 0 18px;letter-spacing:-.03em}
+  .kpi .val small{font-size:32px;color:var(--c-ink-soft);font-weight:400;margin-left:6px}
+  .kpi .desc{font-size:18px;color:var(--c-ink-soft);line-height:1.45}
+  .kpi .trend{font-family:var(--f-mono);font-size:14px;color:var(--c-ink-mute);margin-top:10px;letter-spacing:.04em}
+  .kpi .trend b{color:var(--c-primary);font-weight:500}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 关键数据</p>
+  <h2 class="title">{数据背后的一句话断言 — 给观众一个结论}</h2>
+  <p class="subtitle">{数据时间窗 · 样本范围 · 口径说明}</p>
+  <div class="kpis">
+  
+  <div class="kpi"><div class="lbl">01 · 渗透率</div><div><div class="val">42<small>%</small></div><div class="desc">{指标一说明，一句话}</div><div class="trend">同比 <b>+12.4%</b> · 环比 +2.1%</div></div></div>
+  <div class="kpi"><div class="lbl">02 · 同比</div><div><div class="val">+3.8<small>x</small></div><div class="desc">{指标二说明，一句话}</div><div class="trend">同比 <b>+12.4%</b> · 环比 +2.1%</div></div></div>
+  <div class="kpi"><div class="lbl">03 · 覆盖</div><div><div class="val">1,240<small>+</small></div><div class="desc">{指标三说明，一句话}</div><div class="trend">同比 <b>+12.4%</b> · 环比 +2.1%</div></div></div>
+  <div class="kpi"><div class="lbl">04 · 节省</div><div><div class="val">¥18<small>亿</small></div><div class="desc">{指标四说明，一句话}</div><div class="trend">同比 <b>+12.4%</b> · 环比 +2.1%</div></div></div>
+  </div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>09 / 25</span></div></div></body></html>

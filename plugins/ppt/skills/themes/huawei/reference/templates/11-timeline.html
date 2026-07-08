@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>11 · 时间轴</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .tl{flex:1;margin-top:90px;position:relative;display:flex;align-items:center}
+  .tl::before{content:'';position:absolute;left:0;right:0;top:50%;height:2px;background:var(--c-ink);transform:translateY(-1px)}
+  .tl-row{flex:1;display:grid;grid-template-columns:repeat(5,1fr);position:relative}
+  .tn{position:relative;text-align:center;padding:0 16px}
+  .tn .dot{width:20px;height:20px;background:var(--c-primary);border:4px solid #fff;box-shadow:0 0 0 2px var(--c-primary);border-radius:50%;margin:0 auto;position:relative;z-index:2}
+  .tn .yr{font-family:var(--f-mono);font-size:22px;color:var(--c-primary);font-weight:500;margin-top:30px;letter-spacing:.06em}
+  .tn .lab{font-size:22px;font-weight:600;color:var(--c-ink);margin-top:6px}
+  .tn .desc{font-size:16px;color:var(--c-ink-soft);margin-top:10px;line-height:1.4;text-wrap:pretty}
+  .tn.up{margin-bottom:240px}
+  .tn.up .yr,.tn.up .lab,.tn.up .desc{position:absolute;left:0;right:0;bottom:56px}
+  .tn.up .desc{bottom:0}.tn.up .lab{bottom:26px}.tn.up .yr{bottom:120px}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 演进路径</p>
+  <h2 class="title">{行业 / 技术 / 业务 的阶段性演进 — 一句话结论}</h2>
+  <div class="tl"><div class="tl-row">
+  <div class="tn up"><div class="yr">2018</div><div class="dot"></div><div class="lab">起步</div><div class="desc">{关键节点简述}</div></div><div class="tn "><div class="yr">2020</div><div class="dot"></div><div class="lab">试点</div><div class="desc">{关键节点简述}</div></div><div class="tn up"><div class="yr">2022</div><div class="dot"></div><div class="lab">规模化</div><div class="desc">{关键节点简述}</div></div><div class="tn "><div class="yr">2024</div><div class="dot"></div><div class="lab">产业化</div><div class="desc">{关键节点简述}</div></div><div class="tn up"><div class="yr">2026</div><div class="dot"></div><div class="lab">{当下}</div><div class="desc">{关键节点简述}</div></div>
+  </div></div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>11 / 25</span></div></div></body></html>

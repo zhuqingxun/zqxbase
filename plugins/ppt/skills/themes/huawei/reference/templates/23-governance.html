@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>23 · 组织治理</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .gov{flex:1;margin-top:36px;display:grid;grid-template-rows:auto 1fr auto;gap:24px}
+  .org-top{display:flex;justify-content:center}
+  .org-top .box{background:var(--c-primary);color:#fff;padding:22px 50px;text-align:center;min-width:480px}
+  .org-top .box b{display:block;font-size:22px;font-weight:600;margin-bottom:4px}
+  .org-top .box span{font-family:var(--f-mono);font-size:13px;letter-spacing:.1em;opacity:.8}
+  .org-mid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;position:relative}
+  .org-mid::before{content:'';position:absolute;top:-24px;left:12.5%;right:12.5%;height:2px;background:var(--c-ink)}
+  .org-mid .box{background:#fff;border:2px solid var(--c-ink);padding:20px;position:relative}
+  .org-mid .box::before{content:'';position:absolute;top:-24px;left:50%;width:2px;height:24px;background:var(--c-ink)}
+  .org-mid .box b{display:block;font-size:18px;font-weight:600;color:var(--c-ink);margin-bottom:6px}
+  .org-mid .box span{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;color:var(--c-ink-mute);text-transform:uppercase;margin-bottom:12px;display:block}
+  .org-mid .box ul{margin:0;padding:0;list-style:none;font-size:14px;color:var(--c-ink-soft);line-height:1.5}
+  .org-mid .box li{padding:4px 0;border-top:1px dashed var(--c-rule-soft)}
+  .org-mid .box li:first-child{border-top:none}
+  .rr{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--c-rule);border:1px solid var(--c-rule)}
+  .rr .h{background:var(--c-paper-3);padding:10px 14px;font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--c-ink)}
+  .rr .c{background:#fff;padding:10px 14px;font-size:14px;color:var(--c-ink-soft)}
+  .rr .c b{color:var(--c-primary);font-family:var(--f-mono);font-weight:500}</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+  <div class="slide"><div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+  <p class="eyebrow">章节 · 组织治理</p>
+  <h2 class="title">{治理架构{角色}纲 — 谁决策 / 谁落地 / 谁监督}</h2>
+  <div class="gov">
+  <div class="org-top"><div class="box"><b>{决策委员会}</b><span>STEERING COMMITTEE · 月度</span></div></div>
+  <div class="org-mid">
+  
+  <div class="box"><span>STRATEGY</span><b>{战略组}</b><ul><li>· 愿景与路线</li><li>· 优先级排序</li><li>· 投入预算</li></ul></div>
+  <div class="box"><span>BUSINESS</span><b>{业务组}</b><ul><li>· 场景设计</li><li>· KPI 对齐</li><li>· 客户验证</li></ul></div>
+  <div class="box"><span>TECH</span><b>{技术组}</b><ul><li>· 架构与平台</li><li>· 技术栈选型</li><li>· 研发执行</li></ul></div>
+  <div class="box"><span>GOVERNANCE</span><b>{治理组}</b><ul><li>· 风险合规</li><li>· 数据管理</li><li>· 质量监督</li></ul></div>
+  </div>
+  <div class="rr">
+  <div class="h">角色</div><div class="h">R · 执行</div><div class="h">A · 责任</div><div class="h">C · 协同</div>
+  <div class="c"><b>战略议题</b></div><div class="c">战略组</div><div class="c">委员会</div><div class="c">业务 / 技术 / 治理</div>
+  <div class="c"><b>能力建设</b></div><div class="c">技术组</div><div class="c">战略组</div><div class="c">业务 / 治理</div>
+  <div class="c"><b>风险评估</b></div><div class="c">治理组</div><div class="c">委员会</div><div class="c">业务 / 技术</div>
+  </div>
+  </div>
+  <div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>23 / 25</span></div></div></body></html>

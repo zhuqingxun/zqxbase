@@ -2,8 +2,10 @@
 name: rpiv-loop:archive
 description: 归档已完成的过程文件
 allowed-tools: Bash, Read, AskUserQuestion
-version: 2.1.0
+version: 2.17.4
 ---
+
+> `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
 
 # Archive: 归档 RPIV 过程文件
 
@@ -12,7 +14,7 @@ version: 2.1.0
 ## 调用脚本
 
 ```bash
-uv run --no-project python ${CLAUDE_PLUGIN_ROOT}/tools/archive.py $ARGUMENTS
+uv run --no-project python <rpiv-loop-root>/tools/archive.py $ARGUMENTS
 ```
 
 ## 用法

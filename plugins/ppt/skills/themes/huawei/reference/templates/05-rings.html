@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><title>05 · 三环模型</title>
+<link rel="stylesheet" href="../assets/theme.css"><link rel="stylesheet" href="../assets/deck-base.css">
+<script src="../assets/single.js"></script><script src="../assets/tweaks.js" defer></script>
+<style>
+  .rw{height:700px;margin-top:30px;display:grid;grid-template-columns:1.1fr 1fr;grid-template-rows:700px;gap:80px;align-items:center;overflow:hidden}
+  .rings{position:relative;width:640px;height:580px;justify-self:center}
+  .rings .r{position:absolute;border:2px solid var(--c-primary);border-radius:50%;display:flex;align-items:flex-start;justify-content:center;padding-top:20px;font-family:var(--f-mono);font-size:16px;letter-spacing:.1em;color:var(--c-primary);text-transform:uppercase}
+  .rings .r1{width:640px;height:580px;top:0;left:0}
+  .rings .r2{width:480px;height:430px;top:75px;left:80px;border-color:var(--c-ink-soft);color:var(--c-ink-soft)}
+  .rings .r3{width:320px;height:290px;top:145px;left:160px;background:var(--c-primary);color:#fff;border:none;align-items:center;padding-top:0;font-family:var(--f-sans);font-size:24px;font-weight:500;letter-spacing:normal;text-transform:none;text-align:center;flex-direction:column;justify-content:center}
+  .rings .r3 small{display:block;font-size:13px;font-family:var(--f-mono);opacity:.7;margin-top:8px;letter-spacing:.1em}
+  .steps{list-style:none;padding:0;margin:0;align-self:center}
+  .steps li{display:grid;grid-template-columns:44px 1fr;gap:18px;padding:16px 0;border-bottom:1px solid var(--c-rule);align-items:baseline}
+  .steps li:last-child{border-bottom:none}
+  .steps .n{font-family:var(--f-mono);color:var(--c-primary);font-size:18px;line-height:1}
+  .steps b{color:var(--c-ink);font-weight:600;font-size:20px;margin-right:10px}
+  .steps span.txt{color:var(--c-ink-soft);font-size:18px;line-height:1.4;display:block}
+</style></head><body>
+<script type="application/json" id="__tweaks">/*EDITMODE-BEGIN*/{"primary":"#C7000B","inkDark":"#2A2A2A","paper":"#FFFFFF","fontSans":"Inter, 'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif","fontMono":"JetBrains Mono, ui-monospace, monospace"}/*EDITMODE-END*/</script>
+<div class="slide">
+<div class="tabs"><span class="tab on">战略层</span><span class="tab">业务层</span><span class="tab">架构层</span><span class="tab">治理层</span></div>
+<p class="eyebrow">章节 · 方法论</p>
+<h2 class="title">{三环 / 同心圆 方法论的一句话定义}</h2>
+<p class="subtitle">{形成 A → B → C 的正向飞轮}</p>
+<div class="rw">
+<div class="rings"><div class="r r1">外 环 · OUTER</div><div class="r r2">中 环 · MIDDLE</div><div class="r r3">核心范式<br><small>CORE</small></div></div>
+<ol class="steps">
+<li><span class="n">01</span><span class="txt"><b>{步骤一}</b>一句话说明</span></li>
+<li><span class="n">02</span><span class="txt"><b>{步骤二}</b>一句话说明</span></li>
+<li><span class="n">03</span><span class="txt"><b>{步骤三}</b>一句话说明</span></li>
+<li><span class="n">04</span><span class="txt"><b>{步骤四}</b>一句话说明</span></li>
+<li><span class="n">05</span><span class="txt"><b>{步骤五}</b>一句话说明</span></li>
+</ol>
+</div>
+<div class="footer"><span class="brand"><span class="brand-mark"></span>{公司占位}</span><span>05 / 25</span></div>
+</div></body></html>

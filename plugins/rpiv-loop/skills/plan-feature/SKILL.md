@@ -3,8 +3,10 @@ name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
 argument-hint: "<功能描述或 PRD 路径>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.3.1
+version: 2.17.4
 ---
+
+> `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
 
 # 规划新任务
 
@@ -415,7 +417,7 @@ version: 2.3.1
 - `evidence`：执行 verification_method 后的具体证据（路径:行号 / 日志片段 / 截图文件名）
 - `status`：`passed` / `failed` / `not_applicable`（初始留空，由 QA 翻状态）
 
-**delivery-report 阶段职责**：只读 `acceptance.yaml`，**禁止修改任何字段**。`check_acceptance.py` 通过 `uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>` 校验后以退出码决定能否出具交付报告。
+**delivery-report 阶段职责**：只读 `acceptance.yaml`，**禁止修改任何字段**。`check_acceptance.py` 通过 `uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>` 校验后以退出码决定能否出具交付报告。
 
 **质量门（plan 阶段自检清单）**：
 - [ ] `acceptance.yaml` 条目数 ≥ 3
@@ -453,9 +455,9 @@ acceptance_criteria:
     notes: ""
   - id: AC-003
     given: 8 条 AC 全部 passed 且 evidence 非空
-    when: 运行 uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>
+    when: 运行 uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>
     then: 退出码 0，stdout 含 "ALL PASS"
-    verification_method: uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>
+    verification_method: uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>
     blocking: true
     evidence: ""
     status: ""

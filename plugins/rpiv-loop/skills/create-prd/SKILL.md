@@ -3,8 +3,10 @@ name: rpiv-loop:create-prd
 description: 基于对话上下文创建产品需求文档
 argument-hint: "[功能主题]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.1.1
+version: 2.17.4
 ---
+
+> `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
 
 # Create PRD: 生成产品需求文档
 
@@ -13,7 +15,7 @@ version: 2.1.1
 首次执行前调用（幂等，已存在则静默跳过）：
 
 ```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/tools/ensure_project_dod.py
+uv run --no-project python <rpiv-loop-root>/tools/ensure_project_dod.py
 ```
 
 该脚本若发现 `rpiv/dod.yaml` 缺失则从 `tools/dod_template.yaml` 拷贝初始化；已存在则静默跳过。确保项目级 DoD 通用门在后续 RPIV 各阶段可用。

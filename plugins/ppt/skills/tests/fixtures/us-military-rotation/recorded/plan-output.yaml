@@ -1,0 +1,606 @@
+meta:
+  title: 美军军官调动制度解析——破解大型企业'干部调不动'困局
+  source_files:
+  - input/delivery-report-us-military-rotation.md
+  - input/brainstorm-summary-us-military-rotation.md
+  - input/notes-01-pcs-cycle.md
+  - input/notes-02-hrc.md
+  - input/notes-03-dream-sheet.md
+  - input/notes-04-oer-promotion.md
+  - input/notes-05-information-systems.md
+  - input/notes-06-culture.md
+  - input/notes-07-ibm-lead.md
+  - input/gemini-deep-research-us-military-rotation.md
+  preset: research-report
+  theme: huawei
+  target_audience: 企业 一把手、董事会成员、人力负责人——关注顶层组织设计与战略执行的决策层
+  generated_at: '2026-04-24T23:46:00'
+narrative:
+  thesis: 大型企业'干部调不动'是公司治理问题而非 HR 问题——美军用'集中管理+硬约束+数学算法+数据底座+文化建构'五位一体机制，在百万人规模下实现每年
+    15,000 名军官的双向匹配与强制流动。
+  arc: opening -> context -> evidence -> mapping -> insight -> roadmap -> challenges
+    -> closing
+  total_slides: 19
+slides:
+- id: 1
+  role: title
+  chapter: 封面
+  visual_type: cover-left-bar
+  content:
+    title: 美军军官调动制度解析
+    subtitle: 破解大型企业'干部调不动'的治理困局
+  variant:
+    visual_type: cover-left-bar
+    eyebrow: 研究报告 · 组织设计系列
+    title: 美军军官调动制度解析
+    emphasis: '2026'
+    subtitle: 破解大型企业'干部调不动'的治理困局
+    meta:
+    - label: 目标受众
+      value: 一把手 / 董事会 / 人力负责人
+    - label: 研究深度
+      value: 74+ 信息源 / 6 模块
+    - label: 版本
+      value: v1.0
+- id: 2
+  role: content
+  chapter: 目录
+  visual_type: toc
+  content:
+    title: 目录
+  variant:
+    visual_type: toc
+    title: 目录
+    chapters:
+    - number: '01'
+      title: 三层痛点：调不动的真实约束
+      page: '03'
+    - number: '02'
+      title: 本质定位：治理问题而非 HR 问题
+      page: '04'
+    - number: '03'
+      title: 五大机制：百万人规模的制度闭环
+      page: '05'
+    - number: '04'
+      title: IBM 对照：企业如何做同构设计
+      page: '12'
+    - number: '05'
+      title: 五大洞察与落地路径
+      page: '15'
+    - number: '06'
+      title: 落地风险与致谢
+      page: '17'
+- id: 3
+  role: content
+  chapter: 三层痛点
+  visual_type: kpi-stats
+  content:
+    title: 调不动的三层真实约束
+    subtitle: 意愿层 / 博弈层 / 效率层——三层同时作用才形成锁死
+    footnote: 来源：企业高管访谈摘要（brainstorm-summary-us-military-rotation.md）
+  variant:
+    visual_type: kpi-stats
+    title: 调不动的三层真实约束
+    subtitle: 意愿层 / 博弈层 / 效率层——三层同时作用才形成锁死
+    kpis:
+    - label: 意愿层
+      value: 不匹配
+      desc: 干部个体意愿与组织需求错位
+      trend: flat
+    - label: 博弈层
+      value: 被绑架
+      desc: 部门留人意愿压过公司整体调配
+      trend: flat
+    - label: 效率层
+      value: 成本高
+      desc: 沟通成本高、审批链条长
+      trend: flat
+- id: 4
+  role: section
+  chapter: 本质定位
+  visual_type: section-divider-dark
+  content:
+    title: 这不是 HR 问题，是公司治理问题
+    description: 美军 HRC 是 Direct Reporting Unit 直通参谋部不隶属作战司令部；IBM 人力负责人 直通 一把手。共同点：人事决策机构必须在治理结构上独立于业务单位——只有公司章程能推动，HR
+      部门无权设计。
+  variant:
+    visual_type: section-divider-dark
+    big_number: '01'
+    eyebrow: 第一个认知转换
+    title: 这不是 HR 问题，是公司治理问题
+    description: 美军 HRC 是 Direct Reporting Unit 直通参谋部不隶属作战司令部；IBM 人力负责人 直通 一把手。共同点：人事决策机构必须在治理结构上独立于业务单位——只有公司章程能推动，HR
+      部门无权设计。
+- id: 5
+  role: content
+  chapter: 五大机制
+  visual_type: governance
+  content:
+    title: HRC：独立于业务单位的治理架构
+    description: Direct Reporting Unit 直通 G-1 人事副参谋长，具备独立人事决策权——'调得动'的治理基础
+    footnote: HRC 官方组织页 + Wikipedia 交叉验证（notes-02-hrc.md）
+  variant:
+    visual_type: governance
+    title: HRC：独立于业务单位的治理架构
+    subtitle: DRU 直通 G-1，独立人事决策权
+    top:
+      name: HRC · Human Resources Command
+      tag: DRU 直通 G-1 · 少将级指挥官 · 独立预算
+    units:
+    - code: D1
+      name: Officer Personnel
+      items:
+      - 全军军官完整档案
+      - PCS 全流程
+      - Career Manager 3-5 年规划
+    - code: D2
+      name: Promotions & Selection
+      items:
+      - 全部晋升选拔板
+      - 独立 OER 标准
+      - 不受用人单位施压
+    - code: D3
+      name: Talent Management
+      items:
+      - ATAP / AIM 2.0 平台
+      - 40 operational elements
+      - Force Shaping
+- id: 6
+  role: content
+  chapter: 五大机制
+  visual_type: pyramid
+  content:
+    title: 五位一体：五个机制缺一不可
+    description: 自底向上耦合——任何一层缺失都会让上层机制退化
+  variant:
+    visual_type: pyramid
+    title: 五位一体：五个机制缺一不可
+    subtitle: 自底向上耦合——任何一层缺失都会让上层机制退化
+    levels:
+    - name: 治理独立
+      tag: HRC 作为 DRU 独立于作战单位，直通参谋部独立预算
+    - name: 制度硬约束
+      tag: OER broadening 必填 + Senior Rater Profile 分布约束
+    - name: 算法匹配
+      tag: Gale-Shapley 双向稳定匹配，诚实偏好是最优策略
+    - name: 数据底座
+      tag: IPPS-A 整合 40+ 遗留系统，覆盖 100 万人
+    - name: 文化软引导
+      tag: Pentathlete Leader 取代 Muddy Boot，Wardynski 六卷本 + Junior Officer Center
+- id: 7
+  role: data
+  chapter: 五大机制
+  visual_type: kpi-stats
+  content:
+    title: ATAP：每年 15,000 军官在 21 天完成双向匹配
+    subtitle: 2019 首轮到 2025 稳态：匹配质量持续提升
+    footnote: 数据来源：Army Times 2019 首轮报道 + Eightfold.ai 2025 追踪 + ATAP 官方指南 v5
+  variant:
+    visual_type: kpi-stats
+    title: ATAP：每年 15,000 军官在 21 天完成双向匹配
+    subtitle: 2019 首轮到 2025 稳态
+    kpis:
+    - label: 年度参与
+      value: 15,000
+      unit: 军官
+      trend: flat
+    - label: 首选命中
+      value: '50'
+      unit: '%+'
+      trend: up
+      trend_text: +10pp
+    - label: 前 10 命中
+      value: '80'
+      unit: '%'
+      trend: up
+    - label: Cycle 周期
+      value: '21'
+      unit: 天
+      trend: flat
+    - label: 开放职位
+      value: 1,400
+      unit: +
+      trend: flat
+- id: 8
+  role: content
+  chapter: 五大机制
+  visual_type: process-flow-huawei
+  content:
+    title: ATAP 21 天 Cycle：从市场开放到订单生成
+    description: 市场窗口 + 双向面试 + Gale-Shapley 匹配 + 自动订单生成
+    footnote: 流程节点来源：Capt. Travis Salley 亲历 + ATAP 官方指南（notes-05-information-systems.md）
+  variant:
+    visual_type: process-flow-huawei
+    title: ATAP 21 天 Cycle：从市场开放到订单生成
+    subtitle: Gale-Shapley 匹配 + 自动订单生成
+    steps:
+    - label: T-11 月
+      desc: Marketplace 开放
+    - label: T-10 月
+      desc: 双向面试
+    - label: T-9 月
+      desc: 双向排序
+    - label: T-8.5 月
+      desc: 算法匹配
+    - label: T-8 月
+      desc: 订单生成
+- id: 9
+  role: content
+  chapter: 五大机制
+  visual_type: architecture-layered
+  content:
+    title: IPPS-A：整合 40+ 遗留系统的数据底座
+    description: 2023 全面上线，覆盖 100 万人统一人事+薪酬+档案平台
+    footnote: 20+ 年建设周期，多轮延期（notes-05-information-systems.md）
+  variant:
+    visual_type: architecture-layered
+    title: IPPS-A：整合 40+ 遗留系统的数据底座
+    subtitle: 2023 全面上线
+    layers:
+    - header:
+        code: L1
+        name: 应用层
+      cells:
+      - title: AIM 2.0
+        desc: Marketplace 排序与双向面试
+      - title: MyAssignments
+        desc: 个人调动看板
+      - title: ATAP Dashboard
+        desc: HRC 匹配监控
+    - header:
+        code: L2
+        name: 匹配引擎
+      cells:
+      - title: Gale-Shapley
+        desc: 双向稳定匹配算法
+      - title: KSB-P Matcher
+        desc: 技能岗位对齐
+      - title: 异常仲裁
+        desc: HRC 人工介入 <5%
+    - header:
+        code: L3
+        name: 数据层
+      cells:
+      - title: 军官档案库
+        desc: KSBs / OER / 偏好
+      - title: 岗位库
+        desc: 1,400+ vacancies
+      - title: 薪酬档案
+        desc: PCS 补贴 / 级差
+      - title: 历史数据
+        desc: 20 年匹配记录
+    - header:
+        code: L4
+        name: 基础设施
+      cells:
+      - title: 遗留系统整合
+        desc: 40+ 旧系统收敛
+      - title: 统一身份
+        desc: 覆盖 100 万军人
+- id: 10
+  role: content
+  chapter: 五大机制
+  visual_type: matrix-2x2
+  content:
+    title: 文化张力：Muddy Boot vs Pentathlete
+    description: 专业深度（纵轴）× 经历广度（横轴）——2014 后 Pentathlete 成新范式
+    footnote: 文化框架：Modern War Institute + Wardynski Officer Corps Strategy（notes-06-culture.md）
+  variant:
+    visual_type: matrix-2x2
+    title: 文化张力：Muddy Boot vs Pentathlete
+    axis:
+      x:
+        label: 经历广度
+        low: 单一岗位
+        high: 多元锻炼
+      y:
+        label: 专业深度
+        low: 辅助岗
+        high: 关键岗
+    quadrants:
+    - position: Q1
+      heading: Pentathlete Leader
+      desc: 深度+广度双高
+      highlight: true
+    - position: Q2
+      heading: Muddy Boot Track
+      desc: 深度高广度少
+      highlight: false
+    - position: Q3
+      heading: 碰运气型
+      desc: 深度浅广度也少
+      highlight: false
+    - position: Q4
+      heading: 半途转型
+      desc: 过度 broadening
+      highlight: false
+- id: 11
+  role: content
+  chapter: 五大机制
+  visual_type: timeline-huawei
+  content:
+    title: OER 2014 改革：把轮岗写进晋升硬门槛
+    description: 制度硬约束的 10 年推进 · Rater/Senior Rater 分离 + broadening 必填 + Profile 分布约束
+    footnote: 时间线来源：HRC Evaluation Systems 文档 + Modern War Institute（notes-04-oer-promotion.md）
+  variant:
+    visual_type: timeline-huawei
+    title: OER 2014 改革：把轮岗写进晋升硬门槛
+    phases:
+    - year: '2013'
+      label: 改革启动
+      items:
+      - 识别旧 OER 三大缺陷
+      - broadening 改必填
+    - year: '2014'
+      label: 首次实施
+      items:
+      - Rater 双层分离
+      - broadening 为晋升必要条件
+    - year: '2019'
+      label: ATAP 合流
+      items:
+      - AIM 2.0 上线
+      - 40% 首选命中
+    - year: '2023'
+      label: 数据化成熟
+      items:
+      - IPPS-A 上线
+      - 50%+ 命中率
+    - year: '2025'
+      label: 文化追赶
+      items:
+      - 制度已稳定
+      - Pentathlete 扩散
+- id: 12
+  role: content
+  chapter: IBM 对照
+  visual_type: cards-6
+  content:
+    title: IBM LEAD 体系：六大项目组合
+    description: 5 个 LDP + 1 个内部市场 = 等效美军 HRC 的企业版闭环
+    footnote: 数据来源：IBM 2025 Annual Report + Josh Bersin 分析（notes-07-ibm-lead.md）
+    key_points:
+    - heading: HRLDP
+      body: HR Leadership Development Program — 3 年 3 段轮岗，每段 1 年跨 HR 功能（人才/薪酬/组织发展）
+    - heading: GMLDP
+      body: General Management LDP — 3 年跨业务线轮岗，对标美军 broadening 跨兵种经历
+    - heading: Finance LDP
+      body: 财务领导力项目，跨财务功能（会计/战略/FP&A）3 年轮岗培养未来 CFO
+    - heading: GFLDP
+      body: Global Financing LDP — 全球金融业务线轮岗，覆盖北美/欧洲/亚太
+    - heading: Extreme Blue
+      body: 高潜早期选拔：技术/商科双背景学生快速通道，对标美军西点军校
+    - heading: Blue Opportunities
+      body: 全员内部市场：345,000 员工，50%+ 空缺内部填补，对标 AIM 2.0
+  variant:
+    visual_type: cards-6
+    title: IBM LEAD 体系：六大项目组合
+    subtitle: 5 LDP + 1 内部市场
+    cards:
+    - heading: HRLDP
+      body: HR Leadership — 3 年 3 段轮岗
+    - heading: GMLDP
+      body: General Management — 跨业务线
+    - heading: Finance LDP
+      body: 财务领导力 · 3 年轮岗
+    - heading: GFLDP
+      body: Global Financing · 全球轮岗
+    - heading: Extreme Blue
+      body: 高潜早期选拔快速通道
+    - heading: Blue Opportunities
+      body: 345k 员工 · 50%+ 内部填补
+- id: 13
+  role: data
+  chapter: IBM 对照
+  visual_type: heatmap-matrix
+  content:
+    title: 美军 vs IBM：六模块同构度评分
+    description: 打分 0-5：5 表示完全同构，0 表示未对应。治理/市场/数据高度同构，强制度/文化/家庭配套有差距
+    footnote: 对照框架：IBM 对照 6 模块映射表（notes-07-ibm-lead.md 第四节）
+  variant:
+    visual_type: heatmap-matrix
+    title: 美军 vs IBM：六模块同构度评分
+    columns:
+    - 美军 Army
+    - IBM LEAD
+    - 同构度
+    rows:
+    - label: 治理独立（HRC DRU）
+      scores:
+      - 5
+      - 4
+      - 4
+      total: 13
+    - label: 内部市场（ATAP）
+      scores:
+      - 5
+      - 5
+      - 5
+      total: 15
+    - label: 数据底座（IPPS-A）
+      scores:
+      - 5
+      - 4
+      - 4
+      total: 13
+    - label: 强制轮岗（OER）
+      scores:
+      - 5
+      - 3
+      - 2
+      total: 10
+    - label: 文化塑造
+      scores:
+      - 5
+      - 3
+      - 3
+      total: 11
+    - label: 家庭配套
+      scores:
+      - 5
+      - 2
+      - 2
+      total: 9
+- id: 14
+  role: section
+  chapter: IBM 对照
+  visual_type: section-divider-dark
+  content:
+    title: 愿不愿意走到'强制'这一步
+    description: IBM Blue Opportunities 是自愿市场；美军是制度硬约束——不轮岗就不晋升。企业借鉴核心抉择：满足于'鼓励内部流动'的半强制，还是走到'非轮岗不晋升'的全强制？后者对治理成熟度要求极高。
+  variant:
+    visual_type: section-divider-dark
+    big_number: '02'
+    eyebrow: 第二个认知转换
+    title: 愿不愿意走到'强制'这一步
+    description: IBM 自愿市场 vs 美军硬约束——企业需抉择走到哪一步
+- id: 15
+  role: content
+  chapter: 五大洞察
+  visual_type: pyramid
+  content:
+    title: 给 一把手 的五条治理原则
+    description: 五位一体——缺一项都会让上层机制退化
+  variant:
+    visual_type: pyramid
+    title: 给 一把手 的五条治理原则
+    subtitle: 缺一项都会让上层机制退化
+    levels:
+    - name: 治理独立
+      tag: 人事决策机构直通 一把手，不隶属业务单位；必须由董事会在公司章程层面固化
+    - name: 制度硬约束
+      tag: 把轮岗写进晋升硬门槛，不靠鼓励靠规则——broadening 必填 + Senior Rater Profile
+    - name: 算法匹配
+      tag: 用数学消除博弈，诚实表达偏好是最优策略（Gale-Shapley 1962 诺奖算法）
+    - name: 数据底座
+      tag: 没有统一人才数据库，集中化就是人情办事——KSB-P 结构化标签是必要起点
+    - name: 10 年耐心
+      tag: 改革必须跨任期传承，不依赖个人意志；Talent Committee 章程化固化考核目标
+- id: 16
+  role: content
+  chapter: 落地路径
+  visual_type: roadmap
+  content:
+    title: 企业落地：3 阶段 10 年路径图
+    description: 按'数据 → 制度 → 文化'三阶段推进，每阶段约 3 年
+    footnote: 避免数据底座缺位时就做强制轮岗——COHORT 1980s 失败的教训
+  variant:
+    visual_type: roadmap
+    title: 企业落地：3 阶段 10 年路径图
+    subtitle: 10 年尺度 · 跨任期传承
+    phases:
+    - code: P1
+      title: 打底座
+      summary: 0-3 年：数据与治理
+    - code: P2
+      title: 立制度
+      summary: 3-6 年：硬约束与算法
+    - code: P3
+      title: 塑文化
+      summary: 6-10 年：Pentathlete 文化
+    rows:
+    - label: 治理
+      cells:
+      - title: 人力负责人 直通 一把手
+        emphasis: bar
+      - title: Talent Board
+      - title: 章程化
+    - label: 数据
+      cells:
+      - title: KSB-P 标签
+        emphasis: bar
+      - title: 内部市场
+      - title: AI 匹配
+    - label: 制度
+      cells:
+      - title: 识别关键岗
+      - title: 晋升硬门槛
+        emphasis: bar
+      - title: Rater 分离
+    - label: 文化
+      cells:
+      - title: 一把手 故事会
+      - title: 白皮书
+      - title: 同辈传承
+        emphasis: bar
+    milestones:
+    - code: M1
+      title: 3 年
+      desc: 数据底座就绪
+    - code: M2
+      title: 6 年
+      desc: 制度硬约束生效
+    - code: M3
+      title: 10 年
+      desc: 三重闭环成型
+- id: 17
+  role: content
+  chapter: 落地风险
+  visual_type: risk-list
+  content:
+    title: 落地风险：5 个高概率陷阱
+    description: 基于美军 DOPMA/COHORT 教训 + IBM 强制度差异——每个风险含历史案例与缓解策略
+  variant:
+    visual_type: risk-list
+    title: 落地风险：5 个高概率陷阱
+    subtitle: 按严重度排序 · 含缓解策略
+    risks:
+    - number: '01'
+      title: 数据底座缺位强推集中化
+      desc: 无统一人才数据库就搞 Talent Board 会退化为人情办事
+      mitigation: 先做 KSB-P 结构化 + 内部市场 MVP
+      severity: HIGH
+      probability: 高
+    - number: '02'
+      title: 制度无文化支撑变形式
+      desc: muddy boot 文化惯性会让制度约束被绕过
+      mitigation: 文化与制度同步，一把手 故事会常态化
+      severity: HIGH
+      probability: 高
+    - number: '03'
+      title: 去中心化 COHORT 复刻
+      desc: 决策权下放 BU 导致晋升率停滞 40%
+      mitigation: 坚守 人力负责人 直通 一把手 架构
+      severity: MED
+      probability: 中
+    - number: '04'
+      title: 家庭配套缺位致抗拒
+      desc: 无配套福利则轮岗被视为惩罚
+      mitigation: 搬家补贴 ≥ 3 月工资 + 教育基金
+      severity: MED
+      probability: 中
+- id: 18
+  role: closing
+  chapter: 致谢
+  visual_type: thankyou
+  content:
+    title: 谢谢
+    subtitle: 74+ 信息源 · 9 万字调研 · 面向企业治理决策层
+  variant:
+    visual_type: thankyou
+    eyebrow: 美军军官调动制度解析
+    title: Thank
+    emphasis: you
+    subtitle: 74+ 信息源 · 9 万字调研
+    contacts:
+    - label: 研究团队
+      value: Insight 洞察项目组
+    - label: 主线报告
+      value: delivery-report.md
+    - label: 深度专题
+      value: Gemini 45k 字
+    - label: 站点地址
+      value: insight.zqxbase.com
+- id: 19
+  role: appendix
+  chapter: 后续方向
+  visual_type: section-divider-dark
+  content:
+    title: 下一步：中国企业对照 + 数字化选型 + 文化手册
+    description: 按本研究 6 模块框架对标华为铁三角 / 阿里政委 / 腾讯活水；对比 Workday / SuccessFactors / Eightfold.ai
+      / 北森的企业版 KSB-P + 双向匹配能力；从 Wardynski 六卷本提炼企业版人才战略白皮书与高管故事会运营手册。
+  variant:
+    visual_type: section-divider-dark
+    big_number: '03'
+    eyebrow: 可延展方向
+    title: 下一步：中国企业对照 + 数字化选型 + 文化手册
+    description: 按 6 模块框架对标华为/阿里/腾讯；对比 Workday/SuccessFactors/Eightfold/北森；提炼企业版白皮书与运营手册。

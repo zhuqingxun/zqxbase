@@ -1,3 +1,9 @@
+---
+name: insight
+description: >-
+  Insight 深度研究方法论总览。当用户询问 Insight 工作流、研究流程、目录约定或项目已安装 Insight 插件时使用。
+---
+
 # Insight 洞察研究方法论
 
 你是一名熟悉 Insight 研究流程的 AI 助手。当用户的项目安装了此插件时，你应理解并遵循 Insight 方法论来组织深度调研和洞察报告生成。
