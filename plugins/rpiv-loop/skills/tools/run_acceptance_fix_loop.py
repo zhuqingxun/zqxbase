@@ -38,7 +38,7 @@ while round < 10:
 
     # 2. same-error-twice 护栏：两轮完全相同的 failure 集合 -> 提前 escalate
     if last_failure_set is not None and last_failure_set == failure_ids:
-        AskUserQuestion(
+        request_user_decision(
             "AC 修复连续两轮相同失败（疑似卡死）",
             options=[
                 "查看失败清单并手动介入",
@@ -80,7 +80,7 @@ while round < 10:
 
 # 7. 10 轮上限触发
 if round == 10:
-    AskUserQuestion(
+    request_user_decision(
         "AC gate 10 轮未通过",
         options=[
             "继续再 10 轮",
@@ -93,7 +93,7 @@ if round == 10:
 ## 三、护栏清单
 
 - **10 轮上限**：避免无限消耗 context / API 额度
-- **same-error-twice 提前 escalate**：连续两轮失败集合完全相同 -> 立即 AskUserQuestion，不等到 10 轮
+- **same-error-twice 提前 escalate**：连续两轮失败集合完全相同 -> 立即请求用户决策，不等到 10 轮
 - **Dev agent 无响应**：重启 agent 后轮次不重置（SendMessage 失败 / 超时视为无响应）
 - **acceptance.yaml 被误改**：check_acceptance.py id 唯一性校验失败 -> 退出码 2 -> 触发下一轮，Leader 从 git 恢复（参考 biubiubiu SKILL 的备份步骤）
 
@@ -127,7 +127,7 @@ def fix_loop_runbook(feature: str) -> int:  # pragma: no cover
             break
         current_failures: set[str] = set()  # pseudo: parse JSON
         if last_failures is not None and last_failures == current_failures:
-            # AskUserQuestion + break
+            # request user decision + break
             break
         # SendMessage to Dev / QA ...
         last_failures = current_failures

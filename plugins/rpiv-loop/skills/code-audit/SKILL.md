@@ -4,7 +4,7 @@ description: >-
   对指定目录/模块/skill 进行全量代码审计（不依赖 git diff）。支持逻辑、安全、性能、架构、集成与环境、可迁移性 6 个维度的审查，特别适合审计 skills 是否绑定 Claude Code、Codex、opencode 或特定机器环境。
 argument-hint: "<目标> [logic|security|performance|architecture|integration|portability]"
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write
-version: 2.17.4
+version: 2.17.5
 ---
 
 对指定目录、文件、模块或 skill 进行全量代码审计。
