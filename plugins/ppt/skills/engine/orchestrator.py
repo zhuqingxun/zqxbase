@@ -1223,7 +1223,7 @@ excluded_content:
 
 1. 写完 `{output_path}`
 2. 输出架构摘要 (核心论点、章节标题 + 核心信息、预计页数、被裁剪内容清单)
-3. **AskUserQuestion 确认 gate** (保留, 不可跳):
+3. **用户确认 gate** (必须通过当前运行时可用的用户交互机制完成, 不可跳):
    - 选项 1: "确认, 进入视觉规划" -> 用户选此后执行 resume
    - 选项 2: "需要调整" (用户输入修改意见后重做 Architect, 覆写 output.yaml)
    - 选项 3: "查看某章节的详细 content_points"
@@ -1283,8 +1283,8 @@ slide-plan.yaml, schema 由 schemas/slide_plan.py 定义 (顶层 meta + narrativ
 1. 写完 `{output_path}`
 2. `uv run --script {plugin_root}/engine/orchestrator.py resume {run_dir}`
 3. orchestrator resume 时: (1) SlidePlan.from_yaml(output.yaml) pydantic 校验 (2) validate_plan(output.yaml) 内容量 + 应用率门禁 (3) 通过则 render -> exit 0; 失败写 error.json:
-   - 内容量 FAIL (exit 1, rule=content_volume.*): 读 error.json 的 message, 从 architecture source_refs 回溯源材料补充 body, 覆写 output.yaml 后再 resume. **连续 3 轮无法通过 -> AskUserQuestion 让用户决策**
-   - 应用率 FAIL (exit 1, rule=application_rate.fail_below_30): 按 theme-prompt.md 重选 visual_type (cards-N -> kpi-stats / architecture-layered 等). **连续 2 轮未达阈值 -> AskUserQuestion**
+   - 内容量 FAIL (exit 1, rule=content_volume.*): 读 error.json 的 message, 从 architecture source_refs 回溯源材料补充 body, 覆写 output.yaml 后再 resume. **连续 3 轮无法通过 -> 向用户说明失败原因并请求决策**
+   - 应用率 FAIL (exit 1, rule=application_rate.fail_below_30): 按 theme-prompt.md 重选 visual_type (cards-N -> kpi-stats / architecture-layered 等). **连续 2 轮未达阈值 -> 向用户说明失败原因并请求决策**
 """
 
 
