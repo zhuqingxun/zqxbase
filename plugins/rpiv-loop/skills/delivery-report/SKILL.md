@@ -3,7 +3,7 @@ name: rpiv-loop:delivery-report
 description: >-
   生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.17.5
+version: 2.17.6
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。

@@ -3,7 +3,7 @@ name: rpiv-loop:execute
 description: 执行实施计划
 argument-hint: "<plan 文件路径>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Skill
-version: 2.17.5
+version: 2.17.6
 ---
 
 # Execute: 从计划实施

@@ -3,7 +3,7 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskStop, SendMessage, Skill
-version: 2.17.5
+version: 2.17.6
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -20,7 +20,7 @@ version: 2.17.5
 uv run --no-project python <rpiv-loop-root>/tools/ensure_project_dod.py
 ```
 
-该脚本确保项目根目录存在 `rpiv/dod.yaml`（项目级 DoD 通用门），后续 AC gate 校验以此为上下文。
+该脚本在缺失时从 `<rpiv-loop-root>/tools/dod_template.yaml` 创建项目根目录的 `rpiv/dod.yaml`；已存在则静默跳过。后续 AC gate 校验以此为上下文。
 
 从对话上下文中提取需求，启动 agent 团队自主完成完整 RPIV 开发流程（PRD → Plan → Execute → Validate），全程无需用户介入。
 
