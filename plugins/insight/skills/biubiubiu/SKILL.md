@@ -5,7 +5,7 @@ description: >-
   当用户提到'自动研究'、'全自主研究'、'research biubiubiu'、'启动研究团队'、'深度调研'时触发。
   也适用于用户说'帮我研究一下 XXX'且研究范围足够大（需要多源调研+写作+部署）的场景。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch, Skill, SendMessage, TaskCreate, TaskUpdate, TaskGet, TaskList, TaskStop
-version: 1.2.1
+version: 1.2.2
 ---
 
 # Biubiubiu Research: 全自主研究团队执行
@@ -110,8 +110,6 @@ docs/                      # 研究报告输出
 ### 步骤 4：团队机制说明（无需显式创建团队）
 
 当前 Claude Code harness **没有 `TeamCreate`/`TeamDelete` 工具**。团队是**单一 implicit flat team**：你（main 会话）即 Leader，用 `Agent` 工具 spawn 的每个 named agent（Scout / Analyst）自动加入该 implicit team，可被 `SendMessage` 按 name 寻址。因此本步骤无需任何操作，直接进入步骤 5。
-
-> 历史备注：旧 SOP 曾用 `TeamCreate` / `team_name`，当前 harness 已废弃——`Agent` 工具的 `team_name` 参数标注 "Deprecated; ignored. The session has a single implicit team."。与 `rpiv-loop:biubiubiu` 步骤 2 对齐。
 
 ### 步骤 5：创建任务结构
 

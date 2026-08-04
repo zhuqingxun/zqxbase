@@ -3,7 +3,7 @@ name: rpiv-loop:handoff-list
 description: >-
   快速列出当前项目 pending handoff；支持 --all 查看 archived 历史。不加载 handoff 创建/消费 SOP。
 allowed-tools: Bash
-version: 2.17.6
+version: 2.17.7
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。

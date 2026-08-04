@@ -3,7 +3,7 @@ name: rpiv-loop:code-review
 description: >-
   在提交前运行的技术代码审查，用于质量和错误检查
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.17.6
+version: 2.17.7
 ---
 
 对最近更改的文件执行技术代码审查。
@@ -156,6 +156,6 @@ suggestion: [如何修复]
 ## 重要提示
 
 - 要具体（行号，不要模糊的抱怨）
-- 专注于真正的错误，而不是风格
+- 报告**所有**发现的问题，包括不确定的和低严重度的——用 severity 分级供下游 code-review-fix 过滤；宁可上报后被降级，不可自行压下不报。纯风格 / 命名偏好类 nit 不属于问题范围
 - 建议修复方法，不要只是抱怨
 - 将安全问题标记为 CRITICAL

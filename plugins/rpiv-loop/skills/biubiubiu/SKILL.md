@@ -3,7 +3,7 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskStop, SendMessage, Skill
-version: 2.17.6
+version: 2.17.7
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -78,8 +78,6 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 
 当前 Claude Code harness **没有 `TeamCreate`/`TeamDelete` 工具**。团队是**单一 implicit flat team**：你（main 会话）即 Leader，用 `Agent` 工具 spawn 的每个 named agent 自动加入该 implicit team，可被 `SendMessage` 按 name 寻址。因此本步骤无需任何操作，直接进入步骤 3。
 
-> 历史备注：旧 SOP 曾用 `TeamCreate` / `team_name`，当前 harness 已废弃——`Agent` 工具的 `team_name` 参数标注 "Deprecated; ignored. The session has a single implicit team."
-
 若当前运行面没有 `Agent` / `TaskCreate` / `TaskUpdate` / `SendMessage` / `TaskStop` 等团队工具，进入 **single-agent sequential mode**：Leader 按同一阶段顺序在本会话内依次扮演 Architect、Research、QA、Dev，使用 checklist 记录任务状态，不调用缺失工具，不承诺并行执行。核心交付链仍是 PRD → Plan → Execute → Validate → Delivery Report，只有调度方式降级。
 
 ### 步骤 3：创建任务结构
@@ -115,7 +113,7 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 
 用 `Agent` 工具 spawn 以下每个角色，参数：`name` = 角色名（如 `architect`）、`subagent_type` = `general-purpose`、`run_in_background` = `true`（不阻塞 Leader 协调）。**不要传 `team_name`**（已废弃且被忽略）。spawn 出的 named agent 自动加入 implicit team，后续用 `SendMessage`（`to` = 角色名）双向通信；spawn 返回的 `agent_id`（形如 `architect@session-xxxx`）可用于 `TaskStop` 兜底。
 
-> 实测（2026-06-18 当前 harness）：main 会话可正常 spawn ≥4 个 named teammate；spawn 时 Leader 身份正确识别为 `team-lead`；`SendMessage` 双向投递正常。**历史现象（2026-06-17 偶发，当前不复现）**：曾出现 spawn 第 3 个 named 报 `team roster is flat` + Leader 的 `SendMessage` sender 被显示成 teammate（architect）——根因是 harness 把 main 误降级成 teammate（teammate 不能再 spawn teammate）。若再次遇到，按「规模自适应 → 降级路径」处理，不要反复重试 spawn。
+> 若 spawn named teammate 报错（roster / 身份类错误），不要反复重试 spawn，按「规模自适应 → 降级路径」处理。
 
 #### Architect Agent
 
@@ -124,7 +122,7 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 提示词要点：
 - 你是 RPIV 团队的架构师，负责产品设计和技术架构
 - **首要步骤**：开始任何文档编写前，先读取项目 CLAUDE.md 获取部署平台、技术栈、架构等基础设施信息。PRD/Plan 中涉及部署、环境、技术栈的内容必须以 CLAUDE.md 为准，禁止自行推断
-- **事实承接（强制）**：PRD/Plan 中**任何含具体事实声明的语句**（文件名 / 行号 / 类名 / 函数签名 / 字段名 / 调用次数 / 批量计数 / 模块依赖），实施前必须先 `Grep` 或 `Read` 实际代码 verify 事实存在且精确。grep 出"所有命中行"后还要**人工区分"必须改 vs 中性可保留"**，给每行打 `MUST_CHANGE / OPTIONAL / KEEP` 标记，再写入 Plan，禁止整段未分级倒入。verify 与 brainstorm/PRD 描述不符时，立刻 SendMessage 透明披露给 Leader，禁止默默按错描述继续。**为什么**：2026-05-26 P-B 清理 verify-first 实战中,T3 stage 此机制 catch 了"17 处 batch_size brainstorm 漏列"+"SDK_GUIDE.md 8 行清单需区分中性 vs P-B 特定"+"`_MIN_TRAIT_IMPORTANCE` 是函数内变量非模块常量"等关键事实漏洞,每个 catch 节省 1-3 轮下游 fix loop
+- **事实承接（强制）**：PRD/Plan 中**任何含具体事实声明的语句**（文件名 / 行号 / 类名 / 函数签名 / 字段名 / 调用次数 / 批量计数 / 模块依赖），实施前必须先 `Grep` 或 `Read` 实际代码 verify 事实存在且精确。grep 出"所有命中行"后还要**人工区分"必须改 vs 中性可保留"**，给每行打 `MUST_CHANGE / OPTIONAL / KEEP` 标记，再写入 Plan，禁止整段未分级倒入。verify 与 brainstorm/PRD 描述不符时，立刻 SendMessage 透明披露给 Leader，禁止默默按错描述继续（此机制多次 catch PRD/Plan 中的事实漏洞，每次节省数轮下游 fix loop）
 - **阶段 1**：读取需求摘要文件 `{brainstorm-summary-path}`，将其 `status` 更新为 `in-progress`。按照 RPIV create-prd 规范创建 PRD → `rpiv/requirements/prd-{feature-name}.md`。PRD 创建完成后，将需求摘要的 `status` 更新为 `completed`。PRD 规范参考读取 `{RPIV_SKILLS}/create-prd/SKILL.md`
 - **阶段 2**：等待 tech-research 任务完成（通过 TaskList 检查），然后按照 RPIV plan-feature 规范创建实施计划 → `rpiv/plans/plan-{feature-name}.md`。计划规范参考读取 `{RPIV_SKILLS}/plan-feature/SKILL.md`。代码库分析要做充分，计划要足够详细，让 Dev agent 无需额外调研就能实现
 - **阶段 4**：对比实现代码与计划，检查是否有偏离或遗漏，将审查结果通过 SendMessage 发给 team leader
@@ -154,7 +152,7 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 
 提示词要点：
 - 你是 RPIV 团队的质量保证工程师，贯穿全流程
-- **事实承接（强制）**：PRD/brainstorm 中**任何具体断言**(如"新增测试 pass:断言 trait_subtype 不恒为 'behavior'"、"行 184 应改 dict"），编写 test-strategy/test-specs 前必须先 `Read` 实际代码验证该断言**可达**(grep 字段定义 / 看代码硬编码默认值 / 看 callsite)。**verification_method self-test(强制)**：写 `acceptance.yaml` 时,每条 `verification_method` 的 shell 命令(`grep` / `bash` / `pytest` 流程)在标 `status=passed` 前**必须先用最小 case 自验**该命令真能产出预期结果——典型陷阱:`grep -A2 pattern file` 在签名跨 4 行时会截断,`grep -rn token` 会撞 `__pycache__` 假阳性。**为什么**:2026-05-26 P-B 清理 verify-first 实战中,T2 stage QA catch 了"mini-V1 主断言不可达(trait_subtype 硬编码 'behavior')"+T7 stage QA 自查 catch 了"AC-2 grep -A2 截断 4 行签名"+"AC-1 `__pycache__` 假阳性"等关键漏洞,每个 catch 节省 1+ 轮 AC gate 卡死
+- **事实承接（强制）**：PRD/brainstorm 中**任何具体断言**(如"新增测试 pass:断言 trait_subtype 不恒为 'behavior'"、"行 184 应改 dict"），编写 test-strategy/test-specs 前必须先 `Read` 实际代码验证该断言**可达**(grep 字段定义 / 看代码硬编码默认值 / 看 callsite)。**verification_method self-test(强制)**：写 `acceptance.yaml` 时,每条 `verification_method` 的 shell 命令(`grep` / `bash` / `pytest` 流程)在标 `status=passed` 前**必须先用最小 case 自验**该命令真能产出预期结果——典型陷阱:`grep -A2 pattern file` 在签名跨 4 行时会截断,`grep -rn token` 会撞 `__pycache__` 假阳性（此类自检多次 catch 断言不可达 / 命令假阳性问题，避免 AC gate 空转卡死）
 - **阶段 1**：分析需求，制定测试策略文档 `rpiv/validation/test-strategy-{feature-name}.md`（frontmatter status: `pending`）
 - **阶段 2**：基于 PRD 编写测试规格 `rpiv/validation/test-specs-{feature-name}.md`（frontmatter status: `pending`）和验收标准（等 PRD 完成后开始）
 - **阶段 3**：基于实施计划编写测试用例代码（与 Dev 并行）
@@ -185,7 +183,7 @@ updated_at: {YYYY-MM-DDTHH:MM:SS}
 - 严格按计划实现，不擅自扩展范围
 - 遵循项目 CLAUDE.md 中的编码规范
 - 每完成一个子任务运行基本语法验证
-- **事实承接 + 透明披露（强制）**：Plan 中含具体事实声明（行号 / 字段名 / 函数签名）时，实施前先 `Read` 该位置 verify。**发现 Plan 跟实际代码冲突时（如 "PRD §7 line 262 说改字符串,但 line 184 实际是 dict 断言"），不要默默调和——立刻 SendMessage 透明披露给 Leader,等指示再继续**。判定 baseline vs 新引入回退时,**禁止凭 `.pytest_cache/lastfailed` 单文件判断**(它是多次 partial run 累积),必须 `git stash -u && pytest <files>` 跑改动前 baseline 对比 diff。**每完成一个 Plan 子任务立即 SendMessage 通知 Leader 进度**,不要静默 idle 等大批工作完才汇报。**为什么**:2026-05-26 P-B 清理实战教训——Dev-1 透明披露 `test_reflect_background:184` 兼容性修订让 Leader 避免按错 PRD 描述走;Dev-1 主动做 `git stash` baseline diff 澄清了 Leader 对"29 fail"的误判(实际 lastfailed 累积,单次 run 只 15 fail 全 baseline)
+- **事实承接 + 透明披露（强制）**：Plan 中含具体事实声明（行号 / 字段名 / 函数签名）时，实施前先 `Read` 该位置 verify。**发现 Plan 跟实际代码冲突时（如 "PRD §7 line 262 说改字符串,但 line 184 实际是 dict 断言"），不要默默调和——立刻 SendMessage 透明披露给 Leader,等指示再继续**。判定 baseline vs 新引入回退时,**禁止凭 `.pytest_cache/lastfailed` 单文件判断**(它是多次 partial run 累积),必须 `git stash -u && pytest <files>` 跑改动前 baseline 对比 diff。**每完成一个 Plan 子任务立即 SendMessage 通知 Leader 进度**,不要静默 idle 等大批工作完才汇报（透明披露与 baseline diff 能防止 Leader 基于失真描述派工）
 - 遇到计划不明确的地方，通过 SendMessage 询问 team leader
 - **完成任务的固定顺序**：如果任务涉及 `rpiv/` 目录下的 .md 文件，标记 TaskUpdate completed 之前必须先 Edit 文件将 frontmatter `status` 更新为 `completed`、`updated_at` 更新为当前时间戳。顺序：Edit frontmatter → TaskUpdate completed，不可颠倒
 - 全程使用中文
@@ -286,7 +284,7 @@ Leader 在派工 / 仲裁 / 任务依赖判定中，**禁止仅凭 SendMessage �
 - ✓ Dev-1 汇报后，Leader Read `core/spec.py` 或 `Grep "class SlideSpec"` 验证 variant 字段确实存在 + 类型符合预期 → 再 SendMessage Dev-2
 - ✓ QA 汇报后，Leader Read `tests/test_xxx.py:120-135` 范围确认断言改动 → 再判断是否进入交付
 
-**为什么**：2026-04 huawei-theme-complete 复盘暴露 SlideSpec.variant 字段 add → remove → 双路兼容三轮反转，Leader 多次基于 Dev 不完整汇报错误派工，至少 2 次 Dev 主动质疑才纠正。SendMessage 是异步队列，agent 汇报常因消息间撤销 / 反转产生信息损耗。Read/Grep 单次约 1-2 秒，相对错误派工导致的 2+ 轮 Dev 来回成本可忽略。
+**为什么**：SendMessage 是异步队列，agent 汇报常因消息间撤销 / 反转产生信息损耗。Read/Grep 单次约 1-2 秒，相对错误派工导致的 2+ 轮 Dev 来回成本可忽略。
 
 **与门禁 1/2 的 frontmatter grep 区别**：那两处 grep 是校验 RPIV 文档元数据（status 字段），本节是校验 agent 汇报的实际代码状态。两者协同覆盖"流程纪律"与"内容纪律"。
 
@@ -309,7 +307,7 @@ Leader **同一时刻 spawn 多个 agent**（如 Dev-1 + Architect + QA 同步�
 
 **触发关键词**：spawn 多 agent / 同时启动 / Agent 工具 spawn 多个 named teammate / Architect + QA + Dev 并行启动 / 多 agent 任务分配
 
-**为什么**：2026-05-26 P-B 清理 RPIV 复盘暴露——Leader spawn Dev-1 + Architect 时 prompt 对 `test_reflection.py` / `TestDigestCompat` ownership 矛盾,Dev-1 按旧 prompt 执行完成了 QA 应做的 Q2/Q3,QA 后续 verify-only 部分时间浪费。spawn 多 agent 是 RPIV 流程中**最易产生 race condition 的关键节点**,cross-check 单次约 2-3 秒,相对错误 ownership 导致的 1-2 轮 agent 工作浪费成本可忽略。
+**为什么**：spawn 多 agent 是 RPIV 流程中**最易产生 race condition 的关键节点**,cross-check 单次约 2-3 秒,相对错误 ownership 导致的 1-2 轮 agent 工作浪费成本可忽略。
 
 #### 决策原则
 
@@ -406,7 +404,7 @@ related_files:
 
 在步骤 1 完成后，根据需求复杂度判断规模，选择合适的团队配置。
 
-**降级路径（named spawn 受限时）**：当前 harness 实测可正常 spawn 多个 named teammate；但若遇到 named spawn 受限（步骤 4 备注的历史现象），按以下顺序降级——① **Leader 兼任 Dev**：plan 已机械化到代码片段级时，中大型也可由 Leader 直接实现 + named Architect/QA 审查；② **Dev/Research 改用 omit-name background subagent**：`Agent` 不传 `name`、`run_in_background: true`，完成即返回结果，不中途双向通信。named teammate 仅保留给需要全程双向协作的 Architect/QA。这条也是 2026-06-17 实战的兜底做法（Leader 兼 Dev + omit-name subagent，10 AC 全通过，质量未受损）。
+**降级路径（named spawn 受限时）**：若遇到 named spawn 受限，按以下顺序降级——① **Leader 兼任 Dev**：plan 已机械化到代码片段级时，中大型也可由 Leader 直接实现 + named Architect/QA 审查；② **Dev/Research 改用 omit-name background subagent**：`Agent` 不传 `name`、`run_in_background: true`，完成即返回结果，不中途双向通信。named teammate 仅保留给需要全程双向协作的 Architect/QA。
 
 ## 备注
 

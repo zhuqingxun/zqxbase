@@ -2,7 +2,7 @@
 name: rpiv-loop:prime
 description: 使用代码库理解项目，加载项目上下文
 allowed-tools: Read, Bash, Glob, Grep
-version: 2.17.6
+version: 2.17.7
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。

@@ -5,7 +5,7 @@ description: >-
   当用户提到"生成播客"、"做视频"、"精美PPT"、"nblm"、"NotebookLM 增强"时触发。
 argument-hint: "[notebook-url 或 notebook 名]"
 allowed-tools: Read, Write, Bash, Glob, AskUserQuestion
-version: 1.2.1
+version: 1.2.2
 ---
 
 > **依赖声明**：本命令依赖 `notebooklm` CLI，这是基于 Google NotebookLM 非官方 API 的第三方工具（非 Google 官方产品）。API 接口可能随时变更导致功能失效。安装：`uv tool install notebooklm-mcp-cli`
