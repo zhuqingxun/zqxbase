@@ -6,24 +6,18 @@ Claude Code plugin marketplace — structured workflows, meeting intelligence, d
 
 ## 安装 / Install
 
-### 方式一：Marketplace（推荐）
-
 ```bash
 # 添加市场 / Add the marketplace
 /plugin marketplace add zhuqingxun/zqxbase
 
 # 按需安装 / Install plugins (pick what you need)
 /plugin install rpiv-loop@zqxbase
-/plugin install mint@zqxbase
+/plugin install ppt@zqxbase
 /plugin install insight@zqxbase
 /plugin install challenge@zqxbase
 /plugin install reflect@zqxbase
 /plugin install whatsnew@zqxbase
 ```
-
-### 方式二：独立 ZIP
-
-从 [`skills-release/`](./skills-release/) 目录下载 zip 文件，解压到 `~/.claude/skills/` 即可使用，无需 marketplace。
 
 ## 插件 / Plugins
 
@@ -36,22 +30,12 @@ Structured development workflow: **Requirements → Plan → Implementation → 
 
 **主要命令**: `/rpiv-loop:brainstorm`, `/rpiv-loop:plan-feature`, `/rpiv-loop:execute`, `/rpiv-loop:code-review`
 
-### mint
-**MINT (Meeting Intelligence)** — 从录音到结构化洞察的全流程管线。
+### ppt
+**PPT 套件** — 从 Markdown/目录一键生成高质量演示文稿，自然语言微调已有幻灯片，视觉评审打分。
 
-Audio-to-insights pipeline for meeting recordings.
+PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, and review visual taste with public fallback principles.
 
-通过 4 个阶段将会议录音转化为结构化输出：
-1. **Transcribe** — ASR 语音识别 + 说话人分离
-2. **Refine** — 双路交叉校对清洁
-3. **Polish** — 编辑稿、结构化分析、精华语录
-4. **Extract** — 要点摘要、发言人分析、行动项、决策记录
-
-> **依赖说明**: Stage 1 (Transcribe) 依赖阿里云百炼 ASR API (`dashscope`)，需要阿里云账号和 API Key。Stage 2-4 无外部依赖，可配合任何 ASR 转录稿使用。所有 prompt 面向中文会议场景。
->
-> **Dependency note**: Stage 1 requires Alibaba Cloud Bailian ASR API (`dashscope`). Stages 2-4 work with any transcript and have no external dependencies. Prompts are designed for Chinese-language meetings.
-
-**主要命令**: `/mint`, `/mint:transcribe`, `/mint:refine`, `/mint:polish`, `/mint:extract`
+**主要命令**: `/ppt:create`, `/ppt:refine`, `/ppt:taste`
 
 ### insight
 **Insight** — 结构化深度研究流程。
