@@ -3,7 +3,7 @@ name: rpiv-loop:delivery-report
 description: >-
   生成功能交付报告，聚合所有 RPIV 工件为面向外部的交付摘要
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.17.7
+version: 2.17.8
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -60,6 +60,7 @@ uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>
 | Plan | 是 | 实施计划 |
 | exec-report | 是 | 实施记录 |
 | code-review | 推荐 | 不存在时警告但不阻断 |
+| DoD blocking gates | 条件 | 若存在 `rpiv/dod.yaml`：其 `blocking: true` 的 gates 须全部通过（引用 validate 摘要报告「DoD gates」小节）；无 dod.yaml 时跳过 |
 
 如果必需文件缺失或非 completed 状态，提示用户先完成上游步骤，不生成报告。
 
@@ -160,7 +161,7 @@ related_files:
 
 ## 关键决策
 
-{从 exec-report 的偏离记录中提取的重要决策，每条简述原因}
+{从 exec-report 的偏离记录中提取的重要决策，每条简述原因；biubiubiu 团队模式下一并纳入团队自主做出的重大决策及理由}
 
 ## 遗留问题
 

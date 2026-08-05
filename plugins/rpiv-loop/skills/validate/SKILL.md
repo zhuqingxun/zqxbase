@@ -3,7 +3,7 @@ name: rpiv-loop:validate
 description: >-
   根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
 allowed-tools: Read, Bash, Edit, Grep, Glob
-version: 2.17.7
+version: 2.17.8
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -11,6 +11,20 @@ version: 2.17.7
 # 运行项目的全面验证
 
 按项目类型执行验证并报告。优先采用项目自定义的验证方式，否则根据检测到的技术栈自动选择 lint、测试、构建及可选的服务健康检查。
+
+---
+
+## 第 0 步：项目级 DoD gates（rpiv/dod.yaml）
+
+**若存在 `rpiv/dod.yaml`**（由 rpiv-loop 入口 skill 幂等创建、用户按项目修订），先读取其 `gates` 逐条执行，再继续后续验证流程（本步不短路「优先级 0」与「按类型检测」）：
+
+1. 命令型 `verification_method` → 运行并记录退出码；与后续步骤将执行的命令相同时（如 `uv run pytest`）只跑一次，复用结果
+2. `verification_method: manual_review` → 不自动执行，在摘要报告中列为「人工确认」项
+3. 命令因工具/脚本缺失无法执行 → 该 gate 记为失败，并提示用户修订 dod.yaml（模板允许删除或替换不适用条目）
+4. **判定**：任一 `blocking: true` 的 gate 失败 → 整体健康评估记为**失败**；非 blocking gate 失败仅记警告
+5. 不存在 `rpiv/dod.yaml` → 跳过本步，不视为异常
+
+执行结果在「摘要报告」的「DoD gates」小节逐条列出（gate id / blocking / 通过与否 / 证据摘要）。
 
 ---
 
@@ -165,6 +179,7 @@ uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>
 
 所有验证（及可选的服务检查）完成后，提供包含以下内容的摘要报告：
 
+- **DoD gates**：逐条列出 `rpiv/dod.yaml` 的 gate 结果（id / blocking / 通过与否 / manual_review 项列为人工确认）；无 dod.yaml 时标注「未配置」
 - **代码检查（Lint）**：通过 / 失败 / 未执行（及原因）
 - **测试**：通过 / 失败 / 未执行（及原因）
 - **覆盖率**：百分比或「未执行」（若执行了带 coverage 的测试）

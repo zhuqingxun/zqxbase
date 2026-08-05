@@ -2,7 +2,7 @@
 name: rpiv-loop:handoff
 description: 长程任务跨会话打结 + 续会话冷启动。**本 skill 仅负责创建新 handoff 或 mark-consumed 已有 handoff**，把当前会话的状态、决策、待办、教训持久化成 handoff 文件，下次会话首条消息引用即可机械化恢复。当用户提到"打个结"、"生成 handoff"、"创建 handoff"、"今天到这"、"明天接着"、"暂停一下"、"切别的话题"、"/rpiv-loop:handoff" 时触发。**用户意图为"查看 / 列出 / 看一下 pending handoff" 时, 禁止触发本 skill, 改用 `/rpiv-loop:handoff-list` 命令 (fast path, 不加载 SOP)**。也适用于：完成显著 milestone 后用户切换任务、context window 用量明显增长、跨日推进同一长程任务。Claude Code 适配层可通过 SessionStart/UserPromptSubmit hook 自动检测 pending handoff；hook 去重状态写入 `RPIV_STATE_DIR`，未设置时使用 `$HOME/.rpiv-loop`。Codex、opencode 或普通 shell 不自动注册这些 hook，应使用 `/rpiv-loop:handoff-list` 显式查看。注意：本 skill 的 "handoff" 是 Claude Code 社区"跨会话打结"语义（非 OpenAI Agents SDK 的多 agent 间运行时转移）。状态机仅 pending → archived 两状态，handoff 是一次性票据，被新会话消费后即归档。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.17.7
+version: 2.17.8
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -189,23 +189,6 @@ skill 在写文件**之前**检查以下条件，任一失败立即报错退出�
 
 3. mark-consumed **不读 handoff 正文**，只动 frontmatter + 物理挪文件，避免污染消费会话上下文（正文由消费会话自己 Read 触发）。不要手工 `mkdir -p` / `mv`；统一交给 `mark_handoff_consumed.py` 保证写入与移动一致。
 
-## 模式 C: --list-pending
-
-```bash
-/rpiv-loop:handoff --list-pending
-```
-
-扫 cwd 下 `rpiv/handoff-*.md`（无 rpiv/ 则 `handoff/`），列出所有 `status: pending` 的文件，按 mtime 倒序。
-
-输出：
-```
-Pending handoff (N):
-- rpiv/handoff-2026-05-22-v14.md (created 2026-05-22 22:10, updated 2026-05-22 22:30)
-- rpiv/handoff-2026-05-15-v8.md (created 2026-05-15 09:00, updated 2026-05-15 09:00) [⚠️ 距今 7 天未消费]
-```
-
-`N > 1` 时输出 warn："⚠️ 多份 pending handoff 同时存在，工作流可能出错。预期应为 0 或 1。"
-
 ## 模式 D: SessionStart hook 自动检测（v1.1.0 起）
 
 Claude Code 适配层在新会话启动时（matcher `startup|clear|resume`）自动跑 `hooks/handoff_detector.py`，检测 pending handoff 并在 system context 中注入提醒。Codex、opencode 或普通 shell 不会自动注册 Claude hook；这些运行面使用 `/rpiv-loop:handoff-list` 或手动调用 `tools/list_handoffs.py` 作为等价入口。
@@ -251,15 +234,15 @@ Claude Code 适配层在新会话启动时（matcher `startup|clear|resume`）�
 
 注意：单纯 Read handoff **不会**改 status，必须显式调 `--mark-consumed`。
 
-### 与模式 C `--list-pending` 的关系
+### 与 `/rpiv-loop:handoff-list` 的关系
 
-| 维度 | 模式 C `--list-pending` | 模式 D SessionStart hook |
-|------|------------------------|--------------------------|
-| 触发 | 用户主动调用 | 新会话启动自动 |
+| 维度 | `/rpiv-loop:handoff-list` | 模式 D SessionStart hook |
+|------|---------------------------|--------------------------|
+| 触发 | 用户主动调用（fast path, 走 `tools/list_handoffs.py`, 不加载本 SKILL SOP）| 新会话启动自动 |
 | 输出渠道 | terminal stdout | system context（Claude 可见）|
 | 扫描深度 | cwd 一层 | cwd + 直接子目录（≤2）|
 | 失败影响 | 报错 | 静默（不阻塞）|
-| 适用场景 | 怀疑有遗忘的 pending | 防止"不知道有 handoff 待续" |
+| 适用场景 | 怀疑有遗忘的 pending（`--all` 连 archived 一起列）| 防止"不知道有 handoff 待续" |
 
 ### Hook 部署位置（Claude Code adapter）
 
@@ -281,11 +264,11 @@ handoff **不是** 进度追踪器。**任务进度事实**（如 import 了哪�
 
 create 时，AskUserQuestion 问用户"本任务有没有 source-of-truth 文件需要在 bootstrap prompt 里引用？"，用户可填多个路径（逗号分隔），自动写入段 1 的 `读 <PROGRESS_FILES>` 行。
 
-**handoff 自身仅记录状态摘要 + 决策上下文**，不重抄进度。这是 14 份 know-me 实证后的最佳实践。
+**handoff 自身仅记录状态摘要 + 决策上下文**，不重抄进度。这是多轮跨会话实践验证后的最佳实践。
 
 ## 元规则 / 经验沉淀升级路径
 
-某些跨会话强制约束（如 know-me 的"含人名前必须先 recall"）会在 handoff 间累积。当一条元规则**跨项目可复用**时，建议升级到更长期的载体：
+某些跨会话强制约束（如"涉及敏感对象前必须先查长期记忆"）会在 handoff 间累积。当一条元规则**跨项目可复用**时，建议升级到更长期的载体：
 
 | 范围 | 载体 |
 |------|------|

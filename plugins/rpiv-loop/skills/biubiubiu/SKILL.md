@@ -3,7 +3,7 @@ name: rpiv-loop:biubiubiu
 description: >-
   一键启动全自主 agent 团队，自动完成从 PRD 到验证的完整 RPIV 开发流程。brainstorm 完成后使用此命令，无需人工介入。当用户提到"自动开发"、"团队开发"、"全自主"、"biubiubiu"时触发。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskStop, SendMessage, Skill
-version: 2.17.7
+version: 2.17.8
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -20,7 +20,7 @@ version: 2.17.7
 uv run --no-project python <rpiv-loop-root>/tools/ensure_project_dod.py
 ```
 
-该脚本在缺失时从 `<rpiv-loop-root>/tools/dod_template.yaml` 创建项目根目录的 `rpiv/dod.yaml`；已存在则静默跳过。后续 AC gate 校验以此为上下文。
+该脚本在缺失时从 `<rpiv-loop-root>/tools/dod_template.yaml` 创建项目根目录的 `rpiv/dod.yaml`；已存在则静默跳过。该文件是 validate 阶段项目级质量门的数据源（validate SKILL「第 0 步」逐条执行其 gates），delivery-report 前置条件亦对账其 blocking gates。
 
 从对话上下文中提取需求，启动 agent 团队自主完成完整 RPIV 开发流程（PRD → Plan → Execute → Validate），全程无需用户介入。
 
@@ -329,40 +329,7 @@ Leader **同一时刻 spawn 多个 agent**（如 Dev-1 + Architect + QA 同步�
 - [ ] 6.4 向用户报告
 ```
 
-1. **生成交付报告**保存到 `rpiv/validation/delivery-report-{feature-name}.md`：
-
-```markdown
----
-description: "交付报告: {feature-name}"
-status: completed
-created_at: {timestamp}
-updated_at: {timestamp}
-archived_at: null
-related_files:
-  - rpiv/requirements/prd-{feature-name}.md
-  - rpiv/plans/plan-{feature-name}.md
-  - rpiv/validation/code-review-{feature-name}.md
----
-
-# 交付报告：{feature-name}
-
-## 完成摘要
-- PRD 文件：{路径}
-- 实施计划：{路径}
-- 代码变更：{创建/修改的文件列表}
-- 测试覆盖：{测试用例数量和通过率}
-- 代码审查：{问题数量和解决状态}
-
-## 关键决策记录
-{团队自主做出的重大决策及理由}
-
-## 遗留问题
-{未解决的问题和风险}
-
-## 建议后续步骤
-{推荐的改进和扩展方向}
-```
-
+1. **生成交付报告**：按 `{RPIV_SKILLS}/delivery-report/SKILL.md` 的规范与「输出格式」模板生成（含第 0 步 AC gate 硬校验），保存到 `rpiv/validation/delivery-report-{feature-name}.md`。frontmatter `related_files` 按本次流程实际产物填写；「关键决策」章节除计划偏离外，一并纳入团队自主做出的重大决策及理由。
 2. **关闭团队**：仅当本轮实际启动了 named teammate 时执行。对每个仍活跃的 teammate 用当前运行面支持的团队通信工具发送 `{"type": "shutdown_request", "reason": "..."}`，收到确认后结束；某 teammate 无响应且当前运行面支持 `TaskStop` 时，才用 `TaskStop`（task_id = spawn 返回的 agent_id）强制终止兜底。若处于 single-agent sequential mode，本步骤标记为已跳过。
 3. **归档过程文件**：将本次流程产生的所有 `rpiv/` 过程文件归档到 `rpiv/archive/`。具体操作：
    - 创建 `rpiv/archive/` 目录（如不存在）

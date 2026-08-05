@@ -1,9 +1,13 @@
 ---
 name: rpiv-loop:handoff-list
 description: >-
-  快速列出当前项目 pending handoff；支持 --all 查看 archived 历史。不加载 handoff 创建/消费 SOP。
+  立即列出当前项目所有 pending handoff (markdown 表格), 性能极高 — 不加载 handoff SKILL 完整 SOP,
+  不做任何探索/思考; 支持 --all 查看 archived 历史。当用户说"查看 handoff" / "看一下 handoff" /
+  "列出 handoff" / "有哪些 pending handoff" / "list handoff" / "handoff 列表" / "show handoffs"
+  时优先触发。列举意图**禁止改走 rpiv-loop:handoff skill**（那是 create / mark-consumed 用的,
+  不是 list 用的）。
 allowed-tools: Bash
-version: 2.17.7
+version: 2.17.8
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。

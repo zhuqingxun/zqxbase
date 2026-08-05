@@ -100,7 +100,9 @@ PROTOCOL_INSTRUCTIONS = """PROTOCOL:
 
 # ----- frontmatter 解析 -----
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
-SCALAR_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$", re.MULTILINE)
+# `:` 后仅吞行内空白（[ \t] 而非 \s）：\s* 会跨行吞噬——空值字段（`status:` 单独一行）
+# 时把下一行整行误捕为值。守卫：plugin_test tests/test_frontmatter_parser_consistency.py
+SCALAR_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):[ \t]*(.*?)[ \t]*$", re.MULTILINE)
 
 
 def _strip_value(raw: str) -> str:
@@ -865,7 +867,7 @@ def _replace_fm_field(text: str, key: str, new_value: str) -> str:
     if not m:
         return text
     block = m.group(1)
-    pattern = re.compile(rf"^({re.escape(key)}):\s*.*?\s*$", re.MULTILINE)
+    pattern = re.compile(rf"^({re.escape(key)}):[ \t]*.*$", re.MULTILINE)
     if pattern.search(block):
         new_block = pattern.sub(rf"\1: {new_value}", block, count=1)
     else:

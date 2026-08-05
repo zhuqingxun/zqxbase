@@ -11,7 +11,6 @@ handoff_first_prompt_seen.json 跟踪
 
 任何异常静默 exit 0, 绝不阻塞 user prompt 提交.
 """
-import datetime
 import json
 import os
 import sys
@@ -29,7 +28,6 @@ from handoff_detector import (  # noqa: E402
 
 STATE_DIR = Path(os.environ.get("RPIV_STATE_DIR", Path.home() / ".rpiv-loop"))
 SEEN_FILE = STATE_DIR / "handoff_first_prompt_seen.json"
-LOG_FILE = STATE_DIR / "handoff_first_prompt.log"
 MAX_SEEN = 200
 
 
@@ -113,16 +111,6 @@ def main():
 
     if not cwd or not session_id:
         return 0
-
-    try:
-        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with LOG_FILE.open("a", encoding="utf-8") as fp:
-            fp.write(
-                f"[{datetime.datetime.now().isoformat()}] "
-                f"cwd={cwd} session_id={session_id}\n"
-            )
-    except OSError:
-        pass
 
     seen = load_seen()
     if session_id in seen:

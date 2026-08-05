@@ -113,28 +113,6 @@ from __future__ import annotations
 import sys
 
 
-def fix_loop_runbook(feature: str) -> int:  # pragma: no cover
-    """伪代码占位：此函数不会被真正调用。
-
-    Leader agent 读完上方 docstring 后自行执行循环语义，不走此函数。
-    """
-    # pseudocode placeholders - 语法合法，实际执行另走 agent 循环
-    round_cnt = 0
-    last_failures: set[str] | None = None
-    while round_cnt < 10:
-        result_code = 0  # pseudo: subprocess check_acceptance.py
-        if result_code == 0:
-            break
-        current_failures: set[str] = set()  # pseudo: parse JSON
-        if last_failures is not None and last_failures == current_failures:
-            # request user decision + break
-            break
-        # SendMessage to Dev / QA ...
-        last_failures = current_failures
-        round_cnt += 1
-    return 0
-
-
 def main() -> int:
     sys.stdout.write(
         "This is a runbook, read the docstring; do not execute directly.\n"

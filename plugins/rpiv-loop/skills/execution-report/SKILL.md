@@ -1,9 +1,9 @@
 ---
 name: rpiv-loop:execution-report
 description: >-
-  为系统审查生成实施报告
+  记录实施过程、验证结果与计划偏离，供交付报告聚合
 allowed-tools: Read, Bash, Grep, Glob, Write
-version: 2.17.7
+version: 2.17.8
 ---
 
 # 执行报告
