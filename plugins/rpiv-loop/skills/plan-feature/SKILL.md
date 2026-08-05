@@ -3,7 +3,7 @@ name: rpiv-loop:plan-feature
 description: 通过深入的代码库分析和研究创建全面的功能计划
 argument-hint: "<功能描述或 PRD 路径>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, WebSearch, WebFetch
-version: 2.17.8
+version: 2.17.9
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。

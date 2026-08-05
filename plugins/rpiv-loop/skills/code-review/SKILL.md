@@ -3,7 +3,7 @@ name: rpiv-loop:code-review
 description: >-
   在提交前运行的技术代码审查，用于质量和错误检查
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.17.8
+version: 2.17.9
 ---
 
 对最近更改的文件执行技术代码审查。
@@ -140,7 +140,7 @@ detail: [解释为什么这是问题]
 suggestion: [如何修复]
 ```
 
-> `status` 字段取值：`open`（新建时固定）、`fixed`（已修复）、`skipped`（有意跳过，需附理由）。由 code-review-fix 流程在修复完成后回写。
+> `status` 字段取值：`open`（新建时固定）、`fixed`（已修复）、`wont_fix`（评估后决定不修复，下方附 `wont_fix_reason`）、`deferred`（延后跟踪，下方附 `deferred_reason`，并在 `rpiv/todo/` 创建对应待办文件）。由 code-review-fix 流程在修复完成后回写，禁止使用无归属的 `skipped` 状态（见 code-review-fix SKILL step 2）。
 
 如果未发现问题："代码审查通过。未检测到技术问题。"
 

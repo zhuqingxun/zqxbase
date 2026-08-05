@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.17.8",
+      "version": "2.17.9",
       "keywords": [
         "rpiv",
         "workflow",
