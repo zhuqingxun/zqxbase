@@ -2,7 +2,7 @@
 name: rpiv-loop:handoff
 description: 长程任务跨会话打结 + 续会话冷启动。**本 skill 仅负责创建新 handoff 或 mark-consumed 已有 handoff**，把当前会话的状态、决策、待办、教训持久化成 handoff 文件，下次会话首条消息引用即可机械化恢复。当用户提到"打个结"、"生成 handoff"、"创建 handoff"、"今天到这"、"明天接着"、"暂停一下"、"切别的话题"、"/rpiv-loop:handoff" 时触发。**用户意图为"查看 / 列出 / 看一下 pending handoff" 时, 禁止触发本 skill, 改用 `/rpiv-loop:handoff-list` 命令 (fast path, 不加载 SOP)**。也适用于：完成显著 milestone 后用户切换任务、context window 用量明显增长、跨日推进同一长程任务。Claude Code 适配层可通过 SessionStart/UserPromptSubmit hook 自动检测 pending handoff；hook 去重状态写入 `RPIV_STATE_DIR`，未设置时使用 `$HOME/.rpiv-loop`。Codex、opencode 或普通 shell 不自动注册这些 hook，应使用 `/rpiv-loop:handoff-list` 显式查看。注意：本 skill 的 "handoff" 是 Claude Code 社区"跨会话打结"语义（非 OpenAI Agents SDK 的多 agent 间运行时转移）。状态机仅 pending → archived 两状态，handoff 是一次性票据，被新会话消费后即归档。
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.17.9
+version: 2.17.10
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。

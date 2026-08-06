@@ -12,7 +12,7 @@ check_acceptance.py 退出码 0 或触发护栏（10 轮上限 / same-error-twic
 在 biubiubiu 模式 `#### 门禁 3：实现完成` 阶段，所有子任务快速检查通过后：
 
   1. QA agent 运行完整测试套件 + 初步 code-review
-  2. QA 运行 `uv run ${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py <feature>`
+  2. QA 运行 `uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>`
   3. 退出码 0 -> 跳过循环，进入交付步骤 6
   4. 退出码 1/2 -> 进入下述循环
 
@@ -25,7 +25,7 @@ last_failure_set = None  # 上一轮失败 AC id 集合
 while round < 10:
     # 1. 重新获取失败清单（带 JSON 便于 parse）
     result = subprocess.run(
-        ["uv", "run", "${CLAUDE_PLUGIN_ROOT}/tools/check_acceptance.py",
+        ["uv", "run", "--no-project", "python", "<rpiv-loop-root>/tools/check_acceptance.py",
          feature, "--json"],
         capture_output=True, text=True,
     )
@@ -38,7 +38,7 @@ while round < 10:
 
     # 2. same-error-twice 护栏：两轮完全相同的 failure 集合 -> 提前 escalate
     if last_failure_set is not None and last_failure_set == failure_ids:
-        AskUserQuestion(
+        request_user_decision(
             "AC 修复连续两轮相同失败（疑似卡死）",
             options=[
                 "查看失败清单并手动介入",
@@ -80,7 +80,7 @@ while round < 10:
 
 # 7. 10 轮上限触发
 if round == 10:
-    AskUserQuestion(
+    request_user_decision(
         "AC gate 10 轮未通过",
         options=[
             "继续再 10 轮",
@@ -93,7 +93,7 @@ if round == 10:
 ## 三、护栏清单
 
 - **10 轮上限**：避免无限消耗 context / API 额度
-- **same-error-twice 提前 escalate**：连续两轮失败集合完全相同 -> 立即 AskUserQuestion，不等到 10 轮
+- **same-error-twice 提前 escalate**：连续两轮失败集合完全相同 -> 立即请求用户决策，不等到 10 轮
 - **Dev agent 无响应**：重启 agent 后轮次不重置（SendMessage 失败 / 超时视为无响应）
 - **acceptance.yaml 被误改**：check_acceptance.py id 唯一性校验失败 -> 退出码 2 -> 触发下一轮，Leader 从 git 恢复（参考 biubiubiu SKILL 的备份步骤）
 
@@ -111,28 +111,6 @@ if round == 10:
 from __future__ import annotations
 
 import sys
-
-
-def fix_loop_runbook(feature: str) -> int:  # pragma: no cover
-    """伪代码占位：此函数不会被真正调用。
-
-    Leader agent 读完上方 docstring 后自行执行循环语义，不走此函数。
-    """
-    # pseudocode placeholders - 语法合法，实际执行另走 agent 循环
-    round_cnt = 0
-    last_failures: set[str] | None = None
-    while round_cnt < 10:
-        result_code = 0  # pseudo: subprocess check_acceptance.py
-        if result_code == 0:
-            break
-        current_failures: set[str] = set()  # pseudo: parse JSON
-        if last_failures is not None and last_failures == current_failures:
-            # AskUserQuestion + break
-            break
-        # SendMessage to Dev / QA ...
-        last_failures = current_failures
-        round_cnt += 1
-    return 0
 
 
 def main() -> int:

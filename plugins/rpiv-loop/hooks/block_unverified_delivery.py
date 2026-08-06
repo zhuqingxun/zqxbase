@@ -15,6 +15,7 @@ Hook 协议:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +23,7 @@ from pathlib import Path
 CHECK_SCRIPT = (
     Path(__file__).resolve().parent.parent / "tools" / "check_acceptance.py"
 )
+ALLOW_FAIL_OPEN_ENV = "RPIV_ALLOW_DELIVERY_GATE_FAIL_OPEN"
 
 
 def extract_feature(posix: str) -> str | None:
@@ -87,36 +89,40 @@ def main() -> int:
         sys.stderr.write(
             "[rpiv-loop] check_acceptance.py 缺失\n"
             f"  期望路径: {CHECK_SCRIPT.as_posix()}\n"
-            "  降级放行（请检查插件安装完整性）。\n"
+            "  已阻止 delivery-report 写入；请检查插件安装完整性。\n"
         )
-        return 0
+        return 2
 
     project_root = derive_project_root(file_path)
     if project_root is None:
-        # file_path 无法上溯到 rpiv 目录 -> 降级放行
         sys.stderr.write(
             "[rpiv-loop] 无法从 file_path 推导项目根（未找到 rpiv 上溯祖先）\n"
             f"  file_path: {posix}\n"
-            "  降级放行。\n"
+            "  已阻止 delivery-report 写入。\n"
         )
-        return 0
+        return 2
 
     try:
         result = subprocess.run(
-            ["uv", "run", "--no-project", str(CHECK_SCRIPT), feature],
+            [sys.executable, str(CHECK_SCRIPT), feature],
             capture_output=True,
             text=True,
             timeout=60,
             cwd=str(project_root),
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        # subprocess 失败（如 uv 不在 PATH）-> 降级放行，在 stderr 打印警告
+        if os.environ.get(ALLOW_FAIL_OPEN_ENV) == "1":
+            sys.stderr.write(
+                "[rpiv-loop] check_acceptance.py 调用失败但已显式配置 fail-open\n"
+                f"  错误: {exc}\n"
+            )
+            return 0
         sys.stderr.write(
             "[rpiv-loop] check_acceptance.py 调用失败\n"
             f"  错误: {exc}\n"
-            "  降级放行（请手工执行 check_acceptance.py 验证后再提交）。\n"
+            f"  已阻止 delivery-report 写入。确需临时放行时设置 {ALLOW_FAIL_OPEN_ENV}=1。\n"
         )
-        return 0
+        return 2
 
     if result.returncode == 0:
         return 0

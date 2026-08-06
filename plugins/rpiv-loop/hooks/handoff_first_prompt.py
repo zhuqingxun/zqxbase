@@ -5,12 +5,12 @@
 - detector 输出 system context (additionalContext via SessionStart), LLM 可能看到但不一定优先响应
 - 本 hook 输出 user prompt prefix (additionalContext via UserPromptSubmit), Claude 必看必处理
 
-为避免每条 user prompt 都注入, 用 ~/.claude/handoff_first_prompt_seen.json 跟踪
+为避免每条 user prompt 都注入, 用 RPIV_STATE_DIR（未设置时为通用 rpiv-loop 状态目录）下的
+handoff_first_prompt_seen.json 跟踪
 已注入过的 session_id, 同一会话只注入一次 (会话首条 user prompt).
 
 任何异常静默 exit 0, 绝不阻塞 user prompt 提交.
 """
-import datetime
 import json
 import os
 import sys
@@ -26,7 +26,8 @@ from handoff_detector import (  # noqa: E402
     fmt_item,
 )
 
-SEEN_FILE = Path.home() / ".claude" / "handoff_first_prompt_seen.json"
+STATE_DIR = Path(os.environ.get("RPIV_STATE_DIR", Path.home() / ".rpiv-loop"))
+SEEN_FILE = STATE_DIR / "handoff_first_prompt_seen.json"
 MAX_SEEN = 200
 
 
@@ -88,7 +89,7 @@ def render_prompt_prefix(handoffs, cwd):
     parts.extend([
         "---",
         "**强制行为 (本会话首条 user prompt, 后续不再注入)**:",
-        "1. 立刻用 AskUserQuestion 询问用户是否要 mark-consumed 某份 handoff 并按其 bootstrap prompt 推进, 还是先做别的",
+        "1. 立刻简洁询问用户是否要 mark-consumed 某份 handoff 并按其 bootstrap prompt 推进, 还是先做别的",
         "2. 如果用户选 mark-consumed: 调 `/rpiv-loop:handoff --mark-consumed <path>` 并按文件顶部的 bootstrap prompt 接续工作",
         "3. 如果用户选跳过: 才开始处理用户本条 prompt 的原始请求",
         "",
@@ -110,17 +111,6 @@ def main():
 
     if not cwd or not session_id:
         return 0
-
-    try:
-        log_path = Path.home() / ".claude" / "handoff_first_prompt.log"
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        with log_path.open("a", encoding="utf-8") as fp:
-            fp.write(
-                f"[{datetime.datetime.now().isoformat()}] "
-                f"cwd={cwd} session_id={session_id}\n"
-            )
-    except OSError:
-        pass
 
     seen = load_seen()
     if session_id in seen:

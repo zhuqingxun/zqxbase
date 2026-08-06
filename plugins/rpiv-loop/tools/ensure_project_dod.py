@@ -33,6 +33,10 @@ def main() -> int:
     target_dir = cwd / "rpiv"
     target = target_dir / "dod.yaml"
 
+    if target.is_file():
+        sys.stdout.write(f"已存在 rpiv/dod.yaml，跳过（路径: {target.as_posix()}）\n")
+        return 0
+
     if not TEMPLATE_PATH.is_file():
         sys.stderr.write(
             "[rpiv-loop] 模板文件缺失\n"
@@ -40,10 +44,6 @@ def main() -> int:
             "  请检查插件安装完整性。\n"
         )
         return 1
-
-    if target.is_file():
-        sys.stdout.write(f"已存在 rpiv/dod.yaml，跳过（路径: {target.as_posix()}）\n")
-        return 0
 
     if args.dry_run:
         sys.stdout.write(

@@ -13,7 +13,7 @@
       "name": "rpiv-loop",
       "source": "./plugins/rpiv-loop",
       "description": "RPIV structured development workflow: Requirements → Plan → Implementation → Validation",
-      "version": "2.17.9",
+      "version": "2.17.10",
       "keywords": [
         "rpiv",
         "workflow",
@@ -25,7 +25,7 @@
       "name": "reflect",
       "source": "./plugins/reflect",
       "description": "Session retrospective: extract reusable lessons and insights from your current conversation",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "keywords": [
         "reflect",
         "retrospective",
@@ -37,7 +37,7 @@
       "name": "challenge",
       "source": "./plugins/challenge",
       "description": "Red-Blue Adversarial structured thinking tool for stress-testing decisions, architectures, and technical choices",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "keywords": [
         "challenge",
         "adversarial",
@@ -50,7 +50,7 @@
       "name": "whatsnew",
       "source": "./plugins/whatsnew",
       "description": "List Claude Code changelog and release notes for specified versions",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "keywords": [
         "whatsnew",
         "changelog",
@@ -62,7 +62,7 @@
       "name": "insight",
       "source": "./plugins/insight",
       "description": "Insight research methodology: structured deep research pipeline from brainstorming to PPT delivery",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "keywords": [
         "research",
         "insight",
@@ -75,7 +75,7 @@
       "name": "ppt",
       "source": "./plugins/ppt",
       "description": "PPT suite: create high-quality presentations from Markdown/directories, refine existing slides, and review visual taste with public fallback principles.",
-      "version": "3.9.4",
+      "version": "3.9.5",
       "keywords": [
         "ppt",
         "presentation",

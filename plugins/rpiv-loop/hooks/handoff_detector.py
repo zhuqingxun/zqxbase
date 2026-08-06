@@ -244,7 +244,7 @@ def main():
 
     parts.extend([
         "---",
-        "**请在本次会话开头主动用 AskUserQuestion 询问用户:**",
+        "**请在本次会话开头主动简洁询问用户:**",
         "- 是否要 mark-consumed 某份 handoff 并按其 bootstrap prompt 推进",
         "- 还是先做别的 (跳过本次提醒)",
         "",

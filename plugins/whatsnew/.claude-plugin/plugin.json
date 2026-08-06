@@ -1,10 +1,14 @@
 {
   "name": "whatsnew",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "List Claude Code changelog and release notes for specified versions",
   "author": {
     "name": "zhuqingxun"
   },
   "repository": "https://github.com/zhuqingxun/zqxbase",
-  "keywords": ["changelog", "release-notes", "whatsnew"]
+  "keywords": [
+    "changelog",
+    "release-notes",
+    "whatsnew"
+  ]
 }

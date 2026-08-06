@@ -3,7 +3,7 @@
 
 正常 5 个 mode (默认 / all / <status> / <feature> / check) 全程 Python。
 fix mode 在 stdout 末尾输出 __NEED_LLM__\\n<json payload> 标记,
-让 SKILL 接管 AskUserQuestion 流程处理用户决策项。
+让 SKILL 用当前运行面的用户确认方式处理决策项。
 
 零依赖：仅 stdlib 正则解析 frontmatter,与 tools/check_acceptance.py 保持一致。
 
@@ -85,7 +85,7 @@ _SELF_CHECK_CMD = f"uv run --no-project python {Path(__file__).resolve().as_posi
 PROTOCOL_INSTRUCTIONS = """PROTOCOL:
 按下列步骤处理 items(payload 见上方 JSON 行):
 
-1. 用 AskUserQuestion 把 items 包装成选项。kind → 选项映射:
+1. 用当前运行面的用户确认方式把 items 包装成选项。kind → 选项映射:
    - stale_in_progress → ["改为 completed", "回退到 pending", "保持 in-progress 并更新 updated_at"]
    - illegal_status → 把 legal_options 各值列为选项
    - superseded_missing_by → 让用户提供 superseded_by 路径(无合适选项时让用户填)
@@ -100,7 +100,9 @@ PROTOCOL_INSTRUCTIONS = """PROTOCOL:
 
 # ----- frontmatter 解析 -----
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
-SCALAR_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):\s*(.*?)\s*$", re.MULTILINE)
+# `:` 后仅吞行内空白（[ \t] 而非 \s）：\s* 会跨行吞噬——空值字段（`status:` 单独一行）
+# 时把下一行整行误捕为值。守卫：plugin_test tests/test_frontmatter_parser_consistency.py
+SCALAR_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*):[ \t]*(.*?)[ \t]*$", re.MULTILINE)
 
 
 def _strip_value(raw: str) -> str:
@@ -865,7 +867,7 @@ def _replace_fm_field(text: str, key: str, new_value: str) -> str:
     if not m:
         return text
     block = m.group(1)
-    pattern = re.compile(rf"^({re.escape(key)}):\s*.*?\s*$", re.MULTILINE)
+    pattern = re.compile(rf"^({re.escape(key)}):[ \t]*.*$", re.MULTILINE)
     if pattern.search(block):
         new_block = pattern.sub(rf"\1: {new_value}", block, count=1)
     else:

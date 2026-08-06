@@ -1,10 +1,15 @@
 {
   "name": "challenge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Red-Blue Adversarial structured thinking tool for stress-testing decisions, architectures, and technical choices",
   "author": {
     "name": "zhuqingxun"
   },
   "repository": "https://github.com/zhuqingxun/zqxbase",
-  "keywords": ["red-blue", "adversarial", "challenge", "decision-review"]
+  "keywords": [
+    "red-blue",
+    "adversarial",
+    "challenge",
+    "decision-review"
+  ]
 }
