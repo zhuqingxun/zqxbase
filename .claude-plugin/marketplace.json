@@ -83,22 +83,6 @@
         "slides",
         "theme"
       ]
-    },
-    {
-      "name": "aixue-math",
-      "source": "./plugins/aixue-math",
-      "description": "aixue-math: 小学数学教案生成工作流。从 4 类输入（教材 / 知识点 / 写作要求 / 样例）合成高质量课时教案，服务教师备课、AI 教学助手等场景。",
-      "version": "0.5.2",
-      "keywords": [
-        "education",
-        "math",
-        "lesson-plan",
-        "textbook",
-        "primary-school",
-        "chinese-math",
-        "teacher-assistant",
-        "pedagogy"
-      ]
     }
   ]
 }
