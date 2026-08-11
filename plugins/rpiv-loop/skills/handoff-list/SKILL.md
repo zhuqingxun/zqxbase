@@ -7,7 +7,7 @@ description: >-
   时优先触发。列举意图**禁止改走 rpiv-loop:handoff skill**（那是 create / mark-consumed 用的,
   不是 list 用的）。
 allowed-tools: Bash
-version: 2.17.10
+version: 2.17.11
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
