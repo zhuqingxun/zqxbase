@@ -3,7 +3,7 @@ name: rpiv-loop:validate
 description: >-
   根据项目结构自动选择 lint、测试、构建及可选服务检查，并输出摘要
 allowed-tools: Read, Bash, Edit, Grep, Glob
-version: 2.17.12
+version: 2.17.13
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -25,6 +25,26 @@ version: 2.17.12
 5. 不存在 `rpiv/dod.yaml` → 跳过本步，不视为异常
 
 执行结果在「摘要报告」的「DoD gates」小节逐条列出（gate id / blocking / 通过与否 / 证据摘要）。
+
+---
+
+## 第 0.5 步：产物类型分派（skill 分支入口）
+
+**PRD 定位规则**：复用本文件「AC 逐条证据采集」章节已确立的 `<feature>` 输入契约——该契约的路径是 `rpiv/validation/<feature>/acceptance.yaml`，本步同构地读取 `rpiv/requirements/prd-<feature>.md` 的 frontmatter `product_types` 字段。**不引入任何新的"如何确定当前 feature"机制。**
+
+**两种缺省一律静默回落 `[code]`**——不报错、不中断流程、不在报告中标记为异常：
+
+1. PRD 文件存在但无 `product_types` 字段 → 按 `[code]`（存量 PRD 无需回填）
+2. 按约定路径找不到 PRD 文件 → 按 `[code]`。**这不是理论情况**：PRD 归档后会被移动到 `rpiv/archive/`，约定路径就此失效，任何已交付归档的历史特性再跑 validate 都会命中这条
+
+分派规则：
+
+1. **含 `skill`** → 执行 skill 验证分支：Read `<rpiv-loop-root>/references/skill-authoring/skill-validation-checklist.md`，按其通用质量门与分层验收清单逐项验收，结果记入「摘要报告」新增的「skill 质量门」小节
+2. **含 `code`** → 继续下方「优先级 0」与「按类型检测与执行」，行为不变
+3. **`[code, skill]`** → 两条分支**都执行**，摘要报告分节呈现，互不遮蔽
+4. **纯 `[skill]`（不含 `code`）** → **跳过**下方「优先级 0」与「按类型检测与执行」的代码侧流程，直接进入「摘要报告」。此时代码检查 / 测试 / 覆盖率 / 构建各项一律标注「**不适用（纯 skill 产物）**」，**不得**输出「未执行自动验证」——纯 Markdown 产物落入 3.7 节「其他 / 未识别」而整体标为未验证，正是本分派要消除的空转
+
+**本步不被「优先级 0」短路**：即使项目命中了自定义验证入口（脚本 / Make / 包管理器 script），skill 分支仍须执行——「优先级 0」的「直接进入摘要报告」只作用于代码侧验证流程。
 
 ---
 
@@ -180,6 +200,7 @@ uv run --no-project python <rpiv-loop-root>/tools/check_acceptance.py <feature>
 所有验证（及可选的服务检查）完成后，提供包含以下内容的摘要报告：
 
 - **DoD gates**：逐条列出 `rpiv/dod.yaml` 的 gate 结果（id / blocking / 通过与否 / manual_review 项列为人工确认）；无 dod.yaml 时标注「未配置」
+- **skill 质量门**：产物类型含 `skill` 时，逐条列出通用质量门与分层验收结果（未含 skill 时标注「不适用」）
 - **代码检查（Lint）**：通过 / 失败 / 未执行（及原因）
 - **测试**：通过 / 失败 / 未执行（及原因）
 - **覆盖率**：百分比或「未执行」（若执行了带 coverage 的测试）

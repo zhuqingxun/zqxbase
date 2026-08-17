@@ -1,0 +1,55 @@
+# 项目级 DoD（Definition of Done）：skill 产物通用质量门
+# 参考业界实践：Anthropic Agent Skills best practices（progressive disclosure / description 触发质量）
+#
+# 与 dod_template.yaml（代码产物模板）的关系：
+#   - 纯 skill 项目   ：用本文件的 gates 初始化或替换 rpiv/dod.yaml
+#   - 纯代码项目     ：用 dod_template.yaml，不需要本文件
+#   - 混合产物项目   ：把本文件的 gates 条目【追加】进已有 rpiv/dod.yaml 的 gates 列表
+#                      （id 前缀 DODS- 与代码侧 DOD- 天然不冲突，两套门禁取并集）
+#
+# ensure_project_dod.py 的行为不变：它只在 rpiv/dod.yaml 缺失时拷贝 dod_template.yaml。
+# 本文件不参与自动初始化，由 plan / validate 阶段指引用户按需合并——避免破坏现有初始化语义。
+#
+# 全部条目为 manual_review 形态：skill 质量门以人工判定为主，
+# validate 会把它们列为「人工确认」项，不自动执行命令。
+# 每条 gate 的判定标准与验证手段见 references/skill-authoring/skill-validation-checklist.md
+#
+# 用户应根据项目实际情况修订：删除不适用条目，添加项目特有条目。
+version: 1
+applies_to: skill_prds
+gates:
+  - id: DODS-FRONTMATTER
+    description: SKILL.md frontmatter 合法（name 小写连字符且 <= 64 字符，description 非空且 <= 1024 字符）
+    verification_method: manual_review
+    blocking: true
+    notes: "判定标准见 skill-validation-checklist.md 的 G1；name 与目录名的一致性按所在插件既有惯例核对"
+  - id: DODS-DESCRIPTION
+    description: description 只写触发条件（做什么 + 何时用），不含工作流步骤摘要
+    verification_method: manual_review
+    blocking: true
+    notes: "description 是模型加载 skill 的唯一信号，混入步骤描述会稀释触发匹配。见 G2"
+  - id: DODS-SIZE
+    description: SKILL.md 正文行数 < 500
+    verification_method: manual_review
+    blocking: true
+    notes: "超限说明该拆 references；已超限的存量文件应单独立 todo 跟踪，不在本特性内顺手重写。见 G3"
+  - id: DODS-DISCLOSURE
+    description: progressive disclosure 分层合理，references 目录仅一层深
+    verification_method: manual_review
+    blocking: true
+    notes: "正文放触发判定与分派，细节下沉 references；不出现 references/<a>/<b>/ 二级子目录。见 G4"
+  - id: DODS-PATH-NEUTRAL
+    description: 无硬编码绝对路径 / home 目录 / 安装位置，资源定位走占位符或相对路径
+    verification_method: manual_review
+    blocking: true
+    notes: "本地开发路径与分发安装路径通常不同，硬编码会在他人环境失效。见 G5"
+  - id: DODS-TRIGGER
+    description: PRD 的 should / should-not-trigger 清单已抽测并记录命中情况
+    verification_method: manual_review
+    blocking: false
+    notes: "抽测非全量；PRD 无触发场景章节的存量 skill 可判 not_applicable 并在此说明理由"
+  - id: DODS-BASELINE
+    description: 客观可验证类 skill 已做 baseline 对照（新建 = 无 skill 裸跑 / 优化 = 旧版本，>= 3 个真实场景）
+    verification_method: manual_review
+    blocking: false
+    notes: "流程编排类 skill 判 not_applicable 并说明理由；对照方法见 skill-eval-guide.md"

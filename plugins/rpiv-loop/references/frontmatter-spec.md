@@ -124,6 +124,29 @@ superseded_by: {新版本文件路径}
 
 不引入 `superseded_by: array<string>` 类型扩展——仅在出现稳定多次"一对多拆解"案例时再讨论是否升级字段定义。
 
+## 产物类型字段（product_types）
+
+PRD 文件（`requirements/prd-*.md`）的**可选** frontmatter 字段，声明本次交付的产物类型，供 plan-feature / validate / code-review 做分支分派。
+
+| 取值 | 含义 |
+|------|------|
+| `code` | 可执行代码产物（默认） |
+| `skill` | SKILL.md / references 等技能定义产物 |
+
+```yaml
+product_types: [code]          # 纯代码（等价于省略该字段）
+product_types: [skill]         # 纯 skill
+product_types: [code, skill]   # 混合产物，两套质量门取并集
+```
+
+**三条契约**：
+
+1. **仅 PRD 使用**：plan / validation / todo / handoff 等其他文件类型不写此字段；下游技能一律从 PRD 读取
+2. **hook 不校验**：`hooks/validate_rpiv_status.py` 只提取 `status` 与 `type` 两个字段，`product_types` 的取值与格式由使用它的技能自行判断，写错不会被 Write/Edit 拦截
+3. **缺失默认 `[code]`**：存量 PRD 无需回填，所有纯代码流程行为与该字段引入前完全一致
+
+skill 场景的具体指引见 `references/skill-authoring/`（由 create-prd / plan-feature / validate 按需加载）。
+
 ## 格式约束
 
 - status 值使用**连字符**分隔：`in-progress`（不是 `in_progress`）

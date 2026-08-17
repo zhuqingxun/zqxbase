@@ -3,10 +3,12 @@ name: rpiv-loop:code-review
 description: >-
   在提交前运行的技术代码审查，用于质量和错误检查
 allowed-tools: Read, Bash, Grep, Glob, Edit, Write
-version: 2.17.12
+version: 2.17.13
 ---
 
 对最近更改的文件执行技术代码审查。
+
+> **skill 产物引导**：若本次 `git diff` 的主体是 `SKILL.md`、`references/**.md` 等技能定义文件（而非可执行代码），或本次特性 PRD 的 frontmatter `product_types` 含 `skill`，则本技能下方的审查维度（SQL 注入 / N+1 查询 / 类型提示等）对其基本不适用——**改用 `/rpiv-loop:code-audit <skill 目标>`**，它支持 skill 作为审计对象，且对 skill 目标会自动追加 portability（可迁移性）维度。混合产物（diff 同时含 `.py` 等代码文件）时，代码部分仍按本技能正常审查。
 
 ## 核心原则
 

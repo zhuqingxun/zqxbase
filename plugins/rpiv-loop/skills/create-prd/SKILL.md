@@ -3,7 +3,7 @@ name: rpiv-loop:create-prd
 description: 基于对话上下文创建产品需求文档
 argument-hint: "[功能主题]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-version: 2.17.12
+version: 2.17.13
 ---
 
 > `<rpiv-loop-root>` 解析顺序：环境变量 `RPIV_LOOP_ROOT` -> `CLAUDE_PLUGIN_ROOT` -> 当前插件根目录；均不存在时停止并请用户配置 `RPIV_LOOP_ROOT` 或 `CLAUDE_PLUGIN_ROOT`。
@@ -45,6 +45,7 @@ uv run --no-project python <rpiv-loop-root>/tools/ensure_project_dod.py
 ---
 description: "产品需求文档: {feature-name}"
 status: pending
+product_types: [code]
 created_at: {YYYY-MM-DDTHH:MM:SS}
 updated_at: {YYYY-MM-DDTHH:MM:SS}
 archived_at: null
@@ -56,6 +57,7 @@ archived_at: null
 **Frontmatter 字段说明：**
 - `description`: 文件描述
 - `status`: 文件状态，新创建时固定为 `pending`
+- `product_types`: 产物类型列表，枚举 `code` / `skill`，可叠加（如 `[code, skill]`）。省略时下游按 `[code]` 处理，行为与改造前一致
 - `created_at`: 创建时间戳，ISO 8601 格式
 - `updated_at`: 更新时间戳，创建时与 created_at 相同
 - `archived_at`: 归档时间戳，创建时固定为 `null`
@@ -143,6 +145,14 @@ archived_at: null
 - 关键依赖项及链接
 - 仓库/项目结构
 
+### 条件章节：按产物类型追加
+
+判定本次产物类型并写入 frontmatter `product_types`（枚举 `code` / `skill`，可叠加；从对话上下文判定，不明确时用 AskUserQuestion 询问用户）：
+
+- **含 `code`**：按上方必需章节产出，无额外要求
+- **含 `skill`**（产物为 SKILL.md / references / 插件技能）：追加「触发场景」必需章节——should-trigger 与 should-not-trigger 清单各 8-10 条，外加 description 草案。章节模板与写法规则 Read `<rpiv-loop-root>/references/skill-authoring/prd-trigger-scenarios.md`
+- **`[code, skill]`**：两者叠加，必需章节与触发场景章节都要有
+
 ## 指令
 
 ### 1. 提取需求
@@ -211,4 +221,4 @@ archived_at: null
 - 根据可用细节调整章节深度
 - 对于高度技术性的产品，强调架构和技术栈
 - 对于面向用户的产品，强调用户故事和体验
-- 此命令包含完整的 PRD 模板结构 - 不需要外部引用
+- 代码产物场景本文件自足，不需要外部引用；skill 产物场景按需加载 `references/skill-authoring/`
