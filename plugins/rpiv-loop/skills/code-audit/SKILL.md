@@ -1,10 +1,10 @@
 ---
 name: rpiv-loop:code-audit
 description: >-
-  对指定目录/模块/skill 进行全量代码审计（不依赖 git diff）。支持逻辑、安全、性能、架构、集成与环境、可迁移性、必要性 7 个维度的审查，特别适合审计 skills 是否绑定 Claude Code、Codex、opencode 或特定机器环境。
+  对指定目录/模块/skill 进行全量代码审计（不依赖 git diff）。支持逻辑、安全、性能、架构、集成与环境、可迁移性、必要性 7 个维度的审查，特别适合审计 skills 是否绑定 Claude Code、Codex、CodeAgent 或特定机器环境。
 argument-hint: "<目标> [logic|security|performance|architecture|integration|portability|necessity]"
 allowed-tools: Read, Glob, Grep, Bash, Edit, Write
-version: 2.17.13
+version: 2.17.14
 ---
 
 对指定目录、文件、模块或 skill 进行全量代码审计。
@@ -55,7 +55,7 @@ version: 2.17.13
 4. 记录项目使用的语言、框架、编码规范。
 5. **运行环境识别**：从 `CLAUDE.md` 和项目配置（pyproject.toml、package.json、Dockerfile 等）中识别目标运行环境（Windows/macOS/Linux/跨平台），标记为 `cross_platform` 如果代码需在多平台运行。
 6. **Git 配置检查**：检查 `.gitattributes` 是否存在、是否配置了行尾符规则（`* text=auto` 等），记录对文件内容的潜在影响；如果目标不在 git 仓库中，记录为 `not_git_repo`，不要把 git 命令失败当成审计失败。
-7. **迁移目标识别**：如果目标是 skill 或 workflow，识别其预期运行面（如 Claude Code、Codex、opencode、公司内部自动化运行面、普通 shell）。未知时默认按多运行面可迁移目标审查。
+7. **迁移目标识别**：如果目标是 skill 或 workflow，识别其预期运行面（如 Claude Code、Codex、公司 CodeAgent、普通 shell）。未知时默认按多运行面可迁移目标审查。
 8. 如果 `cross_platform = true`，在 Phase 2 的逻辑审查、集成审查和可迁移性审查中自动激活跨平台兼容性检查项。
 
 ### Phase 1：文件发现
@@ -117,7 +117,7 @@ version: 2.17.13
 - **环境依赖**：代码是否依赖特定的 git 配置（autocrlf）、文件系统特性（大小写）、shell 环境（PATH）、运行时版本
 
 **维度 6 — 可迁移性审查（skills/runtime-portability，基础）：**
-- **运行面中立性**：skill 是否把核心流程绑定到 Claude Code、Codex、opencode 或某个公司内部自动化运行面的专属工具名、命令名、hook 名、frontmatter 字段或交互模型。
+- **运行面中立性**：skill 是否把核心流程绑定到 Claude Code、Codex、CodeAgent 或某个公司内部自动化运行面的专属工具名、命令名、hook 名、frontmatter 字段或交互模型。
 - **单一事实源**：是否存在为不同运行面维护多套互相分叉的 instructions；迁移适配是否保持为薄层，而不是复制并改写核心流程。
 - **路径与安装位置中立**：是否硬编码个人绝对路径、特定 home 目录、插件源码目录、workspace 名称或机器用户名；是否优先使用 `<skill-root>`、`<plugin-root>`、环境变量、相对路径或可发现路径。
 - **工具能力抽象**：是否把 `Read/Edit/Write/Bash/Glob/Grep`、`apply_patch`、`AskUserQuestion` 等平台工具当成唯一实现；是否提供等价意图或 fallback。
@@ -206,8 +206,8 @@ issues:
 - + **隐式契约文档化**：识别代码中未明确文档化的隐式假设（如"输入文件一定是 UTF-8""远端和本地行尾符一致"），标记为 medium 风险
 
 **portability 深度模式（基础 + 额外，审计 skills 时重点执行）：**
-- + **跨运行面矩阵**：逐项列出 Claude Code、Codex、opencode、普通 shell/公司内部自动化运行面对该 skill 的要求，标出核心流程、适配层和不可迁移部分。
-- + **平台专属 token 扫描**：扫描 `Claude`、`Codex`、`opencode`、`AskUserQuestion`、`Read`、`Edit`、`Write`、`Bash`、`apply_patch`、绝对路径、home 目录、plugin 源路径等，判断是必要适配还是不必要绑定。
+- + **跨运行面矩阵**：逐项列出 Claude Code、Codex、CodeAgent、普通 shell 对该 skill 的要求，标出核心流程、适配层和不可迁移部分。
+- + **平台专属 token 扫描**：扫描 `Claude`、`Codex`、`CodeAgent`、`AskUserQuestion`、`Read`、`Edit`、`Write`、`Bash`、`apply_patch`、绝对路径、home 目录、plugin 源路径等，判断是必要适配还是不必要绑定。
 - + **迁移降级路径审计**：对每个专属工具或外部依赖，确认是否存在等价动作描述、替代命令、缺失时停止条件或人工确认路径。
 - + **同步分叉风险审计**：检查是否把同一核心 workflow 复制到多个环境目录后分别修改；如果存在，建议抽出共享说明、生成脚本或明确的 adapter 区。
 - + **可迁移性修复建议**：优先给出“保留单一核心流程 + 环境适配薄层”的修改方案，而不是建议维护多个独立版本。
@@ -344,7 +344,7 @@ blast_radius: |
 
 - 每个并行审查员或主执行者的每个审查维度都必须**完整阅读**目标文件，不能只读片段。
 - 并行审查员是加速手段，不是正确性前提；不可用时必须由主执行者顺序执行同等审查。
-- 审计 skill 时，可迁移性是重点维度；优先发现会导致 Claude Code、Codex、opencode 或公司内部自动化运行面之间产生长期分叉的绑定。
+- 审计 skill 时，可迁移性是重点维度；优先发现会导致 Claude Code、Codex、CodeAgent 或普通 shell 之间产生长期分叉的绑定。
 - necessity 是唯一在所有模式下无条件执行的维度：未指定维度时随全量执行，指定任意其他维度时自动追加（只跑基础检查项），用户显式指定 `necessity` 时进入深度模式。追加原因需在报告中说明，与 portability 的追加原因分别陈述。
 - necessity 的判定必须先完成四步前置查证；查证未完成即断言"没有价值"的发现不得写入报告。存疑型问题的 suggestion 必须给出关闭路径，使误报能转化为设计意图的补录。
 - 专注真正的 bug 和风险，不是风格偏好。
